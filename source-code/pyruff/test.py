@@ -4,6 +4,7 @@ from dumb25519 import *
 import random
 import unittest
 import pyruff
+import multisig
 
 class TestPyRuff(unittest.TestCase):
     def test_2_2_1(self):
@@ -71,4 +72,31 @@ class TestPyRuff(unittest.TestCase):
         sig = pyruff.spend(sp)
         pyruff.verify(sp.KI,sp.PK,sp.CO,sig.CO1,sp.m,sig)
 
+class TestMultisig(unittest.TestCase):
+    def test_1(self):
+        x = [random_scalar()]*1
+        X = [G*i for i in x]
+        m = hash_to_scalar('test message')
+        multisig.verify(m,X,multisig.sign(m,x))
+
+    def test_2(self):
+        x = [random_scalar()]*2
+        X = [G*i for i in x]
+        m = hash_to_scalar('test message')
+        multisig.verify(m,X,multisig.sign(m,x))
+
+    def test_2_order(self):
+        x = [random_scalar()]*2
+        X = list(reversed([G*i for i in x]))
+        m = hash_to_scalar('test message')
+        multisig.verify(m,X,multisig.sign(m,x))
+
+    def test_2_bad(self):
+        x = [random_scalar()]*2
+        X = [random_point() for i in x]
+        m = hash_to_scalar('test message')
+        with self.assertRaises(ArithmeticError):
+            multisig.verify(m,X,multisig.sign(m,x))
+
+unittest.TextTestRunner(verbosity=2,failfast=True).run(unittest.TestLoader().loadTestsFromTestCase(TestMultisig))
 unittest.TextTestRunner(verbosity=2,failfast=True).run(unittest.TestLoader().loadTestsFromTestCase(TestPyRuff))

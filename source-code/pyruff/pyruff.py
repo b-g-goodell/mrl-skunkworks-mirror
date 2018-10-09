@@ -5,7 +5,7 @@
 # -- assuming this code is secure would also be dumb
 
 from dumb25519 import *
-import random
+import multisig
 
 class SecretKey:
     r = None
@@ -119,14 +119,6 @@ class SpendProof:
         self.sigma1 = sigma1
         self.sigma2 = sigma2
 
-class Multisignature:
-    R = None
-    s = None
-
-    def __init__(self,R,s):
-        self.R = R
-        self.s = s
-
 def sub(f_in):
     L = len(f_in.PK) # number of inputs
     N = len(f_in.PK[0]) # ring size
@@ -162,33 +154,9 @@ def spend(s_in):
     sigma1 = prove2(sub_C,s_in.ii,s,len(s_in.PK),s_in.base,s_in.exponent)
 
     r1 = [s_in.sk[i].r1 for i in range(len(s_in.sk))]
-    sigma2 = multisign(str(sigma1)+str(f),r1,None)
+    sigma2 = multisig.sign(str(sigma1)+str(f),r1)
     
     return SpendProof(s_in.base,s_in.exponent,CO1,sigma1,sigma2)
-
-def multisign(m,x,X):
-    n = len(x)
-    if X is None:
-        X = []
-        for i in range(n):
-            X.append(G*x[i])
-
-    rs = []
-    r = Scalar(0)
-    for i in range(n):
-        rs.append(random_scalar())
-        r += rs[i]
-
-    R = G*r
-    c = []
-    ss = []
-    s = Scalar(0)
-    for i in range(n):
-        c.append(hash_to_scalar(str(X[i])+str(R)+str(X)+str(m)))
-        ss.append(rs[i]+x[i]*c[i])
-        s += ss[i]
-
-    return Multisignature(R,s)
 
 def prove2(CO,ii,r,inputs,base,exponent):
     size = base**exponent
@@ -344,19 +312,4 @@ def verify(KI,PK,CO,CO1,m,sig):
     f = F(KI,PK,CO,CO1,m)
     sub_C,sub_f = sub(f)
 
-    if not multiverify(str(sig.sigma1)+str(f),KI,sig.sigma2):
-        raise Exception('Failed multiverify!')
-
-def multiverify(m,X,sig):
-    n = len(X)
-
-    c = []
-    for i in range(n):
-        c.append(hash_to_scalar(str(X[i])+str(sig.R)+str(X)+str(m)))
-    SG = G*sig.s
-    
-    data = [[sig.R,Scalar(1)]]
-    for i in range(n):
-        data.append([X[i],c[i]])
-
-    return multiexp(data) == SG
+    multisig.verify(str(sig.sigma1)+str(f),KI,sig.sigma2)
