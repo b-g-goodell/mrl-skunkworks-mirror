@@ -12,6 +12,8 @@ class SecretKey:
     r1 = None
 
     def __init__(self,r,r1):
+        if not isinstance(r,Scalar) or not isinstance(r1,Scalar):
+            raise TypeError
         self.r = r
         self.r1 = r1
 
@@ -28,6 +30,8 @@ class Output:
     amount = None
 
     def __init__(self,amount):
+        if not isinstance(amount,Scalar):
+            raise TypeError
         self.amount = amount
         self.mask = random_scalar()
         self.CO = G*amount + H*self.mask
@@ -46,9 +50,23 @@ class F:
     m = None # message
 
     def __init__(self,KI,PK,CO,CO1,m):
+        for i in KI:
+            if not isinstance(i,Point):
+                raise TypeError
         self.KI = KI
+        for i in PK:
+            for j in i:
+                if not len(j) == 2:
+                    raise ValueError
+                if not isinstance(j[0],Point) or not isinstance(j[1],Point):
+                    raise TypeError
         self.PK = PK
+        for i in CO:
+            if not isinstance(i,Point):
+                raise TypeError
         self.CO = CO
+        if not isinstance(CO1,Point):
+            raise TypeError
         self.CO1 = CO1
         self.m = m
 
@@ -65,12 +83,24 @@ class Proof1:
     a = None
 
     def __init__(self,A,C,D,f_trim,zA,zC,a):
+        if not isinstance(A,Point) or not isinstance(C,Point) or not isinstance(D,Point):
+            raise TypeError
         self.A = A
         self.C = C
         self.D = D
+        for i in f_trim:
+            for j in i:
+                if not isinstance(j,Scalar):
+                    raise TypeError
         self.f_trim = f_trim
+        if not isinstance(zA,Scalar) or not isinstance(zC,Scalar):
+            raise TypeError
         self.zA = zA
         self.zC = zC
+        for i in a:
+            for j in i:
+                if not isinstance(j,Scalar):
+                    raise TypeError
         self.a = a
 
     def __str__(self):
@@ -83,9 +113,20 @@ class Proof2:
     z = None
 
     def __init__(self,proof1,B,G1,z):
+        if not isinstance(proof1,Proof1):
+            raise TypeError
         self.proof1 = proof1
+        if not isinstance(B,Point):
+            raise TypeError
         self.B = B
+        if not len(G1) == 2:
+            raise ValueError
+        for i in G1:
+            if not isinstance(i[0],Point) or not isinstance(i[1],Point):
+                raise TypeError
         self.G1 = G1
+        if not isinstance(z,Scalar):
+            raise TypeError
         self.z = z
 
     def __str__(self):
@@ -113,10 +154,20 @@ class SpendProof:
     sigma2 = None
 
     def __init__(self,base,exponent,CO1,sigma1,sigma2):
+        if not isinstance(base,int) or not isinstance(exponent,int):
+            raise TypeError
+        if base < 2 or exponent < 1:
+            raise ValueError
         self.base = base
         self.exponent = exponent
+        if not isinstance(CO1,Point):
+            raise TypeError
         self.CO1 = CO1
+        if not isinstance(sigma1,Proof2):
+            raise TypeError
         self.sigma1 = sigma1
+        if not isinstance(sigma2,multisig.Multisignature):
+            raise TypeError
         self.sigma2 = sigma2
 
 def sub(f_in):
@@ -142,7 +193,14 @@ def sub(f_in):
 
     return C,f
 
+# Perform a spend
+# INPUT
+#   s_in: spend data; type SpendInput
+# OUTPUT
+#   SpendProof
 def spend(s_in):
+    if not isinstance(s_in,SpendInput):
+        raise TypeError
     s = s_in.s
     CO1 = G*s
 
@@ -226,12 +284,21 @@ def trim_list(a,length,index):
 
     return result
 
+# Polynomial product coefficients
+# INPUT
+#   c,d: polynomial coefficients; Scalar lists of equal length
+# OUTPUT
+#   Scalar list
 def product(c,d):
-    max_length = max([len(c),len(d)])
-    result = [Scalar(0)]*(2*max_length-1)
+    if not len(c) == len(d):
+        raise ValueError
+    for i in range(len(c)):
+        if not isinstance(c[i],Scalar) or not isinstance(d[i],Scalar):
+            raise TypeError
+    result = [Scalar(0)]*(2*len(c)-1)
 
-    for i in range(max_length):
-        for j in range(max_length):
+    for i in range(len(c)):
+        for j in range(len(d)):
             result[i+j] += c[i]*d[j]
 
     return result
@@ -285,8 +352,19 @@ def prove1(b,r):
 
     return Proof1(A,C,D,f_trim,zA,zC,a)
 
-# Decompose an integer
+# Decompose an integer with a given base
+# INPUT
+#   base: type int
+#   n: integer to decompose; type int
+#   exponent: maximum length of result; type int
+# OUTPUT
+#   int list
 def decompose(base,n,exponent):
+    if not isinstance(base,int) or not isinstance(n,int) or not isinstance(exponent,int):
+        raise TypeError
+    if base < 2 or n < 0 or exponent < 1:
+        raise ValueError
+
     result = []
     for i in range(exponent-1,-1,-1):
         base_pow = base**i
@@ -294,17 +372,34 @@ def decompose(base,n,exponent):
         n -= base_pow*result[-1]
     return list(reversed(result))
 
-# A scalar delta function
+# Kronecker delta function
+# INPUT
+#   x,y: any type supporting equality testing
+# OUTPUT
+#   Scalar: 1 if the inputs are the same, 0 otherwise
 def delta(x,y):
-    if x == y:
-        return Scalar(1)
-    return Scalar(0)
+    try:
+        if x == y:
+            return Scalar(1)
+        return Scalar(0)
+    except:
+        raise TypeError
 
-# Matrix commitment
+# Scalar matrix commitment
+# INPUT
+#   m: matrix; list of Scalar lists
+#   r: mask; type Scalar
+# OUTPUT
+#   Point
 def matrix_commit(m,r):
+    if not isinstance(r,Scalar):
+        raise TypeError
+
     data = [[G,r]] # multiexp data
     for i in range(len(m)):
         for j in range(len(m[0])):
+            if not isinstance(m[i][j],Scalar):
+                raise TypeError
             data.append([hash_to_point('pyruff '+str(i)+' '+str(j)),m[i][j]])
     return multiexp(data)
 

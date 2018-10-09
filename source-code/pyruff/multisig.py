@@ -12,7 +12,7 @@ class Multisignature:
 
     def __init__(self,R,s):
         if not isinstance(R,Point) or not isinstance(s,Scalar):
-            raise TypeError('Bad type in Multisignature instance!')
+            raise TypeError
         self.R = R
         self.s = s
 
