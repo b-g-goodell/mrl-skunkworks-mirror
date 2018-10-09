@@ -326,7 +326,7 @@ def prove1(b,r):
         d.append([])
         for i in range(n):
             c[j].append(a[j][i]*(Scalar(1) - b[j][i]*Scalar(2)))
-            d[j].append(-a[j][i]**2)
+            d[j].append(-(a[j][i]**2))
 
     rC = random_scalar()
     rD = random_scalar()
@@ -408,3 +408,43 @@ def verify(KI,PK,CO,CO1,m,sig):
     sub_C,sub_f = sub(f)
 
     multisig.verify(str(sig.sigma1)+str(f),KI,sig.sigma2)
+
+    verify2(sig.base,sig.sigma1,sub_C)
+
+def verify2(base,proof,CO):
+    verify1(proof.B,proof.proof1)
+
+def verify1(B,proof1):
+    m = len(proof1.f_trim)
+    n = len(proof1.f_trim[0])+1
+
+    f = []
+    for j in range(m):
+        f.append([Scalar(0)])
+        for i in range(1,n):
+            f[j].append(proof1.f_trim[j][i-1])
+
+    x = hash_to_scalar(str(proof1.A)+str(proof1.C)+str(proof1.D))
+
+    for j in range(m):
+        f[j][0] = x
+        for i in range(1,n):
+            f[j][0] -= f[j][i]
+
+    f1 = []
+    for j in range(m):
+        f1.append([])
+        for i in range(n):
+            f1[j].append(f[j][i]*(x-f[j][i]))
+
+    for j in range(m):
+        col_sum = x
+        for i in range(1,n):
+            col_sum -= f[j][i]
+        if not f[j][0] == col_sum:
+            raise ArithmeticError
+
+    if not B*x+proof1.A == matrix_commit(f,proof1.zA):
+        raise ArithmeticError
+    if not proof1.C*x+proof1.D == matrix_commit(f1,proof1.zC):
+        raise ArithmeticError
