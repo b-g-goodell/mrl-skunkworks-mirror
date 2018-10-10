@@ -119,9 +119,9 @@ class Proof2:
         if not isinstance(B,Point):
             raise TypeError
         self.B = B
-        if not len(G1) == 2:
-            raise ValueError
         for i in G1:
+            if not len(i) == 2:
+                raise ValueError
             if not isinstance(i[0],Point) or not isinstance(i[1],Point):
                 raise TypeError
         self.G1 = G1
@@ -413,6 +413,43 @@ def verify(KI,PK,CO,CO1,m,sig):
 
 def verify2(base,proof,CO):
     verify1(proof.B,proof.proof1)
+
+    exponent = len(proof.proof1.f_trim)
+
+    f = []
+    for j in range(exponent):
+        f.append([Scalar(0)])
+        for i in range(1,base):
+            f[j].append(proof.proof1.f_trim[j][i-1])
+
+    x = hash_to_scalar(str(proof.proof1.A)+str(proof.proof1.C)+str(proof.proof1.D))
+
+    for j in range(exponent):
+        f[j][0] = x
+        for i in range(1,base):
+            f[j][0] -= f[j][i]
+
+    g = []
+    g.append(f[0][0])
+    for j in range(1,exponent):
+        g[0] *= f[j][0]
+
+    data0 = [[CO[0][0],g[0]]]
+    data1 = [[CO[0][1],g[0]]]
+    for i in range(1,base**exponent):
+        i_seq = decompose(base,i,exponent)
+        g.append(f[0][i_seq[0]])
+        for j in range(1,exponent):
+            g[i] *= f[j][i_seq[j]]
+        data0.append([CO[i][0],g[i]])
+        data1.append([CO[i][1],g[i]])
+
+    for k in range(exponent):
+        data0.append([proof.G1[k][0],-x**k])
+        data1.append([proof.G1[k][1],-x**k])
+
+    if not multiexp(data0) == G*proof.z or not multiexp(data1) == H*proof.z:
+        raise ArithmeticError
 
 def verify1(B,proof1):
     m = len(proof1.f_trim)

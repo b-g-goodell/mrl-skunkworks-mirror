@@ -7,9 +7,9 @@ import pyruff
 import multisig
 
 class TestPyRuff(unittest.TestCase):
-    def test_2_2_1(self):
+    def test_2_1_1(self):
         base = 2
-        exponent = 2
+        exponent = 1
         inputs = 1
         size = base**exponent # ring size
 
@@ -98,5 +98,45 @@ class TestMultisig(unittest.TestCase):
         with self.assertRaises(ArithmeticError):
             multisig.verify(m,X,multisig.sign(m,x))
 
-unittest.TextTestRunner(verbosity=2,failfast=True).run(unittest.TestLoader().loadTestsFromTestCase(TestMultisig))
-unittest.TextTestRunner(verbosity=2,failfast=True).run(unittest.TestLoader().loadTestsFromTestCase(TestPyRuff))
+class TestMatrixCommit(unittest.TestCase):
+    def test_1_1(self):
+        m = [[random_scalar()]]
+        r = random_scalar()
+        result = hash_to_point('pyruff 0 0')*m[0][0] + G*r
+        self.assertEqual(pyruff.matrix_commit(m,r),result)
+
+    def test_2_1(self):
+        m = [[random_scalar()],[random_scalar()]]
+        r = random_scalar()
+        result = hash_to_point('pyruff 0 0')*m[0][0] + hash_to_point('pyruff 1 0')*m[1][0] + G*r
+        self.assertEqual(pyruff.matrix_commit(m,r),result)
+
+    def test_1_2(self):
+        m = [[random_scalar(),random_scalar()]]
+        r = random_scalar()
+        result = hash_to_point('pyruff 0 0')*m[0][0] + hash_to_point('pyruff 0 1')*m[0][1] + G*r
+        self.assertEqual(pyruff.matrix_commit(m,r),result)
+
+class TestProduct(unittest.TestCase):
+    def test_1(self):
+        c = [random_scalar()]
+        d = [Scalar(0)]
+        result = [Scalar(0)]
+        self.assertEqual(pyruff.product(c,d),result)
+        self.assertEqual(pyruff.product(d,c),result)
+
+        d = [random_scalar()]
+        result = [c[0]*d[0]]
+        self.assertEqual(pyruff.product(c,d),result)
+        self.assertEqual(pyruff.product(d,c),result)
+
+    def test_2(self):
+        c = [random_scalar()]*2
+        d = [random_scalar()]*2
+        result = [c[0]*d[0],c[0]*d[1]+c[1]*d[0],c[1]*d[1]]
+        self.assertEqual(pyruff.product(c,d),result)
+        self.assertEqual(pyruff.product(d,c),result)
+
+tests = [TestPyRuff]
+for test in tests:
+    unittest.TextTestRunner(verbosity=2,failfast=True).run(unittest.TestLoader().loadTestsFromTestCase(test))
