@@ -209,14 +209,14 @@ def spend(s_in):
     for i in range(len(s_in.sk)):
         s += s_in.sk[i].r*sub_f[i]
 
-    sigma1 = prove2(sub_C,s_in.ii,s,len(s_in.PK),s_in.base,s_in.exponent)
+    sigma1 = prove2(sub_C,s_in.ii,s,s_in.base,s_in.exponent)
 
     r1 = [s_in.sk[i].r1 for i in range(len(s_in.sk))]
     sigma2 = multisig.sign(str(sigma1)+str(f),r1)
     
     return SpendProof(s_in.base,s_in.exponent,CO1,sigma1,sigma2)
 
-def prove2(CO,ii,r,inputs,base,exponent):
+def prove2(CO,ii,r,base,exponent):
     size = base**exponent
     u = [random_scalar()]*exponent
 
@@ -236,18 +236,18 @@ def prove2(CO,ii,r,inputs,base,exponent):
 
     G1 = []
     for k in range(exponent):
-        data0 = [[G,u[k]]] # multiexp data
-        data1 = [[H,u[k]]]
+        data0 = [[H,u[k]]]
+        data1 = [[G,u[k]]]
         for i in range(size):
             data0.append([CO[i][0],coefs[i][k]])
             data1.append([CO[i][1],coefs[i][k]])
         G1.append([multiexp(data0),multiexp(data1)])
 
-    x1 = hash_to_scalar(str(proof1.A)+str(proof1.C)+str(proof1.D))
+    x = hash_to_scalar(str(proof1.A)+str(proof1.C)+str(proof1.D))
 
-    z = r*x1**exponent
+    z = r*x**exponent
     for i in range(exponent-1,-1,-1):
-        z -= u[i]*x1**i
+        z -= u[i]*x**i
 
     return Proof2(proof1,B,G1,z)
 
@@ -286,20 +286,31 @@ def trim_list(a,length,index):
 
 # Polynomial product coefficients
 # INPUT
-#   c,d: polynomial coefficients; Scalar lists of equal length
+#   c,d: polynomial coefficients; Scalar lists
 # OUTPUT
 #   Scalar list
 def product(c,d):
-    if not len(c) == len(d):
-        raise ValueError
     for i in range(len(c)):
-        if not isinstance(c[i],Scalar) or not isinstance(d[i],Scalar):
+        if not isinstance(c[i],Scalar):
             raise TypeError
-    result = [Scalar(0)]*(2*len(c)-1)
+    for i in range(len(d)):
+        if not isinstance(d[i],Scalar):
+            raise TypeError
 
-    for i in range(len(c)):
-        for j in range(len(d)):
-            result[i+j] += c[i]*d[j]
+    max_length = max(len(c),len(d))
+    result = [Scalar(0)]*(2*max_length-1)
+
+    for i in range(max_length):
+        for j in range(max_length):
+            if i >= len(c):
+                c_i = Scalar(0)
+            else:
+                c_i = c[i]
+            if j >= len(d):
+                d_j = Scalar(0)
+            else:
+                d_j = d[j]
+            result[i+j] += c_i*d_j
 
     return result
 
@@ -448,8 +459,8 @@ def verify2(base,proof,CO):
         data0.append([proof.G1[k][0],-x**k])
         data1.append([proof.G1[k][1],-x**k])
 
-    if not multiexp(data0) == G*proof.z or not multiexp(data1) == H*proof.z:
-        raise ArithmeticError
+    if not [multiexp(data0),multiexp(data1)] == elgamal_encrypt(Z,proof.z):
+        raise ArithmeticError('Failed verify2!')
 
 def verify1(B,proof1):
     m = len(proof1.f_trim)
@@ -479,9 +490,15 @@ def verify1(B,proof1):
         for i in range(1,n):
             col_sum -= f[j][i]
         if not f[j][0] == col_sum:
-            raise ArithmeticError
+            raise ArithmeticError('Failed verify1!')
 
     if not B*x+proof1.A == matrix_commit(f,proof1.zA):
-        raise ArithmeticError
+        raise ArithmeticError('Failed verify1!')
     if not proof1.C*x+proof1.D == matrix_commit(f1,proof1.zC):
-        raise ArithmeticError
+        raise ArithmeticError('Failed verify1!')
+
+def elgamal_encrypt(X,r):
+    return [H*r+X,G*r]
+
+def elgamal_commit(x,r):
+    return [G*x+H*r,G*r]

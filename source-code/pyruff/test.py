@@ -7,6 +7,58 @@ import pyruff
 import multisig
 
 class TestPyRuff(unittest.TestCase):
+    def test_verify1(self):
+        b = []
+        b.append([Scalar(1),Scalar(0)])
+        b.append([Scalar(0),Scalar(1)])
+        r = Scalar(1)
+        proof1 = pyruff.prove1(b,r)
+
+        B = pyruff.matrix_commit(b,r)
+        pyruff.verify1(B,proof1)
+
+    def test_verify2_1(self):
+        r = Scalar(1)
+        s = Scalar(1)
+        CO = []
+        CO.append(pyruff.elgamal_commit(Scalar(0),r))
+        CO.append(pyruff.elgamal_commit(Scalar(1),s))
+        ii = 0
+        base = 2
+        exponent = 1
+        proof2 = pyruff.prove2(CO,ii,r,base,exponent)
+        pyruff.verify2(base,proof2,CO)
+
+    def test_verify2_2(self):
+        r = Scalar(1)
+        CO = []
+        CO.append(pyruff.elgamal_commit(Scalar(1),Scalar(1)))
+        CO.append(pyruff.elgamal_commit(Scalar(1),Scalar(1)))
+        CO.append(pyruff.elgamal_commit(Scalar(1),Scalar(1)))
+        CO.append(pyruff.elgamal_commit(Scalar(1),Scalar(1)))
+        CO.append(pyruff.elgamal_commit(Scalar(1),Scalar(1)))
+        CO.append(pyruff.elgamal_commit(Scalar(0),Scalar(1)))
+        CO.append(pyruff.elgamal_commit(Scalar(1),Scalar(1)))
+        CO.append(pyruff.elgamal_commit(Scalar(1),Scalar(1)))
+        CO.append(pyruff.elgamal_commit(Scalar(1),Scalar(1)))
+        ii = 5
+        base = 3
+        exponent = 2
+        proof2 = pyruff.prove2(CO,ii,r,base,exponent)
+        pyruff.verify2(base,proof2,CO)
+
+    def test_verify2_3(self):
+        r = Scalar(1)
+        for k in range(1,4):
+            CO = []
+            for i in range(2**k):
+                CO.append(pyruff.elgamal_commit(Scalar(i),Scalar(1)))
+            ii = 0
+            base = 2
+            exponent = k
+            proof2 = pyruff.prove2(CO,ii,r,base,exponent)
+            pyruff.verify2(base,proof2,CO)
+
     def test_2_1_1(self):
         base = 2
         exponent = 1
@@ -137,6 +189,13 @@ class TestProduct(unittest.TestCase):
         self.assertEqual(pyruff.product(c,d),result)
         self.assertEqual(pyruff.product(d,c),result)
 
-tests = [TestPyRuff]
+    def test_3(self):
+        c = [random_scalar()]*2
+        d = [random_scalar()]*3
+        result = [c[0]*d[0],c[0]*d[1]+c[1]*d[0],c[1]*d[1]+c[0]*d[2],c[1]*d[2],Scalar(0)]
+        self.assertEqual(pyruff.product(c,d),result)
+        self.assertEqual(pyruff.product(d,c),result)
+
+tests = [TestMultisig,TestMatrixCommit,TestProduct,TestPyRuff]
 for test in tests:
     unittest.TextTestRunner(verbosity=2,failfast=True).run(unittest.TestLoader().loadTestsFromTestCase(test))
