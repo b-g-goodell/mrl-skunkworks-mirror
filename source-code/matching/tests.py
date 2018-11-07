@@ -391,7 +391,6 @@ class Test_Graph(unittest.TestCase):
             wf.write(output_report)
 
     def test_make_graph(self):
-
         for i in range(2,20):
             for r in range(2,i):
                 G = make_graph(i,r)
@@ -404,6 +403,6 @@ class Test_Graph(unittest.TestCase):
 
 
 
-tests = [Test_Node, Test_Edge, Test_Graph, Test_sym_dif]
+tests = [Test_Node, Test_Edge, Test_Graph, Test_sym_dif]*10
 for test in tests:
     unittest.TextTestRunner(verbosity=2,failfast=True).run(unittest.TestLoader().loadTestsFromTestCase(test))

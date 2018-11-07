@@ -209,21 +209,28 @@ class Graph(object):
             levs.append(q)
 
         #print("Beginning inductive loop")
+        touched_edges = {}
         found = False
         while len(levs) > 0 and not found:
+            #print("Currently have " + str(len(levs)) + " levels stored in queue")
             q = levs.popleft()
             newq = deque()
             while len(q) > 0:
+                #print("current length of newq=" + str(len(newq)))
                 this_path = q.popleft()
                 b = len(this_path) % 2
                 n = this_path[-1].endpoints[b]
                 if b == 0:
-                    s_edges = random.shuffle(n.edges)
-                    for e in s_edges:
-                        if e not in match:
-                            next_path = this_path
-                            next_path.append(e)
-                            newq.append(next_path)
+                    if len(n.edges) > 0:
+                        s_edges = n.edges
+                        random.shuffle(s_edges)
+                        for e in s_edges:
+                            if e not in match and e.ident not in touched_edges:
+                                next_path = this_path
+                                next_path.append(e)
+                                newq.append(next_path)
+                                touched_edges.update({e.ident:e})
+                    #else: # In this case, the path is a failure and is not re-appended to the queue.
                 elif b == 1:
                     if n not in matched_nodes_1:
                         assert n in s_unmatched_nodes_1
@@ -233,10 +240,11 @@ class Graph(object):
                         s_local_edges = n.edges
                         random.shuffle(s_local_edges)
                         for e in s_local_edges:
-                            if e in match:
+                            if e in match and e.ident not in touched_edges:
                                 next_path = this_path
                                 next_path.append(e)
                                 newq.append(next_path)
+                                touched_edges.update({e.ident:e})
             if len(newq) > 0:
                 levs.append(newq)
         ## The following block of code tests the result is a valid augmenting path.
@@ -253,6 +261,7 @@ class Graph(object):
         return result
 
     def maximal_matching(self):
+        #print("Finding match.")
         # Iteratively call _get_bigger_matching until you stop getting bigger matches.
         match = self._get_bigger_matching(None)
         assert type(match)==type([])
@@ -262,6 +271,7 @@ class Graph(object):
         #print(next_match, type(match))
         assert len(next_match) > len(match)
         while len(match) < len(next_match):
+            #print("Bigger match found, iterating.")
             match = next_match
             self.depth += 1
             #print("\n\n\t\t\t\tDEPTH = " + str(self.depth))
