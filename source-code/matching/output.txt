@@ -4,22 +4,22 @@ Nodes of G:
 Right-nodes of G:
 	Node ident :	0
 	Edge list : 
-		Edge ident :	2,0
-		Edge endpoints :	('2', '0')
-		Edge weight :	0
-
 		Edge ident :	3,0
 		Edge endpoints :	('3', '0')
 		Edge weight :	0
 
-	Node ident :	1
-	Edge list : 
-		Edge ident :	2,1
-		Edge endpoints :	('2', '1')
+		Edge ident :	2,0
+		Edge endpoints :	('2', '0')
 		Edge weight :	0
 
+	Node ident :	1
+	Edge list : 
 		Edge ident :	3,1
 		Edge endpoints :	('3', '1')
+		Edge weight :	0
+
+		Edge ident :	2,1
+		Edge endpoints :	('2', '1')
 		Edge weight :	0
 
 Left-nodes of G:
@@ -40,11 +40,11 @@ Left-nodes of G:
 		Edge endpoints :	('3', '1')
 		Edge weight :	0
 Edges of G:
-	Edge ident :	2,0
-	Edge endpoints :	2, 0
-	Edge weight :	0
 	Edge ident :	3,0
 	Edge endpoints :	3, 0
+	Edge weight :	0
+	Edge ident :	2,0
+	Edge endpoints :	2, 0
 	Edge weight :	0
 	Edge ident :	2,1
 	Edge endpoints :	2, 1
@@ -57,5 +57,5 @@ Edges of G:
 ======================================================================================
 
 Matching:
-	Edge ident: 	3,1
 	Edge ident: 	2,0
+	Edge ident: 	3,1

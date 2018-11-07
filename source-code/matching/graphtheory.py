@@ -139,6 +139,8 @@ class Graph(object):
     def _del_edge(self, old_edge):
         # Remove an old_edge from self.edge
         if old_edge.ident in self.edges:
+            for n in old_edge.endpoints:
+                n._del_edge(old_edge)
             del self.edges[old_edge.ident]
 
     def _get_bigger_matching(self, match=None):

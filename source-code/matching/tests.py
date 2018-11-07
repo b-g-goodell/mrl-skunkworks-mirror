@@ -386,9 +386,23 @@ class Test_Graph(unittest.TestCase):
         output_report += "Matching:\n"
         for e in M:
             output_report += "\tEdge ident: \t" + e.ident + "\n"
-        print(output_report)
+        #print(output_report)
         with open("output.txt", "w") as wf:
             wf.write(output_report)
+
+    def test_make_graph(self):
+
+        for i in range(2,20):
+            for r in range(2,i):
+                G = make_graph(i,r)
+                self.assertTrue(len(G.nodes) == 2 * i)
+                self.assertTrue(len(G.edges) == r * i)
+                for j in range(i):
+                    right_node_key = list(G.nodes.keys())[j]
+                    right_node = G.nodes[right_node_key]
+                    self.assertEqual(len(right_node.edges), r)
+
+
 
 tests = [Test_Node, Test_Edge, Test_Graph, Test_sym_dif]
 for test in tests:
