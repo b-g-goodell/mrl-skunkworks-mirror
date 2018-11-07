@@ -15,6 +15,15 @@ def sym_dif(x, y):
     return z
 
 class Node(object):
+    ''' Node object representing a vertex in a graph
+    Attributes:
+        data : arbitrary
+        ident : string
+        edges : list
+    Functions:
+        _add_edge : take edge(s) as input and add to self.edges
+        _del_edge : take edge as input and remove from self.edges
+    '''
     par = None
     e = None
 
@@ -41,6 +50,13 @@ class Node(object):
  #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### ####
 
 class Edge(object):
+    ''' Edge object representing an edge in a graph. Essentially a container.
+    Attributes:
+        data : arbitrary
+        ident : string
+        endpoints : list length 2
+        weight : None, float, int
+    '''
     par = None
 
     def __init__(self, par):
@@ -53,9 +69,21 @@ class Edge(object):
  #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### ####
 
 class Graph(object):
-    '''
-    Graph object with attributes self.data, self.ident, self.nodes, self.edges, self.depth and with functions
-    _add_node, _del_node, _add_edge, _del_edge, maximal_matching, _get_bigger_matching, _get_augmenting_paths
+    ''' Graph object representing a graph
+    Attributes:
+        data : arbitrary
+        ident : string
+        self.nodes : dict
+        edges : dict
+        depth : int
+    Functions:
+        _add_node : take node as input and add to self.nodes
+        _del_node : take node as input, removes incident edges from self.edges, removes input from self.nodes
+        _add_edge : take edge(s) as input and add to self.edges, adding endpoints to self.nodes if necessary
+        _del_edge : take edge as input and remove from self.edges
+        _get_augmenting_path : take a match as input and return an augmenting path as output.
+        _get_bigger_matching : take match as input and return a larger match
+        maximal_matching : iteratively call _get_bigger_matching until matches of same size are returned
     '''
     par = None
     new_node = None
@@ -92,6 +120,10 @@ class Graph(object):
     def _add_edge(self, new_edge):
         # Add a new_edge to self.edges (and possibly its endpoints)
         #print("entering _add_edge")
+        if new_edge not in new_edge.endpoints[0].edges:
+            new_edge.endpoints[0]._add_edge(new_edge)
+        if new_edge not in new_edge.endpoints[1].edges:
+            new_edge.endpoints[1]._add_edge(new_edge)
         if new_edge.endpoints[0].ident not in self.nodes:
             #print("left endpoint not in nodes, adding to nodes")
             self._add_node(new_edge.endpoints[0])
@@ -110,7 +142,9 @@ class Graph(object):
             del self.edges[old_edge.ident]
 
     def _get_bigger_matching(self, match=None):
+        # Implements Hopcroft-Karp algorithm.
         # Take as input some matching, find some augmenting paths, sym_dif them, and output the (bigger) result
+
         #print("beginning get_bigger_matching")
         if match is None:
             #print("I see we are starting with an emtpy match. random edge is added.")
@@ -130,12 +164,10 @@ class Graph(object):
         return match
 
     def _get_augmenting_paths(self, match):
-        # Want to find a shortest path starting with unmatched
-        # edges with unmatched left endpoint, alternating between
-        # matched and unmatched edges, terminating in an unmatched
-        # edge whose right endpoint is unmatched.
+        # Implements Ford-Fulkerson method for bipartite graphs (citation?)
 
-        # Breadth-first search for an odd-length path terminating in an unmatched endpoint.
+        # Want to find a shortest path whose endpoints are unmatched and edges alternate between matched and
+        # unmatched. Breadth-first search for an odd-length path beginning and ending in an unmatched endpoint.
 
         result = []
         #print("Assemble matched nodes\n")
@@ -219,6 +251,7 @@ class Graph(object):
         return result
 
     def maximal_matching(self):
+        # Iteratively call _get_bigger_matching until you stop getting bigger matches.
         match = self._get_bigger_matching(None)
         assert type(match)==type([])
         assert len(match)==1
@@ -232,3 +265,36 @@ class Graph(object):
             #print("\n\n\t\t\t\tDEPTH = " + str(self.depth))
             next_match = self._get_bigger_matching(match)
         return match
+
+
+def make_graph(i,r):
+    # Create a bipartite graph with 2*i nodes such that all right-hand nodes are r-regular.
+    s = random.random()
+    x = str(hash(str(1.0) + str(s)))
+    par = {'data': 1.0, 'ident': x, 'nodes': [], 'edges': []}
+    G = Graph(par)
+    N = i  # nodeset size
+    K = r  # neighbor size
+
+    ct = 0
+    while len(G.nodes) < 2 * N:
+        while str(ct) in G.nodes:
+            ct += 1
+        par = {'data': 1.0, 'ident': str(ct)}
+        n = Node(par)
+        G._add_node(n)
+
+    nodekeys = list(G.nodes.keys())
+    for i in range(N):
+        sig_idx = nodekeys[i]
+        right_node = G.nodes[sig_idx]
+        idxs = random.sample(range(N), K)
+        assert len(idxs) == K
+        for j in idxs:
+            otk_idx = nodekeys[j + N]
+            left_node = G.nodes[otk_idx]
+            x = left_node.ident + "," + right_node.ident
+            par = {'data': 1.0, 'ident': x, 'endpoints': [left_node, right_node], 'weight': 0}
+            e = Edge(par)
+            G._add_edge(e)
+    return G
