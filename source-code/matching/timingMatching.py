@@ -29,7 +29,7 @@ def timing_opt_matching(par):
             result[(i, r)].update({'matchtime':t})
     return result
 
-par = {'max_nodes': 20, 'sample_size': 1, 'min_nodes': 11, 'min_regularity': 11, 'max_regularity': 11}
+par = {'max_nodes': 20, 'sample_size': 1, 'min_nodes': 11, 'min_regularity': 2, 'max_regularity': 20}
 with open("output.txt", "w") as wf:
     results = timing_opt_matching(par)
     for entry in results:

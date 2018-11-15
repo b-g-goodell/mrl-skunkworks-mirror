@@ -523,7 +523,6 @@ def make_graph(i,r,wt=None):
         else:
             # Assume wt is dictionary of the form {edge.ident:edge.weight}
             for eid in wt:
-                assert eid in self.edges
-                self.edges[eid].weight = wt[eid]
-
+                assert eid in G.edges
+                G.edges[eid].weight = wt[eid]
     return G
