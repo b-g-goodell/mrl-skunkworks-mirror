@@ -564,7 +564,7 @@ class Test_BipartiteGraph(unittest.TestCase):
         match_edge = str(2) + "," + str(3)
         match.append(G.edges[match_edge])
 
-        results = G._get_augmenting_paths(match, wt=False, verbose=False)
+        results = G._get_augmenting_paths(match, wt=False)
         line = [[e.ident for e in p] for p in results]
         #print("Results from _get_augmenting_paths = " + str(line))
         self.assertTrue(len(results)==1)
@@ -731,20 +731,25 @@ class Test_BipartiteGraph(unittest.TestCase):
         bad_ids = [str(0)+","+str(4), str(1)+","+str(6), str(2)+","+str(5), str(3)+","+str(7)]
         bad_match = [G.edges[i] for i in bad_ids]
         for e in bad_match:
-            assert isinstance(e, Edge)
+            self.assertTrue(isinstance(e, Edge))
         results = G._get_improving_cycles(bad_match)
-        fourcycles = results[0]
-        sixcycles = results[1]
-        assert len(fourcycles)==0
-        assert len(sixcycles)==0
-        #print(results)
+        #print("Readable results:")
+        #readable_results = [[e.ident for e in c] for c in results]
+        #for r in readable_results:
+        #    print("\n"+str(r))
+        self.assertEqual(len(results),0)
 
         G.edges[str(3)+","+str(6)].weight = 100
         results = G._get_improving_cycles(bad_match)
-        fourcycles = results[0]
-        sixcycles = results[1]
-        assert len(sixcycles)==1
-        #print(results)
+        self.assertEqual(len(results), 1)
+        self.assertEqual(len(results[0]), 6)
+        resulting_identities = [e.ident for e in results[0]]
+        self.assertTrue(str(3) + "," + str(6) in resulting_identities)
+        self.assertTrue(str(1) + "," + str(6) in resulting_identities)
+        self.assertTrue(str(1) + "," + str(5) in resulting_identities)
+        self.assertTrue(str(2) + "," + str(5) in resulting_identities)
+        self.assertTrue(str(2) + "," + str(7) in resulting_identities)
+        self.assertTrue(str(3) + "," + str(7) in resulting_identities)
 
     def test_get_opt_matching(self, sample_size=10**3, verbose=False):
         for tomato in range(sample_size):

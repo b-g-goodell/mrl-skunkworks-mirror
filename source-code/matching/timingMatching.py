@@ -1,6 +1,6 @@
 import timeit
 
-def timing(par):
+def timing_opt_matching(par):
     min_nodes = par['min_nodes']
     max_nodes = par['max_nodes']
     min_regularity = par['min_regularity'] # regularity = ring size
@@ -21,17 +21,17 @@ def timing(par):
             result.update({(i, r): {}})
             #print("Timing make_graph(i,r) for i=" + str(i) + ", r=" + str(r))
             stp = 'from graphtheory import sym_dif, Node, Edge, BipartiteGraph, make_graph; i='+str(i)+'; r='+str(r)
-            #t = timeit.timeit('make_graph(i,r)', stp, number=sample_size)
+            t = timeit.timeit('make_graph(i,r,wt=\"random\")', stp, number=sample_size)
             #result[(i,r)].update({'gentime':t})
 
             #print("Timing make_graph(i,r).maximal_matching() for i=" + str(i) + ", r=" + str(r))
-            t = timeit.timeit('make_graph(i, r, wt=True).opt_matching()', stp, number=sample_size)
+            t = timeit.timeit('make_graph(i, r, wt=\"random\").opt_matching()', stp, number=sample_size)
             result[(i, r)].update({'matchtime':t})
     return result
 
-par = {'max_nodes': 25, 'sample_size': 100, 'min_nodes': 11, 'min_regularity': 11, 'max_regularity': 25}
+par = {'max_nodes': 20, 'sample_size': 1, 'min_nodes': 11, 'min_regularity': 11, 'max_regularity': 11}
 with open("output.txt", "w") as wf:
-    results = timing(par)
+    results = timing_opt_matching(par)
     for entry in results:
         wf.write(str(entry[0])+","+str(entry[1])+","+str(results[entry]['matchtime'])+"\n")
 
@@ -50,10 +50,8 @@ c = 1.0/float(float(n)*float(x2) - float(simplesum)*float(simplesum))
 XTXI = [[float(n)*c, -1.0*float(simplesum)*c], [-1.0*float(simplesum)*c, float(x2)*c]]
 #parameters = [XTXI[0][0]*XTZ[0] + XTXI[0][1]*XTZ[1],XTXI[1][0]*XTZ[0] + XTXI[1][1]*XTZ[1]]
 parameters = [XTXI[0][0]*XTY[0] + XTXI[0][1]*XTY[1],XTXI[1][0]*XTY[0] + XTXI[1][1]*XTY[1]]
-print(parameters)
-
-# Interpretation: the approximate time it takes to find any maximal matching on an r-regular bipartite graph with 2*N
-# nodes on my computer is approximately scaled_params[0]*r*N**1.5 + scaled_params[1] + EY.
+#print(parameters)
+print("the approximate time it takes to find any maximal matching on an r-regular bipartite graph with 2*N  nodes on my computer is approximately a*r*N**1.5 (up to a constant) where a = " + str(parameters[0]))
 
 
 
