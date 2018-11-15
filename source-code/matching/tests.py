@@ -746,7 +746,7 @@ class Test_BipartiteGraph(unittest.TestCase):
         assert len(sixcycles)==1
         #print(results)
 
-    def test_get_opt_matching(self, sample_size=100000, verbose=False):
+    def test_get_opt_matching(self, sample_size=10**3, verbose=False):
         for tomato in range(sample_size):
             # print("Beginning test_max_matching)")
             s = random.random()
