@@ -3,7 +3,7 @@ import timeit
 def timing(par):
     min_nodes = par['min_nodes']
     max_nodes = par['max_nodes']
-    min_regularity = par['min_regularity']
+    min_regularity = par['min_regularity'] # regularity = ring size
     max_regularity = par['max_regularity']
     sample_size = par['sample_size']
 
@@ -11,7 +11,8 @@ def timing(par):
     assert min_regularity <= max_nodes
     assert max_regularity >= min_regularity
     assert max_regularity <= max_nodes
-    assert max_nodes >= 3
+    assert max_nodes >= min_nodes
+    assert min_nodes >= 3
 
     result = {}
     for i in range(min_nodes,max_nodes+1):
@@ -19,16 +20,16 @@ def timing(par):
         for r in range(min_regularity,min(max_regularity+1,i+1)):
             result.update({(i, r): {}})
             #print("Timing make_graph(i,r) for i=" + str(i) + ", r=" + str(r))
-            stp = 'from graphtheory import sym_dif, Node, Edge, Graph, make_graph; i='+str(i)+'; r='+str(r)
+            stp = 'from graphtheory import sym_dif, Node, Edge, BipartiteGraph, make_graph; i='+str(i)+'; r='+str(r)
             #t = timeit.timeit('make_graph(i,r)', stp, number=sample_size)
             #result[(i,r)].update({'gentime':t})
 
             #print("Timing make_graph(i,r).maximal_matching() for i=" + str(i) + ", r=" + str(r))
-            t = timeit.timeit('make_graph(i,r).maximal_matching()', stp, number=sample_size)
+            t = timeit.timeit('make_graph(i, r, wt=True).opt_matching()', stp, number=sample_size)
             result[(i, r)].update({'matchtime':t})
     return result
 
-par = {'max_nodes': 50, 'sample_size': 100, 'min_nodes': 11, 'min_regularity': 11, 'max_regularity': 50}
+par = {'max_nodes': 25, 'sample_size': 100, 'min_nodes': 11, 'min_regularity': 11, 'max_regularity': 25}
 with open("output.txt", "w") as wf:
     results = timing(par)
     for entry in results:
