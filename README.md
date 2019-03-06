@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-# mrl-skunkworks
-=======
 # Monero Research Lab
 
 Copyright (c) 2014-2018, The Monero Project
