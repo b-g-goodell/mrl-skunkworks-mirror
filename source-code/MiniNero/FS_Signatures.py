@@ -1,2 +1,0 @@
-import MiniNero
-import PaperWallet
