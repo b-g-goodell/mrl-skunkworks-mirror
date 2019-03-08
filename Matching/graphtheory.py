@@ -89,7 +89,7 @@ class BipartiteGraph(object):
     '''
 
     def __init__(self, par):
-        # Initialize with par = {'data':data, 'ident':ident, 'left':Node, 'right':Node, 'edges':[]
+        # Initialize with par = {'data':data, 'ident':ident, 'left':list of Nodes, 'right':list of Node, 'edges':list of Edge}
         self.data = par['data']   # str
         self.ident = par['ident'] # str
         self.left = {}
@@ -143,9 +143,9 @@ class BipartiteGraph(object):
 
     def _add_edge(self, new_edge):
         # Add a new_edge to self.edges (and possibly its endpoints)
-        if new_edge not in new_edge.left.edges:
+        if new_edge.ident not in new_edge.left.edges:
             new_edge.left._add_edge(new_edge)
-        if new_edge not in new_edge.right.edges:
+        if new_edge.ident not in new_edge.right.edges:
             new_edge.right._add_edge(new_edge)
         if new_edge.left.ident not in self.left:
             self._add_left(new_edge.left)
