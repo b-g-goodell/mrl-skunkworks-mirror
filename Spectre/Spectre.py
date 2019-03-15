@@ -72,8 +72,13 @@ class DirAcyGraph(object):
                 G._rem_leaf(nextLabel)
         return G
 
-    def _spec(self, confirmed=[]):
-        # Failing unit tests
+    def _short_spec(self, state):
+        # Not functional yet
+        pass
+
+
+    def _spec(self):
+        # Passing a basic unit test
         result = {}
 
         if len(self.nodes)==1:
