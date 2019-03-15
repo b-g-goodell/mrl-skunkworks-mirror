@@ -242,6 +242,6 @@ class Simulator(object):
         result = list(dict.fromkeys(result)) # dedupe
         return result
 
-
-
+sally = Simulator(None)
+sally.runSimulation()
 
