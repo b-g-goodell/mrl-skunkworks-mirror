@@ -1,6 +1,9 @@
 import random, math
 from graphtheory import *
 import numpy as np
+from scipy.stats import gamma
+
+# TODO: Must assign weights to a blockchain, compute a matching from those weights, and then present a confusion table as output.
 
 class Simulator(object):
     par = None
@@ -202,6 +205,9 @@ class Simulator(object):
             x = None
         return x
 
+    def getWalletPMF(self, h):
+        return gamma(math.log(h*120.0), self.shape, scale=1.0/self.rate)
+
     def getTaintDelay(self, ratio=1.0):
         # Pick a block height N+1, N+2, N+3, ... from any other distribution. Vary for testing purposes.
 
@@ -212,15 +218,25 @@ class Simulator(object):
         #x = random.randint(N,720)
 
         # GAMMA WITH SAME SHAPE BUT SMALLER RATE PARAM = SLOWER SPEND TIME
-        #ratio = 0.5
         #x = min(self.N, math.ceil(math.exp(np.random.gamma(self.shape, self.scale/ratio))/self.timescale))
 
         # GAMMA WITH SAME SPEND TIME BUT GREATER SHAPE = SLOWER SPEND TIME
-        #ratio = 2.0
         #x = min(self.N, math.ceil(math.exp(np.random.gamma(ratio*self.shape, self.scale))/self.timescale))
         #if x > self.T:
         #    x = None
         return x
+
+    def getTaintPMF(self, h, ratio=1.0):
+        # Input ratio should be between 0.0 and 1.0
+        result = None
+        # PERIODIC DAILY PURCHASE BEHAVIOR
+        result = (h==720)
+        # Uniform daily churning
+        #result = 1.0/720.0
+        # Gamma with same shape but smaller rate param = slower spend time
+        #result = gamma(math.log(h*120.0), self.shape, scale=1.0/(ratio*self.rate))
+        # Gamma with same rate but greater shape = slower spend time
+        #result = gamma(math.log(h*120.0), ratio*self.shape, scale=1.0/self.rate)
 
     def getNumbers(self):
         # Pick number of inputs, numbers[0], and number of outputs, numbers[1], from an empirical distribution.

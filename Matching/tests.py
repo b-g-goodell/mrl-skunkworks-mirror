@@ -1,6 +1,7 @@
 import unittest
 import random
 from graphtheory import *
+from simulator import *
 
 class Test_sym_dif(unittest.TestCase):
     def test(self):
@@ -866,6 +867,12 @@ class Test_BipartiteGraph(unittest.TestCase):
                     print(str(wm[0]) + "\t" + str(wm[1]))
                     self.assertTrue(wm[0] <= net_weight)
 
-tests = [Test_Node, Test_Edge, Test_BipartiteGraph, Test_sym_dif]
+class Test_simulator(unittest.TestCase):
+    def test(self):
+        # TODO: Must make sure simulator is constructing stuff the way it should be, etc, and computing
+        # log-likelihood functions the way it is supposed to (after simulator.py starts weighting the resulting blockchain!
+        pass
+
+tests = [Test_Node, Test_Edge, Test_BipartiteGraph, Test_sym_dif, Test_simulator]
 for test in tests:
     unittest.TextTestRunner(verbosity=2,failfast=True).run(unittest.TestLoader().loadTestsFromTestCase(test))
