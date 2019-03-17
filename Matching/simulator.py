@@ -218,8 +218,8 @@ class Simulator(object):
         # GAMMA WITH SAME SPEND TIME BUT GREATER SHAPE = SLOWER SPEND TIME
         #ratio = 2.0
         #x = min(self.N, math.ceil(math.exp(np.random.gamma(ratio*self.shape, self.scale))/self.timescale))
-        if x > self.T:
-            x = None
+        #if x > self.T:
+        #    x = None
         return x
 
     def getNumbers(self):
