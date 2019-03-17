@@ -6,7 +6,7 @@ class Simulator(object):
     par = None
     def __init__(self, par=None):
         if par is None:
-            par = {'ring size':11, 'lock time':10, 'experiment start time':200, 'max sim time':1000, 'prop taint':0.01, 'shape':19.28, 'rate':1.61}
+            par = {'ring size':3, 'lock time':5, 'experiment start time':7, 'max sim time':41, 'prop taint':0.1, 'shape':19.28, 'rate':1.61}
         if 'ring size' in par:
             self.R = par['ring size']
         else:
@@ -40,7 +40,7 @@ class Simulator(object):
         else:
             self.timescale = 120.0 # number of seconds per block
         self.scale = 1.0/self.rate
-        self.G = BipartiteGraph({'data':None, 'ident':None, 'left':[], 'right':[], 'edges':[]})
+        self.G = BipartiteGraph({'data':None, 'ident':None, 'left':[], 'right':[], 'in_edges':[], 'out_edges':[]})
         self.timesUp = [[] for i in range(self.T)] #timesUp[h] = outputs that shall be spent at block height h.
         self.blockChain = [[[], []] for i in range(self.T)] #blockChain[h] = [[], []], blockChain[h][0] = idents for new outputs created at block height h, blockChain[h][1] = signature idents for new signatures created at block height h.
         self.taint = [] # list of tainted outputs
@@ -62,13 +62,16 @@ class Simulator(object):
             wf.write("Right-nodes key list:\n")
             ordList = sorted(list(self.G.right.keys()))
             wf.write(str(ordList)+ "\n\n")
-            wf.write("Edges:\n")
-            ordList = sorted(list(self.G.edges.keys()))
+            wf.write("in_edges:\n")
+            ordList = sorted(list(self.G.in_edges.keys()))
+            wf.write("out_edges:\n")
+            ordList = sorted(list(self.G.out_edges.keys()))
             wf.write(str(ordList)+ "\n\n")
             wf.write("Blockchain representation:\n")
             for h in range(len(self.blockChain)):
                 block = self.blockChain[h]
-                wf.write("\tHeight = h: \n")
+                line = "\tHeight = " + str(h) + ":\n"
+                wf.write(line)
                 wf.write("\t\t OTKeys :\n")
                 for entry in self.blockChain[h][0]:
                     wf.write("\t\t\t" + str(entry) + "\n")
@@ -79,7 +82,12 @@ class Simulator(object):
             wf.write("Ring signature representation:\n")
             for sig_node in self.G.right:
                 wf.write("Signature with ident = " + str(sig_node) + "," + str(type(sig_node)) + "  has ring members:\n")
-                for edge_ident in self.G.edges:
+                for edge_ident in self.G.in_edges:
+                    #print(" edge ident = " + str(edge_ident) + " has type " + str(type(edge_ident)) + "\n")
+                    if sig_node==edge_ident[1]:
+                        wf.write("\t" + str(edge_ident[0])+"\n")
+                wf.write("\t and is associated with outputs:\n")
+                for edge_ident in self.G.out_edges:
                     #print(" edge ident = " + str(edge_ident) + " has type " + str(type(edge_ident)) + "\n")
                     if sig_node==edge_ident[1]:
                         wf.write("\t" + str(edge_ident[0])+"\n")
@@ -118,11 +126,15 @@ class Simulator(object):
             
             # Now we pick ring members and assign those edges.
             next_ring = self.getRing(i) # For this signature, pick a ring
+            #print("next_ring = ", next_ring)
             assert i in next_ring
             for ringMember in next_ring:
                 edge_ident = (int(ringMember), int(next_ident))
                 e = Edge({'data':None, 'ident':edge_ident, 'left':self.G.left[ringMember], 'right':self.G.right[next_ident], 'weight':0.0})
-                self.G._add_edge(e)
+                temp = len(self.G.in_edges)
+                self.G._add_in_edge(e)
+                assert len(self.G.in_edges) - temp > 0
+                
             # We can immediately assign the true edge
             true_edge_ident = (int(i),int(next_ident))
             self.trueEdges.append(true_edge_ident) # Record true edge
@@ -157,7 +169,7 @@ class Simulator(object):
             for sig_ident in sig_idents:
                 edge_ident = (int(next_ident), int(sig_ident))
                 e = Edge({'data':None, 'ident':edge_ident, 'left':self.G.left[next_ident], 'right':self.G.right[sig_ident], 'weight':0.0})
-                self.G._add_edge(e)
+                self.G._add_out_edge(e)
         pass
 
     def Spend(self, list_of_inputs):
@@ -168,7 +180,7 @@ class Simulator(object):
         tainted = [x for x in list_of_inputs if x in self.taint]
         while(len(tainted) > 0):
             nums = self.getNumbers()
-            nums[0] = max(1, min(nums[0], len(tainted))) # pick number of outs in next tainted txn.
+            nums[0] = max(1, min(nums[0], len(tainted))) # pick number of keys signed for in next tainted txn.
             inputs_to_be_used = tainted[:nums[0]]
             tainted = tainted[nums[0]:]
             self.Sign(inputs_to_be_used, nums[1])

@@ -9,14 +9,8 @@ if sys.version_info[0] != 3:
 
 def sym_dif(x, y):
     ''' Compute symmetric difference between two lists'''
-    z = []
-    for e in x:
-        if e not in y:
-            z.append(e)
-    for e in y:
-        if e not in x:
-            z.append(e)
-    return z
+    # Passing unit tests
+    return [e for e in x if e not in y] + [e for e in y if e not in x]
 
 class Node(object):
     ''' Node object representing a vertex in a graph
@@ -28,28 +22,42 @@ class Node(object):
         _add_edge : take edge(s) as input and add to self.edges
         _del_edge : take edge as input and remove from self.edges
     '''
+    # Passing unit tests
     par = None
     e = None
 
     def __init__(self, par):
         self.data = par['data']  # any
         self.ident = par['ident']  # str
-        self.edges = []
+        self.in_edges = []
+        self.out_edges = []
 
-    def _add_edge(self, edges):
+    def _add_in_edge(self, edges):
         if type(edges) == type([]):
             for e in edges:
-                if e not in self.edges:
-                    self.edges.append(e)
+                if e not in self.in_edges:
+                    self.in_edges.append(e)
         elif isinstance(edges, Edge):
-            if edges not in self.edges:
-                self.edges.append(edges)
+            if edges not in self.in_edges:
+                self.in_edges.append(edges)
+
+    def _add_out_edge(self, edges):
+        if type(edges) == type([]):
+            for e in edges:
+                if e not in self.out_edges:
+                    self.out_edges.append(e)
+        elif isinstance(edges, Edge):
+            if edges not in self.out_edges:
+                self.out_edges.append(edges)
 
     def _del_edge(self, e):
-        # Remove an edge from self.edges. Return True if successful, false if edge was already removed.
-        if e in self.edges:
-            new_edges = [f for f in self.edges if f != e]
-            self.edges = new_edges
+        # Remove an edge from self.in_edges or self.out_edges.
+        if e in self.in_edges:
+            new_in_edges = [f for f in self.in_edges if f != e]
+            self.in_edges = new_in_edges
+        if e in self.out_edges:
+            new_out_edges = [f for f in self.out_edges if f != e]
+            self.out_edges = new_out_edges
 
 class Edge(object):
     ''' Edge object representing an edge in a graph.
@@ -59,6 +67,7 @@ class Edge(object):
         endpoints : list length 2
         weight : None, float, int
     '''
+    # Passing unit tests (essentially a container so this should be easy)
     par = None
 
     def __init__(self, par):
@@ -76,7 +85,8 @@ class BipartiteGraph(object):
         ident : string
         left : dict
         right : dict
-        edges : dict
+        in_edges : dict
+        out_edges : dict
         depth : int
     Functions:
         _add_node : take node as input and add to self.nodes
@@ -89,6 +99,7 @@ class BipartiteGraph(object):
     '''
 
     def __init__(self, par):
+        # Passing unit tests.
         # Initialize with par = {'data':data, 'ident':ident, 'left':list of Nodes, 'right':list of Node, 'edges':list of Edge}
         self.data = par['data']   # str
         self.ident = par['ident'] # str
@@ -98,8 +109,11 @@ class BipartiteGraph(object):
         self.right = {}
         for n in par['right']:
             self._add_right(n)
-        self.edges = {}
-        for e in par['edges']:
+        self.in_edges = {}
+        for e in par['in_edges']:
+            self._add_edge(e)
+        self.out_edges = {}
+        for e in par['out_edges']:
             self._add_edge(e)
         self.depth = 0
 
@@ -113,63 +127,91 @@ class BipartiteGraph(object):
         line += "\nRight nodes:"
         for r in self.right:
             line += "\n\t" + str(r) + ",\t\t\t" + str(self.right[r])
-        line += "\nEdges:"
-        for e in self.edges:
-            line += "\n\t" + str(e) + ",\t\t\t" + str(self.edges[e]) +",\t\t\twt = " + str(self.edges[e].weight)
+        line += "\nIn-Edges:"
+        for e in self.in_edges:
+            line += "\n\t" + str(e) + ",\t\t\t" + str(self.in_edges[e]) +",\t\t\twt = " + str(self.in_edges[e].weight)
+        line += "\nOut-Edges:"
+        for e in self.out_edges:
+            line += "\n\t" + str(e) + ",\t\t\t" + str(self.out_edges[e]) +",\t\t\twt = " + str(self.out_edges[e].weight)
         return line
 
     def _add_left(self, new_node):
         # Add a new_node to self.left
+        # Passing unit tests
         if new_node.ident not in self.left:
             self.left.update({new_node.ident:new_node})
 
     def _add_right(self, new_node):
         # Add a new_node to self.right
+        # Passing unit tests
         if new_node.ident not in self.right:
             self.right.update({new_node.ident:new_node})
 
     def _del_node(self, old_node):
         # Delete an old_node from self.left or self.right
+        # Passing unit tests
+        for e in old_node.in_edges:
+            self._del_edge(e)
+        for e in old_node.out_edges:
+            self._del_edge(e)
         if old_node.ident in self.left:
-            for e in old_node.edges:
-                #print(e.ident)
-                self._del_edge(e)
             del self.left[old_node.ident]
-        elif old_node.ident in self.right:
-            for e in old_node.edges:
-                #print(e.ident)
-                self._del_edge(e)
+        if old_node.ident in self.right:
             del self.right[old_node.ident]
 
-    def _add_edge(self, new_edge):
-        # Add a new_edge to self.edges (and possibly its endpoints)
-        if new_edge.ident not in new_edge.left.edges:
-            new_edge.left._add_edge(new_edge)
-        if new_edge.ident not in new_edge.right.edges:
-            new_edge.right._add_edge(new_edge)
-        if new_edge.left.ident not in self.left:
-            self._add_left(new_edge.left)
-        if new_edge.right.ident not in self.right:
-            self._add_right(new_edge.right)
-        if new_edge.ident not in self.edges:
-            self.edges.update({new_edge.ident:new_edge})
+    def _add_in_edge(self, new_in_edge):
+        # Add a new_edge to self.in_edges (and possibly its endpoints)
+        # Passing unit tests
+        if new_in_edge.ident not in new_in_edge.left.in_edges:
+            new_in_edge.left._add_in_edge(new_in_edge)
+        if new_in_edge.ident not in new_in_edge.right.in_edges:
+            new_in_edge.right._add_in_edge(new_in_edge)
+        if new_in_edge.left.ident not in self.left:
+            self._add_left(new_in_edge.left)
+        if new_in_edge.right.ident not in self.right:
+            self._add_right(new_in_edge.right)
+        if new_in_edge.ident not in self.in_edges:
+            self.in_edges.update({new_in_edge.ident:new_in_edge})
+
+    def _add_out_edge(self, new_out_edge):
+        # Add a new_edge to self.out_edges (and possibly its endpoints)
+        if new_out_edge.ident not in new_out_edge.left.out_edges:
+            new_out_edge.left._add_out_edge(new_out_edge)
+        if new_out_edge.ident not in new_out_edge.right.out_edges:
+            new_out_edge.right._add_out_edge(new_out_edge)
+        if new_out_edge.left.ident not in self.left:
+            self._add_left(new_out_edge.left)
+        if new_out_edge.right.ident not in self.right:
+            self._add_right(new_out_edge.right)
+        if new_out_edge.ident not in self.out_edges:
+            self.out_edges.update({new_out_edge.ident:new_out_edge})
 
     def _del_edge(self, old_edge):
         # Remove an old_edge from self.edges
-        if old_edge.ident in self.edges:
+        if old_edge.ident in self.in_edges:
             old_edge.left._del_edge(old_edge)
             old_edge.right._del_edge(old_edge)
-            del self.edges[old_edge.ident]
+            del self.in_edges[old_edge.ident]
+        if old_edge.ident in self.out_edges:
+            old_edge.left._del_edge(old_edge)
+            old_edge.right._del_edge(old_edge)
+            del self.out_edges[old_edge.ident]
 
     def _check_match(self, alleged_match):
         # Return boolean indicating whether alleged_match is truly a match
-        # The constraint here is that each node adjacent to any edge in the
-        # match is adjacent to only one edge in the match.
+        # from the in-edges.
+        # The constraints:
+        #  1) Each node adjacent to any edge in the match is adjacent to only one edge in the match.
+        #  2) All edges in the match are in_edges
+        #print("Checking alleged match")
+        #print([e.ident for e in alleged_match])
+        #print("Current state of in-edges")
+        #print(sorted(list(self.in_edges.keys())))
         tn = []
         ismatch = True
         if alleged_match is not None and len(alleged_match) > 0:
             for e in alleged_match:
-                if e.left in tn or e.right in tn:
+                if e.ident not in self.in_edges or e.left in tn or e.right in tn:
                     ismatch = False
                 else:
                     tn.append(e.left)
@@ -184,21 +226,22 @@ class BipartiteGraph(object):
         return len(set_one_nodes)+len(set_two_nodes)==len(sym_dif(set_one_nodes, set_two_nodes))
 
     def _bfs(self, match=[]):
-        # Carry out a breadth-first search with respect to input match.
+        # Carry out a breadth-first search with respect to input match, using only in-edges.
         # Seeking a vertex-disjoint subset of paths from the set of all shortest paths whose 
         # initial endpoint is an unmatched left endpoint and whose terminal endpoint is 
         # an unmatched right endpoint.
-        if match is None:
-            match = []
 
         result = []
-
+        #print("self._check_match([])==True?", self._check_match([]))
+        #print("self._check_match(match)==True?", self._check_match(match), [e.ident for e in match])
         if self._check_match(match):
-            # Assemble node sets for touchin'
+            #print("Passed check match")
+            #print("Assembling node sets for touchin")
+            # Assemble node sets for touchin
             matched_lefts = []
             matched_rights = []
             for e in match:
-                assert e.ident in self.edges
+                assert e.ident in self.in_edges
                 if e.left not in matched_lefts:
                     matched_lefts.append(e.left)
                 if e.right not in matched_rights:
@@ -206,13 +249,15 @@ class BipartiteGraph(object):
             unmatched_lefts = [self.left[n] for n in self.left if self.left[n] not in matched_lefts]
             unmatched_rights = [self.right[n] for n in self.right if self.right[n] not in matched_rights]
 
+            #print("initializing queue")
             q = deque()
 
             #print("constructing first potential paths")
             potential_paths = []
             # Filling potential_paths with initial possible paths.
+            #print("Filling potential_paths with initial possible paths.")
             for n in unmatched_lefts:
-                for e in n.edges:
+                for e in n.in_edges:
                     assert e not in match
                     assert e.left == n
                     if [e] not in potential_paths:
@@ -220,30 +265,38 @@ class BipartiteGraph(object):
             q.append(potential_paths)
 
             # Entering main loop.
+            #print("Entering main loop.")
             tn = [] # for touching nodes
             spf = False  # shortest path found yet?
             while(len(q) > 0 and not spf):
                 # Take current list of potential paths
                 potential_paths = q.popleft()
+                #print("this level of potential paths = ")
+                #print(potential_paths)
 
                 # Start next level of potential paths
                 next_paths = []
                 for p in potential_paths:
                     parity = len(p)%2
                     if parity == 0:
+                        #print("Need to add at least one more edge")
                         # In this case, the path has an even number of edges and needs at least one more to find
                         # an unmatched right node (it started on the left)
                         endpt = p[-1].left
-                        for e in endpt.edges:
+                        for e in endpt.in_edges:
                             if e not in match and e not in p and e.right not in tn:
                                 pp = [f for f in p] + [e]
                                 next_paths += [pp]
                     elif parity == 1:
                         endpt = p[-1].right
                         if endpt in unmatched_rights:
+                            #print("Success!")
                             # In this case, the path is a success! We add to our result and touch nodes on the path.
                             spf = True
-                            result += [p]
+                            l = len(result)
+                            result.append(p)
+                            #print("Size of result increased?")
+                            #print(l < len(result))
                             for e in p:
                                 if e.left not in tn:
                                     tn.append(e.left)
@@ -252,7 +305,7 @@ class BipartiteGraph(object):
                         else:
                             # In this case, the path is not a success but has an odd number of edges. We add a matched
                             # edge to get to the left.
-                            for e in endpt.edges:
+                            for e in endpt.in_edges:
                                 if e in match and e not in p and e.left not in tn:
                                     pp = [f for f in p] + [e]
                                     next_paths += [pp]
@@ -264,7 +317,7 @@ class BipartiteGraph(object):
                     # Of course, if spf = True, then we won't be going into that loop anyway.
                     q.append(next_paths)
 
-            # check alternating and augmenting
+            # check alternating and augmenting and in-edges
             for p in result:
                 assert len(p) > 0
                 idx = 0
@@ -272,10 +325,10 @@ class BipartiteGraph(object):
                     parity = idx%2
                     if parity == 0:
                         assert p[idx] not in match
-                        assert p[idx].ident in self.edges
+                        assert p[idx].ident in self.in_edges
                     else:
                         assert p[idx] in match
-                        assert p[idx].ident in self.edges
+                        assert p[idx].ident in self.in_edges
                     idx += 1
 
         return result
@@ -290,11 +343,11 @@ class BipartiteGraph(object):
         if self._check_match(match):
             # We first find all unmatched edges and sort them by weight
             weighted_edges = []
-            for e in self.edges:
-                if self.edges[e] not in match:
-                    this_edge = self.edges[e]
+            for e in self.in_edges:
+                if self.in_edges[e] not in match:
+                    this_edge = self.in_edges[e]
                     assert isinstance(this_edge, Edge)
-                    weighted_edges.append((this_edge.weight, self.edges[e]))
+                    weighted_edges.append((this_edge.weight, self.in_edges[e]))
 
             sorted_weighted_unmatched_edges = sorted(weighted_edges, key=lambda x:x[0], reverse=True)
             swue = [x[1] for x in sorted_weighted_unmatched_edges]
@@ -333,7 +386,7 @@ class BipartiteGraph(object):
                             # We began with an unmatched edge, no right node can be the target! This cycle needs
                             # at least one more (matched) edge to become an alternating cycle
                             current_endpt = c[-1].right
-                            for e in current_endpt.edges:
+                            for e in current_endpt.in_edges:
                                 if not scpgf and e not in c and e in match:
                                     cp = c + [e]
                                     if cp not in next_cycles:
@@ -359,7 +412,7 @@ class BipartiteGraph(object):
                             elif not scpgf:
                                 # in this case, we have an even length path that is not a cycle, beginning with an unmatched
                                 # edge. So we need to add at least one more unmatched edge to find a cycle
-                                for e in current_endpt.edges:
+                                for e in current_endpt.in_edges:
                                     if e not in c and e not in match:
                                         cp = c + [e]
                                         if cp not in next_cycles:
@@ -377,15 +430,15 @@ class BipartiteGraph(object):
                     parity = idx%2
                     if parity == 0:
                         assert c[idx] not in match
-                        assert c[idx].ident in self.edges
+                        assert c[idx].ident in self.in_edges
                     else:
                         assert c[idx] in match
-                        assert c[idx].ident in self.edges
+                        assert c[idx].ident in self.in_edges
                     idx += 1
         return result
 
     def _get_augmenting_paths(self, match=[], wt=True):
-        # Returns VERTEX-DISJOINT augmenting paths
+        # Returns vertex disjoint augmenting paths of in-edges
         vertex_disjoint_choices = []
 
         shortest_paths = self._bfs(match)
@@ -412,13 +465,11 @@ class BipartiteGraph(object):
                 vertex_disjoint_choices += [p]
         return vertex_disjoint_choices
 
-    def _get_bigger_matching(self, match=None, wt=True):
+    def _get_bigger_matching(self, match=[], wt=True):
         #print("Beginning _get_bigger_matching")
         result = None
         if self._check_match(match):
             vdc = self._get_augmenting_paths(match, wt)
-            if match is None:
-                match = []
             for p in vdc:
                 #line1 = [e.ident for e in p]
                 #line2 = [e.ident for e in match]
@@ -429,13 +480,13 @@ class BipartiteGraph(object):
             result = match
         return result
 
-    def max_matching(self, match=None, wt=True):
+    def max_matching(self, match=[], wt=True):
         #line = [e.ident for e in match]
         #print("\n\nBeginning max_matching with match = " + str(line))
         next_match = self._get_bigger_matching(match, wt)
         #line = [e.ident for e in next_match]
         #print("First iteration gets us " + str(line))
-        while(match is None or len(next_match)>len(match)):
+        while(len(next_match)>len(match)):
             match = next_match
             next_match = self._get_bigger_matching(match, wt)
             #line = [e.ident for e in next_match]
@@ -444,7 +495,7 @@ class BipartiteGraph(object):
 
     def opt_matching(self, level_of_cycles=10):
         ct = 0
-        result = self.max_matching(match=None, wt=True)
+        result = self.max_matching(match=[], wt=True)
         #print("Result = " + str(result))
         wt = 0.0
         for e in result:
@@ -480,13 +531,13 @@ class BipartiteGraph(object):
         return newResult
 
 def make_graph(i,r,wt=None):
-    # Create a bipartite graph with 2*i nodes such that all right-hand nodes are r-regular.
+    # Create a bipartite graph with 2*i nodes such that all right-hand nodes are K-regular and all edges are in-edges
     s = random.random()
     x = str(hash(str(1.0) + str(s)))
-    par = {'data': 1.0, 'ident': x, 'left': [], 'right':[], 'edges': []}
+    par = {'data': 1.0, 'ident': x, 'left': [], 'right':[], 'in_edges': [], 'out_edges':[]}
     G = BipartiteGraph(par)
     N = i  # nodeset size
-    K = r  # neighbor size
+    K = r  # neighbor size = ring size
     ct = 0
     while len(G.left) <  N:
         while str(ct) in G.left:
@@ -518,16 +569,16 @@ def make_graph(i,r,wt=None):
             x = left_node.ident + "," + right_node.ident
             par = {'data': 1.0, 'ident': x, 'left':left_node, 'right':right_node, 'weight': 0}
             e = Edge(par)
-            G._add_edge(e)
+            G._add_in_edge(e)
 
     if wt is not None:
         if wt=="random":
-            for eid in G.edges:
-                e = G.edges[eid]
+            for eid in G.in_edges:
+                e = G.in_edges[eid]
                 e.weight = random.random()
         else:
             # Assume wt is dictionary of the form {edge.ident:edge.weight}
             for eid in wt:
-                assert eid in G.edges
-                G.edges[eid].weight = wt[eid]
+                assert eid in G.in_edges
+                G.in_edges[eid].weight = wt[eid]
     return G
