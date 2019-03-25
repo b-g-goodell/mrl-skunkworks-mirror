@@ -832,8 +832,6 @@ class Test_BipartiteGraph(unittest.TestCase):
                     print(str(wm[0]) + "\t" + str(wm[1]))
                     self.assertTrue(wm[0] <= net_weight)
 
-
-
 tests = [Test_sym_dif, Test_Node, Test_Edge, Test_BipartiteGraph]
 for test in tests:
     unittest.TextTestRunner(verbosity=2,failfast=True).run(unittest.TestLoader().loadTestsFromTestCase(test))
