@@ -28,27 +28,33 @@ class Node(object):
 
     def __init__(self, par):
         self.data = par['data']  # any
-        self.ident = par['ident']  # str
+        self.ident = par['ident']  # int
         self.in_edges = []
         self.out_edges = []
 
     def _add_in_edge(self, edges):
+        rejected = None
         if type(edges) == type([]):
             for e in edges:
-                if e not in self.in_edges:
-                    self.in_edges.append(e)
+                if isinstance(e,Edge):
+                    self._add_in_edge(e)
         elif isinstance(edges, Edge):
-            if edges not in self.in_edges:
+            rejected = edges in self.in_edges or self not in [edges.left, edges.right]
+            if not rejected:
                 self.in_edges.append(edges)
+        return rejected
 
     def _add_out_edge(self, edges):
+        rejected = None
         if type(edges) == type([]):
             for e in edges:
-                if e not in self.out_edges:
-                    self.out_edges.append(e)
+                if isinstance(e,Edge):
+                    self._add_out_edge(e)
         elif isinstance(edges, Edge):
-            if edges not in self.out_edges:
+            rejected = edges in self.out_edges or self not in [edges.left, edges.right]
+            if not rejected:
                 self.out_edges.append(edges)
+        return rejected
 
     def _del_edge(self, e):
         # Remove an edge from self.in_edges or self.out_edges.
@@ -73,10 +79,11 @@ class Edge(object):
     def __init__(self, par):
         # Initialize with par = {'data':data, 'ident':ident, 'endpoints':[Node, Node], 'weight':weight}
         self.data = par['data']     # str
-        self.ident = par['ident']   # str
+        self.ident = par['ident']   # tuple of ints
         self.left = par['left']     # Node
         self.right = par['right']   # Node
         self.weight = par['weight'] # None or float or int
+
 
 class BipartiteGraph(object):
     ''' Graph object representing a graph
@@ -137,65 +144,75 @@ class BipartiteGraph(object):
 
     def _add_left(self, new_node):
         # Add a new_node to self.left
-        # Passing unit tests
-        if new_node.ident not in self.left:
+        rejected = new_node.ident in self.left or new_node.ident in self.right
+        if not rejected:
             self.left.update({new_node.ident:new_node})
+        return rejected
 
     def _add_right(self, new_node):
         # Add a new_node to self.right
-        # Passing unit tests
-        if new_node.ident not in self.right:
+        rejected = new_node.ident in self.right or new_node.ident in self.left
+        if not rejected:
             self.right.update({new_node.ident:new_node})
+        return rejected
 
     def _del_node(self, old_node):
         # Delete an old_node from self.left or self.right
-        # Passing unit tests
-        for e in old_node.in_edges:
-            self._del_edge(e)
-        for e in old_node.out_edges:
-            self._del_edge(e)
-        if old_node.ident in self.left:
-            del self.left[old_node.ident]
-        if old_node.ident in self.right:
-            del self.right[old_node.ident]
+        rejected = old_node.ident not in self.left and old_node.ident not in self.right
+        if not rejected:
+            for e in old_node.in_edges:
+                self._del_edge(e)
+            for e in old_node.out_edges:
+                self._del_edge(e)
+            if old_node.ident in self.left:
+                del self.left[old_node.ident]
+            if old_node.ident in self.right:
+                del self.right[old_node.ident]
+        return rejected
 
     def _add_in_edge(self, new_in_edge):
         # Add a new_edge to self.in_edges (and possibly its endpoints)
-        # Passing unit tests
-        if new_in_edge.ident not in new_in_edge.left.in_edges:
-            new_in_edge.left._add_in_edge(new_in_edge)
-        if new_in_edge.ident not in new_in_edge.right.in_edges:
-            new_in_edge.right._add_in_edge(new_in_edge)
-        if new_in_edge.left.ident not in self.left:
-            self._add_left(new_in_edge.left)
-        if new_in_edge.right.ident not in self.right:
-            self._add_right(new_in_edge.right)
-        if new_in_edge.ident not in self.in_edges:
+        rejected = new_in_edge.ident in self.in_edges or new_in_edge.ident in self.out_edges
+        if not rejected:
+            if new_in_edge.ident not in new_in_edge.left.in_edges:
+                new_in_edge.left._add_in_edge(new_in_edge)
+            if new_in_edge.ident not in new_in_edge.right.in_edges:
+                new_in_edge.right._add_in_edge(new_in_edge)
+            if new_in_edge.left.ident not in self.left:
+                self._add_left(new_in_edge.left)
+            if new_in_edge.right.ident not in self.right:
+                self._add_right(new_in_edge.right)
             self.in_edges.update({new_in_edge.ident:new_in_edge})
+        return rejected
 
     def _add_out_edge(self, new_out_edge):
         # Add a new_edge to self.out_edges (and possibly its endpoints)
-        if new_out_edge.ident not in new_out_edge.left.out_edges:
-            new_out_edge.left._add_out_edge(new_out_edge)
-        if new_out_edge.ident not in new_out_edge.right.out_edges:
-            new_out_edge.right._add_out_edge(new_out_edge)
-        if new_out_edge.left.ident not in self.left:
-            self._add_left(new_out_edge.left)
-        if new_out_edge.right.ident not in self.right:
-            self._add_right(new_out_edge.right)
-        if new_out_edge.ident not in self.out_edges:
+        rejected = new_out_edge.ident in self.out_edges or new_out_edge.ident in self.in_edges
+        if not rejected:
+            if new_out_edge.ident not in new_out_edge.left.out_edges:
+                new_out_edge.left._add_out_edge(new_out_edge)
+            if new_out_edge.ident not in new_out_edge.right.out_edges:
+                new_out_edge.right._add_out_edge(new_out_edge)
+            if new_out_edge.left.ident not in self.left:
+                self._add_left(new_out_edge.left)
+            if new_out_edge.right.ident not in self.right:
+                self._add_right(new_out_edge.right)
             self.out_edges.update({new_out_edge.ident:new_out_edge})
+        return rejected
 
     def _del_edge(self, old_edge):
         # Remove an old_edge from self.edges
-        if old_edge.ident in self.in_edges:
-            old_edge.left._del_edge(old_edge)
-            old_edge.right._del_edge(old_edge)
-            del self.in_edges[old_edge.ident]
-        if old_edge.ident in self.out_edges:
-            old_edge.left._del_edge(old_edge)
-            old_edge.right._del_edge(old_edge)
-            del self.out_edges[old_edge.ident]
+        rejected = old_edge.ident not in self.in_edges and old_edge.ident not in self.out_edges
+        if not rejected:
+            if old_edge.ident in self.in_edges:
+                old_edge.left._del_edge(old_edge)
+                old_edge.right._del_edge(old_edge)
+                del self.in_edges[old_edge.ident]
+            if old_edge.ident in self.out_edges:
+                old_edge.left._del_edge(old_edge)
+                old_edge.right._del_edge(old_edge)
+                del self.out_edges[old_edge.ident]
+        return rejected
 
     def _check_match(self, alleged_match):
         # Return boolean indicating whether alleged_match is truly a match
@@ -530,6 +547,7 @@ class BipartiteGraph(object):
                 newWt += e.weight
         return newResult
 
+
 def make_graph(i,r,wt=None):
     # Create a bipartite graph with 2*i nodes such that all right-hand nodes are K-regular and all edges are in-edges
     s = random.random()
@@ -540,16 +558,16 @@ def make_graph(i,r,wt=None):
     K = r  # neighbor size = ring size
     ct = 0
     while len(G.left) <  N:
-        while str(ct) in G.left:
+        while ct in G.left or ct in G.right:
             ct += 1
-        par = {'data': 1.0, 'ident': str(ct)}
+        par = {'data': 1.0, 'ident': ct}
         n = Node(par)
         G._add_left(n)
         ct += 1
     while len(G.right) <  N:
-        while str(ct) in G.right:
+        while ct in G.right or ct in G.left:
             ct += 1
-        par = {'data': 1.0, 'ident': str(ct)}
+        par = {'data': 1.0, 'ident': ct}
         n = Node(par)
         G._add_right(n)
         ct += 1
@@ -566,7 +584,7 @@ def make_graph(i,r,wt=None):
             otk_idx = leftkeys[j]
             left_node = G.left[otk_idx]
             assert isinstance(left_node, Node)
-            x = left_node.ident + "," + right_node.ident
+            x = (left_node.ident, right_node.ident)
             par = {'data': 1.0, 'ident': x, 'left':left_node, 'right':right_node, 'weight': 0}
             e = Edge(par)
             G._add_in_edge(e)
@@ -574,11 +592,13 @@ def make_graph(i,r,wt=None):
     if wt is not None:
         if wt=="random":
             for eid in G.in_edges:
-                e = G.in_edges[eid]
-                e.weight = random.random()
+                G.in_edges[eid].weight = random.random()
         else:
             # Assume wt is dictionary of the form {edge.ident:edge.weight}
             for eid in wt:
                 assert eid in G.in_edges
                 G.in_edges[eid].weight = wt[eid]
     return G
+
+
+
