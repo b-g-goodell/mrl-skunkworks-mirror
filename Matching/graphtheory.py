@@ -17,7 +17,8 @@ class Node(object):
     Attributes:
         data : arbitrary
         ident : string
-        edges : list
+        in_edges : list
+        out_edges : list
     Functions:
         _add_edge : take edge(s) as input and add to self.edges
         _del_edge : take edge as input and remove from self.edges
@@ -147,14 +148,16 @@ class BipartiteGraph(object):
         rejected = new_node.ident in self.left or new_node.ident in self.right
         if not rejected:
             self.left.update({new_node.ident:new_node})
-        return rejected
+        rejected = rejected or new_node.ident not in self.left
+        return not rejected
 
     def _add_right(self, new_node):
         # Add a new_node to self.right
         rejected = new_node.ident in self.right or new_node.ident in self.left
         if not rejected:
             self.right.update({new_node.ident:new_node})
-        return rejected
+        rejected = rejected or new_node.ident not in self.right
+        return not rejected
 
     def _del_node(self, old_node):
         # Delete an old_node from self.left or self.right
@@ -168,7 +171,7 @@ class BipartiteGraph(object):
                 del self.left[old_node.ident]
             if old_node.ident in self.right:
                 del self.right[old_node.ident]
-        return rejected
+        return not rejected
 
     def _add_in_edge(self, new_in_edge):
         # Add a new_edge to self.in_edges (and possibly its endpoints)
@@ -183,7 +186,7 @@ class BipartiteGraph(object):
             if new_in_edge.right.ident not in self.right:
                 self._add_right(new_in_edge.right)
             self.in_edges.update({new_in_edge.ident:new_in_edge})
-        return rejected
+        return not rejected
 
     def _add_out_edge(self, new_out_edge):
         # Add a new_edge to self.out_edges (and possibly its endpoints)
@@ -198,7 +201,7 @@ class BipartiteGraph(object):
             if new_out_edge.right.ident not in self.right:
                 self._add_right(new_out_edge.right)
             self.out_edges.update({new_out_edge.ident:new_out_edge})
-        return rejected
+        return not rejected
 
     def _del_edge(self, old_edge):
         # Remove an old_edge from self.edges

@@ -5,8 +5,8 @@ import numpy as np
 class Simulator(object):
     par = None
     def __init__(self, par=None):
-        if par is None:
-            par = {'ring size':3, 'lock time':5, 'experiment start time':7, 'max sim time':41, 'prop taint':0.1, 'shape':19.28, 'rate':1.61}
+        if par is None or len(par) == 0:
+            par = {'ring size':2, 'lock time':5, 'experiment start time':7, 'max sim time':200, 'prop taint':0.1, 'shape':19.28, 'rate':1.61}
         if 'ring size' in par:
             self.R = par['ring size']
         else:
@@ -48,12 +48,18 @@ class Simulator(object):
         self.currentHeight = 0
         self.label = 0
         
-    def runSimulation(self):   
-        while(self.currentHeight < self.T):
-            self.addCoinbase()
-            self.Spend(self.timesUp[self.currentHeight])
-            self.currentHeight += 1
-        # Simple, right?
+    def runSimulation(self, Tau=None):   
+        rejected = False
+        if Tau is None:
+            Tau = self.T
+        while(self.currentHeight < self.T and self.currentHeight < Tau and not rejected):
+            #print("Current height = ", self.currentHeight)
+            #print("Max sim time = ", self.T)
+            rejected = rejected or not self._step()
+        self._report()
+        return not rejected
+
+    def _report(self):
         with open("output.txt","w") as wf:
             wf.write("Description of G ====\n\n")
             wf.write("Left-nodes key list:\n")
@@ -91,115 +97,129 @@ class Simulator(object):
                     #print(" edge ident = " + str(edge_ident) + " has type " + str(type(edge_ident)) + "\n")
                     if sig_node==edge_ident[1]:
                         wf.write("\t" + str(edge_ident[0])+"\n")
-        pass
 
-    def addCoinbase(self):
-        # Create a new coinbase transaction, add it to the graph, record it on the blockchain, pick a time delay for spending, determine if
-        # the miner is taintman, output our rolling index ct for naming nodes.
-        next_ident = self.label
-        self.label += 1        
-        node_to_add = Node({'data':None, 'ident':next_ident, 'edges':[]})
-        self.G._add_left(node_to_add)
-        self.blockChain[self.currentHeight][0].append(next_ident)
-        
-        s = self.getWalletDelay() # measured in number of blocks
-        if s is not None:
-            if self.currentHeight+s < self.T:
-                self.timesUp[self.currentHeight+s].append(next_ident)
+    def _step(self):
+        rejected = not self._spend()
+        if not rejected:
+            self.currentHeight += 1
+        return not rejected
 
-        u = random.random()
-        if u < self.p:
-            self.taint.append(next_ident)
-        pass
-
-    def Sign(self, list_of_inputs, numOuts):
-        # place new signatures, one for each input, record true edge, pick ring members, add fake edges
-        sig_idents = []
-        for i in list_of_inputs:
-            # Each input requires a ring signature node to be added on the right side of the graph
-            next_ident = self.label
-            self.label += 1
-            sig_idents.append(next_ident)
-            sig_node_to_add = Node({'data':None, 'ident':next_ident, 'edges':[]})
-            self.G._add_right(sig_node_to_add)
-            self.blockChain[self.currentHeight][1].append(next_ident)
-            
-            # Now we pick ring members and assign those edges.
-            next_ring = self.getRing(i) # For this signature, pick a ring
-            #print("next_ring = ", next_ring)
-            assert i in next_ring
-            for ringMember in next_ring:
-                edge_ident = (int(ringMember), int(next_ident))
-                e = Edge({'data':None, 'ident':edge_ident, 'left':self.G.left[ringMember], 'right':self.G.right[next_ident], 'weight':0.0})
-                temp = len(self.G.in_edges)
-                self.G._add_in_edge(e)
-                assert len(self.G.in_edges) - temp > 0
-                
-            # We can immediately assign the true edge
-            true_edge_ident = (int(i),int(next_ident))
-            self.trueEdges.append(true_edge_ident) # Record true edge
-
-        # place new output nodes on the left of G and determine their delays and whether they are tainted.
-        out_idents = []
-        for i in range(numOuts):
-            # create next new output
-            next_ident = self.label
-            self.label += 1
-            out_idents.append(next_ident)
-            
-            out_node_to_add = Node({'data':None, 'ident':next_ident, 'edges':[]})
-            self.G._add_left(out_node_to_add)
-            self.blockChain[self.currentHeight][0].append(next_ident) # add to blockchain list
-
-            # Determine if tainted
-            u = random.random()
-            if u < self.p:
-                self.taint.append(next_ident)
-                if self.currentHeight >= self.M:
-                    s = self.getTaintDelay()
-                else:
-                    s = self.getWalletDelay()
-            else:
-                s = self.getWalletDelay()
-            if s is not None:
-                if self.currentHeight+s < self.T:
-                    self.timesUp[self.currentHeight+s].append(next_ident)
-
-            # add edges from signatures to these new outputs
-            for sig_ident in sig_idents:
-                edge_ident = (int(next_ident), int(sig_ident))
-                e = Edge({'data':None, 'ident':edge_ident, 'left':self.G.left[next_ident], 'right':self.G.right[sig_ident], 'weight':0.0})
-                self.G._add_out_edge(e)
-        pass
-
-    def Spend(self, list_of_inputs):
+    def _spend(self):
+        to_be_spent = self.timesUp[self.currentHeight]
         # breaks list_of_inputs into pieces called transactions
         # then calls Sign(-) on each piece
+        rejected = False
 
-        # First: create tainted transactions.
-        tainted = [x for x in list_of_inputs if x in self.taint]
-        while(len(tainted) > 0):
+        # First: create coinbase transaction
+        nums = self.getNumbers()
+        rejected = rejected or not self._sign(nums[1])
+        if rejected:
+            print("REJECTED COINBASE")
+
+        # Next: create tainted transactions.
+        tainted = [x for x in to_be_spent if x in self.taint]
+        while(len(tainted) > 0 and not rejected):
             nums = self.getNumbers()
             nums[0] = max(1, min(nums[0], len(tainted))) # pick number of keys signed for in next tainted txn.
             inputs_to_be_used = tainted[:nums[0]]
             tainted = tainted[nums[0]:]
-            self.Sign(inputs_to_be_used, nums[1])
+            rejected = rejected or not self._sign(nums[1], inputs_to_be_used)
+            if rejected:
+                print("REJECTED TAINTED TXN")
 
-        # Second: create not-tainted transactions:
-        not_tainted = [x for x in list_of_inputs if x not in self.taint]
-        while(len(not_tainted)>0):
+        # Last: create not-tainted transactions:
+        not_tainted = [x for x in to_be_spent if x not in self.taint]
+        while(len(not_tainted)>0 and not rejected):
             nums = self.getNumbers() # generate number of inputs and outptus for next txn.
             nums[0] = max(1, min(nums[0], len(not_tainted)))
             inputs_to_be_used = not_tainted[:nums[0]]
             not_tainted = not_tainted[nums[0]:]
-            self.Sign(inputs_to_be_used, nums[1])
-        pass
+            rejected = rejected or not self._sign(nums[1], inputs_to_be_used)
+            if rejected:
+                print("REJECTED NON-TAINTED TXN")
+        return not rejected
+
+    def _sign(self, numOuts, to_be_spent=[]):
+        rejected = False
+        out_idents = []
+        sig_idents = []
+        if len(to_be_spent) > 0:
+            for i in to_be_spent:
+                # Each input requires a ring signature node to be added on the right side of the graph
+                self.label += 1
+                next_ident = self.label
+                sig_idents.append(next_ident)
+                sig_node_to_add = Node({'data':None, 'ident':next_ident, 'edges':[]})
+                rejected = rejected or not self.G._add_right(sig_node_to_add)
+                if rejected:
+                    print("REJECTED ADDING RIGHT VERTEX")
+                self.blockChain[self.currentHeight][1].append(next_ident)
+                
+                # Now we pick ring members and assign those edges.
+                next_ring = self.getRing(i) # For this signature, pick a ring
+                #print("next_ring = ", next_ring)
+                assert i in next_ring
+                for ringMember in next_ring:
+                    edge_ident = (int(ringMember), int(next_ident))
+                    e = Edge({'data':None, 'ident':edge_ident, 'left':self.G.left[ringMember], 'right':self.G.right[next_ident], 'weight':0.0})
+                    temp = len(self.G.in_edges)
+                    rejected = rejected or not self.G._add_in_edge(e)
+                    if rejected:
+                        print("REJECTED ADDING IN-EDGE")
+                    assert len(self.G.in_edges) - temp > 0
+                    
+                # We can immediately assign the true edge
+                true_edge_ident = (int(i),int(next_ident))
+                self.trueEdges.append(true_edge_ident) # Record true edge
+        if not rejected:
+            # place new output nodes on the left of G and determine their delays and whether they are tainted.
+            out_idents = []
+            for i in range(numOuts):
+                # create next new output
+                self.label += 1
+                next_ident = self.label
+                out_idents.append(next_ident)
+                
+                out_node_to_add = Node({'data':None, 'ident':next_ident, 'edges':[]})
+                #print("G.left", list(self.G.left.keys()), " and node_to_add = ", out_node_to_add.ident)
+                rejected = rejected or not self.G._add_left(out_node_to_add)
+                #print("G.left", list(self.G.left.keys()))
+                #if rejected:
+                #    print("REJECTED ADDING LEFT-VERTEX")
+                #    print(" Current G.left = ", list(self.G.left.keys()))
+                #    print(" Current G.right = ", list(self.G.right.keys()))
+                #    print(" node identity to add = ", next_ident)
+                #    print(" node identity added = ", out_node_to_add.ident)
+                self.blockChain[self.currentHeight][0].append(next_ident) # add to blockchain list
+
+                # Determine if tainted
+                u = random.random()
+                if u < self.p:
+                    self.taint.append(next_ident)
+                    if self.currentHeight >= self.M:
+                        s = self.getTaintDelay()
+                    else:
+                        s = self.getWalletDelay()
+                else:
+                    s = self.getWalletDelay()
+                if s is not None:
+                    if self.currentHeight+s < self.T:
+                        self.timesUp[self.currentHeight+s].append(next_ident)
+                if len(sig_idents)>0:
+                    # add edges from signatures to these new outputs
+                    for sig_ident in sig_idents:
+                        edge_ident = (int(next_ident), int(sig_ident))
+                        e = Edge({'data':None, 'ident':edge_ident, 'left':self.G.left[next_ident], 'right':self.G.right[sig_ident], 'weight':0.0})
+                        rejected = rejected or not self.G._add_out_edge(e)
+                        if rejected:
+                            print("REJECTED ADDING OUT-EDGE")
+        return not rejected    
 
     def getWalletDelay(self):
         # Pick a block height N+1, N+2, N+3, ... from a gamma distribution (continuous, measured in seconds) divided by 120, take the ceiling fcn, but this distribution is clipped to not go below N
         x = max(self.N,math.ceil(math.exp(np.random.gamma(self.shape, self.scale))/self.timescale))
-        if x > self.T:
-            x = None
+        while x > self.T:
+            x = max(self.N,math.ceil(math.exp(np.random.gamma(self.shape, self.scale))/self.timescale))
         return x
 
     def getTaintDelay(self, ratio=1.0):
@@ -224,7 +244,12 @@ class Simulator(object):
 
     def getNumbers(self):
         # Pick number of inputs, numbers[0], and number of outputs, numbers[1], from an empirical distribution.
-        numbers = [2,2] # For now, we will do this deterministically and we will put the empirical distro in later.
+        # To randomize, pick numbers[0] from Poisson(1) and numbers[1] from Poisson(2) - this is a biased model, skewed
+        # small compared to the empirical distribution, and has a light tail. Two models that are unbiased but still
+        # have skew and a light tail are:
+        #   (Poisson(5.41), Poisson(6.14)) - Maximum likelihood estimate
+        #   (NegBinom(71.900, 0.070), NegBinom(38.697,0.137)) - Method of moments
+        numbers = [1,2] # For now, we will do this deterministically and we will put the empirical distro in later.
         return numbers
 
     def getRing(self, signers_ident):
