@@ -17,11 +17,13 @@ class Node(object):
     Attributes:
         data : arbitrary
         ident : string
-        in_edges : list
-        out_edges : list
+        in_edges : list of Edges (not edge identities)
+        out_edges : list of Edges
     Functions:
-        _add_edge : take edge(s) as input and add to self.edges
-        _del_edge : take edge as input and remove from self.edges
+        _add_in_edge : take edge(s) as input and add to self.in_edges
+        _del_in_edge : take edge as input and remove from self.in_edges
+        _add_out_edge : take edge(s) as input and add to self.in_edges
+        _del_out_edge : take edge as input and remove from self.in_edges
     '''
     # Passing unit tests
     par = None
@@ -34,44 +36,54 @@ class Node(object):
         self.out_edges = []
 
     def _add_in_edge(self, edges):
-        rejected = None
+        rejected = False
         if type(edges) == type([]):
             for e in edges:
                 if isinstance(e,Edge):
-                    self._add_in_edge(e)
+                    rejected = rejected or self._add_in_edge(e)
         elif isinstance(edges, Edge):
-            rejected = edges in self.in_edges or self not in [edges.left, edges.right]
+            rejected = rejected or edges in self.in_edges 
+            rejected = rejected or self not in [edges.left, edges.right]
             if not rejected:
                 self.in_edges.append(edges)
         return rejected
 
     def _add_out_edge(self, edges):
-        rejected = None
+        rejected = False
         if type(edges) == type([]):
             for e in edges:
                 if isinstance(e,Edge):
-                    self._add_out_edge(e)
+                    rejected = rejected or self._add_out_edge(e)
         elif isinstance(edges, Edge):
-            rejected = edges in self.out_edges or self not in [edges.left, edges.right]
-            if not rejected:
+            rejected = rejected or edges in self.out_edges 
+            rejected = rejected or self not in [edges.left, edges.right]
+            if rejected:
                 self.out_edges.append(edges)
         return rejected
 
     def _del_edge(self, e):
         # Remove an edge from self.in_edges or self.out_edges.
-        if e in self.in_edges:
-            new_in_edges = [f for f in self.in_edges if f != e]
-            self.in_edges = new_in_edges
-        if e in self.out_edges:
-            new_out_edges = [f for f in self.out_edges if f != e]
-            self.out_edges = new_out_edges
+        rejected = False
+        rejected = rejected or (e not in self.in_edges    and e not in self.out_edges) #if the edge is in neither
+        rejected = rejected or (e     in self.in_edges    and e     in self.out_edges) # or if the edge is in both
+        if not rejected:
+            assert e in self.in_edges or e in self.out_edges and not (e in self.in_edges and e in self.out_edges)
+            # This assertion should not be a problem if rejected still = False
+            if e in self.in_edges:
+                idx = self.in_edges.index(e)
+                del self.in_edges[idx]
+            elif e in self.out_edges:
+                idx = self.out_edges.index(e)
+                del self.out_edges[idx]
+        return rejected
 
 class Edge(object):
     ''' Edge object representing an edge in a graph.
     Attributes:
         data : arbitrary
         ident : string
-        endpoints : list length 2
+        left : Node
+        right : Node
         weight : None, float, int
     '''
     # Passing unit tests (essentially a container so this should be easy)
@@ -145,75 +157,75 @@ class BipartiteGraph(object):
 
     def _add_left(self, new_node):
         # Add a new_node to self.left
-        rejected = new_node.ident in self.left or new_node.ident in self.right
+        rejected = False
+        rejected = rejected or new_node.ident in self.left 
+        rejected = rejected or new_node.ident in self.right
         if not rejected:
             self.left.update({new_node.ident:new_node})
-        rejected = rejected or new_node.ident not in self.left
-        return not rejected
+        return rejected
 
     def _add_right(self, new_node):
         # Add a new_node to self.right
         rejected = new_node.ident in self.right or new_node.ident in self.left
         if not rejected:
             self.right.update({new_node.ident:new_node})
-        rejected = rejected or new_node.ident not in self.right
-        return not rejected
+        return rejected
 
     def _del_node(self, old_node):
         # Delete an old_node from self.left or self.right
         rejected = old_node.ident not in self.left and old_node.ident not in self.right
         if not rejected:
-            for e in old_node.in_edges:
+            for e in old_node.in_edges: # list of edges
                 self._del_edge(e)
-            for e in old_node.out_edges:
+            for e in old_node.out_edges: # list of edges
                 self._del_edge(e)
-            if old_node.ident in self.left:
+            if old_node.ident in self.left: # dict of ident:nodes
                 del self.left[old_node.ident]
-            if old_node.ident in self.right:
+            if old_node.ident in self.right: # dict of ident:nodes
                 del self.right[old_node.ident]
-        return not rejected
+        return rejected
 
     def _add_in_edge(self, new_in_edge):
         # Add a new_edge to self.in_edges (and possibly its endpoints)
         rejected = new_in_edge.ident in self.in_edges or new_in_edge.ident in self.out_edges
         if not rejected:
-            if new_in_edge.ident not in new_in_edge.left.in_edges:
+            if new_in_edge not in new_in_edge.left.in_edges: # list of edges
                 new_in_edge.left._add_in_edge(new_in_edge)
-            if new_in_edge.ident not in new_in_edge.right.in_edges:
+            if new_in_edge not in new_in_edge.right.in_edges: # list of edges
                 new_in_edge.right._add_in_edge(new_in_edge)
-            if new_in_edge.left.ident not in self.left:
+            if new_in_edge.left.ident not in self.left: # dict of ident:nodes
                 self._add_left(new_in_edge.left)
-            if new_in_edge.right.ident not in self.right:
+            if new_in_edge.right.ident not in self.right: # dict of ident:nodes
                 self._add_right(new_in_edge.right)
             self.in_edges.update({new_in_edge.ident:new_in_edge})
-        return not rejected
+        return rejected
 
     def _add_out_edge(self, new_out_edge):
         # Add a new_edge to self.out_edges (and possibly its endpoints)
         rejected = new_out_edge.ident in self.out_edges or new_out_edge.ident in self.in_edges
         if not rejected:
-            if new_out_edge.ident not in new_out_edge.left.out_edges:
+            if new_out_edge not in new_out_edge.left.out_edges: # list of edges
                 new_out_edge.left._add_out_edge(new_out_edge)
-            if new_out_edge.ident not in new_out_edge.right.out_edges:
+            if new_out_edge not in new_out_edge.right.out_edges: # list of edges
                 new_out_edge.right._add_out_edge(new_out_edge)
-            if new_out_edge.left.ident not in self.left:
+            if new_out_edge.left.ident not in self.left: # dict of ident:nodes
                 self._add_left(new_out_edge.left)
-            if new_out_edge.right.ident not in self.right:
+            if new_out_edge.right.ident not in self.right: # dict of ident:nodes
                 self._add_right(new_out_edge.right)
             self.out_edges.update({new_out_edge.ident:new_out_edge})
-        return not rejected
+        return rejected
 
     def _del_edge(self, old_edge):
         # Remove an old_edge from self.edges
         rejected = old_edge.ident not in self.in_edges and old_edge.ident not in self.out_edges
         if not rejected:
-            if old_edge.ident in self.in_edges:
-                old_edge.left._del_edge(old_edge)
-                old_edge.right._del_edge(old_edge)
+            l = old_edge.left
+            r = old_edge.right
+            rejected = rejected or l._del_edge(old_edge)
+            rejected = rejected or r._del_edge(old_edge)
+            if not rejected and old_edge.ident in self.in_edges:
                 del self.in_edges[old_edge.ident]
-            if old_edge.ident in self.out_edges:
-                old_edge.left._del_edge(old_edge)
-                old_edge.right._del_edge(old_edge)
+            if not rejected and old_edge.ident in self.out_edges:
                 del self.out_edges[old_edge.ident]
         return rejected
 

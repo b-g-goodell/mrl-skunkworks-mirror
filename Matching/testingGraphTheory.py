@@ -86,13 +86,15 @@ class Test_Node(unittest.TestCase):
         self.assertTrue(len(m.in_edges) == 1)
         self.assertTrue(e in m.in_edges)
 
-        n._del_edge(e)
+        rejected = n._del_edge(e)
+        self.assertFalse(rejected)
         self.assertTrue(len(n.in_edges) == 0)
         self.assertFalse(e in n.in_edges)
         self.assertTrue(len(m.in_edges)==1)
         self.assertTrue(e in m.in_edges)
 
-        m._del_edge(e)
+        rejected = m._del_edge(e)
+        self.assertFalse(rejected)
         self.assertTrue(len(n.in_edges) == 0)
         self.assertFalse(e in n.in_edges)
         self.assertTrue(len(m.in_edges)==0)
@@ -182,15 +184,15 @@ class Test_BipartiteGraph(unittest.TestCase):
         self.assertTrue(len(G.in_edges) == K*N)
 
     def test_add_delete(self):
-        r = random.random()
-        x = str(hash(str(1.0) + str(r)))
-        par = {'data': 1.0, 'ident': x, 'left':[], 'right':[], 'in_edges':[], 'out_edges':[] }
+        # Pick a random graph identity
+        par = {'data': 1.0, 'ident':'han-tyumi', 'left':[], 'right':[], 'in_edges':[], 'out_edges':[] }
         G = BipartiteGraph(par)
         N = 25 # nodeset size... G actually has 2*N nodes in total
-        K = 5 # neighbor size
+        K = 5 # neighbor size = ring size
 
+        # First: Throw all the 2N nodes into G
+        # For each new node, check that the node set size has increased by one
         node_ct = 0
-
         while len(G.left) < N:
             while(node_ct in G.left or node_ct in G.right):
                 node_ct += 1
@@ -213,88 +215,131 @@ class Test_BipartiteGraph(unittest.TestCase):
             newnumright = len(G.right)
             self.assertTrue(newnumright - numright == 1)
 
+        # Check that there are 2N nodes in the node sets and no edges
         self.assertTrue(len(G.left)+len(G.right) == 2*N)
         self.assertTrue(len(G.in_edges)==0)
         self.assertTrue(len(G.out_edges)==0)
 
         leftnodekeys = list(G.left.keys())
         rightnodekeys = list(G.right.keys())
-
-        r = int(random.choice(rightnodekeys))
+        r = int(random.choice(rightnodekeys)) # Pick a random signature
         l = []
-        while(len(l) < K):
-            nextl = random.choice(leftnodekeys)
+        while(len(l) < K): # K = number of neighbors left neighbors adjacent to in-edges, i.e. ring size
+            nextl = random.choice(leftnodekeys) # For now we will just pick neighbors uniformly at random with replacement
             if nextl not in l:
                 l.append(nextl)
+
+        # Assemble identities of the edges to be added for this signature
+        self.assertTrue(len(l)==K)
         edge_idents = [(lefty, r) for lefty in l]
         self.assertTrue(len(edge_idents)==K)
+        
         for i in range(K):
+            # For each ring member, create an edge, add it, and check that the edge was not rejected.
             par = {'data':1.0, 'ident':edge_idents[i], 'left':G.left[l[i]], 'right':G.right[r], 'weight':0}
             e = Edge(par)
-            G._add_in_edge(e)
+            self.assertTrue(e.ident not in G.in_edges)
+            self.assertTrue(e.ident not in G.out_edges)
+            rejected = G._add_in_edge(e)
+            self.assertTrue(e.ident in G.in_edges)
+            self.assertFalse(rejected)
+        # Check that enough edges were added.
         self.assertTrue(len(G.in_edges) == K)
 
+        # Pick a random signature and key that are not connected with an in-edge
         r = random.choice(rightnodekeys)
-        l = random.choice(leftnodekeys)
+        l = random.choice(leftnodekeys) 
         while((l,r) in G.in_edges):
             r = random.choice(rightnodekeys)
             l = random.choice(leftnodekeys)
             
+        # Create an out-edge for this pair
         eid = (l,r)
         par = {'data':1.0, 'ident':eid, 'left':G.left[l], 'right':G.right[r], 'weight':0}
         e = Edge(par)
-        G._add_out_edge(e)
+        # Include the edge in the graph, verify not rejected, verify there is only one out-edge.
+        rejected = G._add_out_edge(e)
+        self.assertFalse(rejected)
         self.assertTrue(len(G.out_edges) == 1)
 
+        # Find the next node identity that is not yet in the graph
         while (node_ct in G.left or node_ct in G.right):
             node_ct += 1
+        # Create that left node, add it to the left
         l = node_ct
         par = {'data': 1.0, 'ident': l}
         n = Node(par)
-        G._add_left(n)
+        rejected = G._add_left(n)
+        # Verify the node was not rejected, that there are now N+1 left nodes, still N right nodes, K in edges and 1 out edge.
+        self.assertFalse(rejected)
         self.assertEqual(len(G.left), N+1)
         self.assertEqual(len(G.right),N)
         self.assertTrue(len(G.in_edges) == K)
         self.assertTrue(len(G.out_edges) == 1)
 
+        # Pick the next node identity that doesn't yet exist.
         while (node_ct in G.right or node_ct in G.left):
             node_ct += 1
+        # Create that node and add it to the right.
         r = node_ct
         par = {'data': 2.0, 'ident': r}
         m = Node(par)
-        G._add_right(m)
+        rejected = G._add_right(m)
+        # Verify the inclusion of this point was not rejected, that both sides have N+1 nodes, but still only K in edges and 1 out edge
+        self.assertFalse(rejected)
         self.assertEqual(len(G.left),N+1)
         self.assertEqual(len(G.right),N+1)
         self.assertTrue(len(G.in_edges) == K)
         self.assertTrue(len(G.out_edges) == 1)
 
-        b = random.choice([0,1])
+        # Now create either an in-edge or an out-edge connecting l and r with 50% probability of each
+        b = random.choice([0,1]) # Pick a random bit
+        # Construct the edge
         par = {'data':1.0, 'ident':(l,r), 'left':G.left[l], 'right':G.right[r], 'weight':0}
         e = Edge(par)
+        rejected = None
+        # Include edge as in-edge if b=0, out-edge if b=1, and mark the edge as rejected if neither work.
         if b==0:
-            G._add_in_edge(e)
+            rejected = G._add_in_edge(e)
         elif b==1:
-            G._add_out_edge(e)
-
-        self.assertTrue(len(G.in_edges) in [K, K+1])
-        self.assertTrue(len(G.out_edges) in [1,2])
+            rejected = G._add_out_edge(e)
+        else:
+            rejected = True
+        
+        self.assertTrue(rejected is not None) # This should always be true since we've covered all possibilities.
+        self.assertFalse(rejected) # Check that the new edge was not rejected
+        # Make sure that we have the right number of total edges and verify that the edge landed in the correct place
         self.assertEqual(len(G.in_edges) + len(G.out_edges), K+2)
+        if b == 0:
+            self.assertEqual(len(G.in_edges), K+1) 
+            self.assertEqual(len(G.out_edges),1)
+        elif b==1:
+            self.assertEqual(len(G.in_edges), K)
+            self.assertEqual(len(G.out_edges),2)
+        else:
+            self.assertTrue(rejected)
 
+        # Pick a random in-edge
         ek = random.choice(list(G.in_edges.keys()))
         e = G.in_edges[ek]
+        self.assertEqual(e.ident, ek)
+        self.assertTrue(ek in G.in_edges)
+        # Attempt to delete it.
         rejected = G._del_edge(e)
+        # Check that deletion worked
         self.assertFalse(rejected)
-        self.assertTrue(len(G.in_edges) in [K-1, K])
-        self.assertTrue(len(G.out_edges) in [1,2])
         self.assertEqual(len(G.in_edges) + len(G.out_edges), K+1)
 
+        # Pick a random leftnode
         mk = random.choice(list(G.left.keys()))
         m = G.left[mk]
+        # Collect the edge identities of edges that will be delted if this node is deleted
         edges_lost = len(m.in_edges)
+        # Attempt to delete the node
         rejected = G._del_node(m)
         self.assertFalse(rejected)
         self.assertTrue(len(G.left)+len(G.right) == 2*N+1)
-        self.assertTrue(len(G.in_edges) in [K-1-edges_lost,K-edges_lost])
+        self.assertEqual(len(G.in_edges) + len(G.out_edges), K+1 - edges_lost)
 
     def test_make_graph(self):
         for i in range(2,20):
