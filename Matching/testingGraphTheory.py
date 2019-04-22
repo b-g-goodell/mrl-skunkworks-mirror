@@ -832,12 +832,18 @@ class Test_BipartiteGraph(unittest.TestCase):
             #print(G.in_edges)
 
             results = G.opt_matching(level_of_cycles=3)
-            readable_results = [(e.weight, e.ident) for e in results]
+            readable_results = []
+            for eid in results:
+                assert eid in G.in_edges or eid in G.out_edges and not (eid in G.in_edges and eid in G.out_edges)
+                if eid in G.in_edges:
+                    readable_results.append((G.in_edges[eid].weight, eid))
+                elif eid in G.out_edges:
+                    readable_results.append((G.out_edges[eid].weight, eid))
             net_weight = sum(x[0] for x in readable_results)
             if verbose:
                 print("optmatch results = " + str(readable_results))
 
-            # There are 24 possible matchings, we are going to compute the weight of each.
+            # There are 24 possible matchings, we are going to compute the cumulative weight of each.
             all_m = []
             all_m.append([(0,4), (1,5), (2,6), (3,7)])
             all_m.append([(0,4), (1,5), (2,7), (3,6)])

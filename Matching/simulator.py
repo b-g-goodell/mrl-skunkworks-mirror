@@ -22,11 +22,11 @@ class Simulator(object):
         if 'max sim time' in par:
             self.T = par['max sim time']
         else:
-            self.T = 10000
+            self.T = 1000000
         if 'prop taint' in par:
             self.p = par['prop taint']
         else:
-            self.p = 0.01
+            self.p = 0.001
         if 'shape' in par:
             self.shape = par['shape']
         else:
@@ -44,7 +44,7 @@ class Simulator(object):
         self.timesUp = [[] for i in range(self.T)] #timesUp[h] = outputs that shall be spent at block height h.
         self.blockChain = [[[], []] for i in range(self.T)] #blockChain[h] = [[], []], blockChain[h][0] = idents for new outputs created at block height h, blockChain[h][1] = signature idents for new signatures created at block height h.
         self.taint = [] # list of tainted outputs
-        self.trueEdges = [] 
+        self.trueEdges = []  # list of edge identities (not edges)
         self.currentHeight = 0
         self.label = 0
         

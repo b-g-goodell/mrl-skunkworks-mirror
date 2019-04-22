@@ -525,7 +525,7 @@ class BipartiteGraph(object):
             #print("Next iteration gets us " + str(line))
         return match
 
-    def opt_matching(self, level_of_cycles=10):
+    def opt_matching(self, level_of_cycles=3):
         ct = 0
         result = self.max_matching(match=[], wt=True)
         #print("Result = " + str(result))
@@ -560,7 +560,8 @@ class BipartiteGraph(object):
             newWt = 0.0
             for e in newResult:
                 newWt += e.weight
-        return newResult
+        identResult = [e.ident for e in newResult]
+        return identResult
 
 
 def make_graph(i,r,wt=None):
