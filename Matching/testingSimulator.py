@@ -6,25 +6,11 @@ from simulator import *
 class Test_simulator(unittest.TestCase):
     def test_one(self):
         Sally = Simulator()
-        self.assertTrue(Sally.runSimulation())
+        rejected = Sally.runSimulation()
+        self.assertFalse(rejected)
         self.assertTrue(Sally.currentHeight == Sally.T)
         self.assertTrue(len(Sally.G.left) > 1)
         print(Sally._report())
-
-    def test_step(self):
-        Sally = Simulator()
-        Tau = Sally.T//2
-        Sally.runSimulation(Tau)
-        h = Sally.currentHeight
-        numLeft = len(Sally.G.left)
-        numRight = len(Sally.G.right)
-        numInEdges = len(Sally.G.in_edges)
-        numOutEdges = len(Sally.G.out_edges)
-        numToBeSpent = len(Sally.timesUp[h])
-        Sally._step()
-        self.assertEqual(Sally.currentHeight - h, 1)
-        self.assertEqual(len(Sally.G.right) - numRight, numToBeSpent)
-        self.assertEqual(len(Sally.G.in_edges) - numInEdges, numToBeSpent*Sally.R)
 
     def test_spend(self):
         Sally = Simulator()
