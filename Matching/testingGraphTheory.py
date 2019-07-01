@@ -339,10 +339,19 @@ class TestBipartiteGraph(unittest.TestCase):
 
     def test_add_delete_together(self):
         """ test_add_delete_together tests addition and deletion of nodes and edges."""
+
+        # Create graph
         par = {'data': 1.0, 'ident': 'han-tyumi', 'left': {}, 'right': {}, 'red_edges': {}, 'blue_edges': {}}
         g = BipartiteGraph(par)
         n = 25 # Add n nodes to each side
-        k = 5 # make a k-regular graph
+        k = 5 # make a k-regular graph; k = number of red edges adjacent to right nodes, i.e. ring size
+        
+        self.assertEqual(len(g.red_edge_weights), 0)
+        self.assertEqual(len(g.blue_edge_weights), 0)
+        self.assertEqual(len(g.left_nodes), 0)
+        self.assertEqual(len(g.right_nodes), 0)
+
+        # Add left nodes
         nodect = 0
         while len(g.left_nodes) < n:
             while nodect in g.left_nodes or nodect in g.right_nodes:
@@ -353,6 +362,13 @@ class TestBipartiteGraph(unittest.TestCase):
             self.assertFalse(rejected)
             newnumleft = len(g.left_nodes)
             self.assertTrue(newnumleft - numleft == 1)
+
+        self.assertEqual(len(g.red_edge_weights), 0)
+        self.assertEqual(len(g.blue_edge_weights), 0)
+        self.assertEqual(len(g.left_nodes), n)
+        self.assertEqual(len(g.right_nodes), 0)
+
+        # Add right nodes
         while len(g.right_nodes) < n:
             while nodect in g.left_nodes or nodect in g.right_nodes:
                 nodect += 1
@@ -362,18 +378,32 @@ class TestBipartiteGraph(unittest.TestCase):
             newnumright = len(g.right_nodes)
             self.assertTrue(newnumright - numright == 1)
 
-        # Check that there are 2N nodes in the node sets and no edges
-        self.assertTrue(len(g.left_nodes) + len(g.right_nodes) == 2*n)
-        self.assertTrue(len(g.red_edge_weights) == 0)
-        self.assertTrue(len(g.blue_edge_weights) == 0)
+        self.assertEqual(len(g.red_edge_weights), 0)
+        self.assertEqual(len(g.blue_edge_weights), 0)
+        self.assertEqual(len(g.left_nodes), n)
+        self.assertEqual(len(g.right_nodes), n)
+        
+        # Set first signature (right node with id n) to be linked by red edges with first k keys
+        # (left nodes with ids 0, ..., k-1).
+        rejected = None
+        for i in range(k):
+            rejected = g.add_red_edge((i,n),0.0)
+            self.assertTrue((i,n) in g.red_edge_weights)
 
-        # Pick random signature, pick k random keys, add red edges:
+        self.assertEqual(len(g.red_edge_weights), k)
+        self.assertEqual(len(g.blue_edge_weights), 0)
+        self.assertEqual(len(g.left_nodes), n)
+        self.assertEqual(len(g.right_nodes), n)
+        
+        # Pick a random signature (right-node) with no adjacent edges, pick k random keys (left-nodes), 
+        # add red edges between them. For simple test, we merely do this uniformly.
         leftnodekeys = list(g.left_nodes.keys())
         rightnodekeys = list(g.right_nodes.keys())
-        r = int(random.choice(rightnodekeys))  # Pick a random signature
+        r = random.choice(range(n+1,2*n))
         l = []
-        while len(l) < k:  # k = number of neighbors left neighbors adjacent to red-edges, i.e. ring size
-            nextl = random.choice(leftnodekeys)  # For now we will just pick neighbors uniformly at random with repl
+
+        while len(l) < k:  
+            nextl = random.choice(leftnodekeys)  
             if nextl not in l:
                 l.append(nextl)
 
@@ -389,22 +419,29 @@ class TestBipartiteGraph(unittest.TestCase):
             rejected = g.add_red_edge(edge_idents[i],0.0)
             self.assertTrue(edge_idents[i] in g.red_edge_weights)
             self.assertFalse(rejected)
-        # Check that enough edges were added.
-        self.assertTrue(len(g.red_edge_weights) == k)
 
-        # Pick a random signature and key that are not connected with an in-edge
+        self.assertEqual(len(g.red_edge_weights), 2*k)
+        self.assertEqual(len(g.blue_edge_weights), 0)
+        self.assertEqual(len(g.left_nodes), n)
+        self.assertEqual(len(g.right_nodes), n)
+
+        # Pick a random signature and key that are not connected with a red-edge
         r = random.choice(rightnodekeys)
         l = random.choice(leftnodekeys) 
         while (l, r) in g.red_edge_weights:
             r = random.choice(rightnodekeys)
             l = random.choice(leftnodekeys)
             
-        # Create an out-edge for this pair
+        # Create a blue-edge for this pair
         eid = (l, r)
-        # Include the edge in the graph, verify not rejected, verify there is only one out-edge.
+        # Include the blue edge in the graph, verify not rejected, verify there is only one blue-edge.
         rejected = g.add_blue_edge(eid,0.0)
         self.assertFalse(rejected)
-        self.assertTrue(len(g.blue_edge_weights) == 1)
+
+        self.assertEqual(len(g.red_edge_weights), 2*k)
+        self.assertEqual(len(g.blue_edge_weights), 1)
+        self.assertEqual(len(g.left_nodes), n)
+        self.assertEqual(len(g.right_nodes), n)
 
         # Find the next node identity that is not yet in the graph
         while nodect in g.left_nodes or nodect in g.right_nodes:
@@ -412,12 +449,12 @@ class TestBipartiteGraph(unittest.TestCase):
         # Create that left node, add it to the left
         left_ident = nodect
         rejected = g.add_left_node(left_ident)
-        # Verify node not rejected, that there are now N+1 left nodes, still N right nodes, K in edges and 1 out edge.
+
         self.assertFalse(rejected)
+        self.assertEqual(len(g.red_edge_weights), 2*k)
+        self.assertEqual(len(g.blue_edge_weights), 1)
         self.assertEqual(len(g.left_nodes), n+1)
         self.assertEqual(len(g.right_nodes), n)
-        self.assertTrue(len(g.red_edge_weights) == k)
-        self.assertTrue(len(g.blue_edge_weights) == 1)
 
         # Pick the next node identity that doesn't yet exist.
         while nodect in g.right_nodes or nodect in g.left_nodes:
@@ -425,18 +462,17 @@ class TestBipartiteGraph(unittest.TestCase):
         # Create that node and add it to the right.
         right_ident = nodect
         rejected = g.add_right_node(right_ident)
-        # Verify inclusion of point was not rejected, both sides have N+1 nodes, still only K in edges and 1 out edge
+
         self.assertFalse(rejected)
+        self.assertEqual(len(g.red_edge_weights), 2*k)
+        self.assertEqual(len(g.blue_edge_weights), 1)
         self.assertEqual(len(g.left_nodes), n+1)
         self.assertEqual(len(g.right_nodes), n+1)
-        self.assertTrue(len(g.red_edge_weights) == k)
-        self.assertTrue(len(g.blue_edge_weights) == 1)
 
-        # Now create either an in-edge or an out-edge connecting l and r with 50% probability of each
+        # Now create either a red-edge or an blue-edge connecting l and r with 50% probability of each
         b = random.choice([0, 1])  # Pick a random bit
-        # Construct the edge
+        # Include edge as red-edge if b=0, blue-edge if b=1, and mark the edge as rejected if attempt fails
         rejected = None
-        # Include edge as in-edge if b=0, out-edge if b=1, and mark the edge as rejected if neither work.
         if b == 0:
             rejected = g.add_red_edge((left_ident, right_ident), 0.0)
         elif b == 1:
@@ -445,24 +481,26 @@ class TestBipartiteGraph(unittest.TestCase):
         self.assertTrue(rejected is not None)  # This should always be true since we've covered all possibilities.
         self.assertFalse(rejected)  # Check that the new edge was not rejected
         # Make sure that we have the right number of total edges and verify that the edge landed in the correct place
-        self.assertEqual(len(g.red_edge_weights) + len(g.blue_edge_weights), k+2)
+        self.assertEqual(len(g.red_edge_weights) + len(g.blue_edge_weights), 2*k+2)
+        self.assertEqual(len(g.left_nodes), n+1)
+        self.assertEqual(len(g.right_nodes), n+1)
         if b == 0:
-            self.assertEqual(len(g.red_edge_weights), k+1)
+            self.assertEqual(len(g.red_edge_weights), 2*k+1)
             self.assertEqual(len(g.blue_edge_weights), 1)
         elif b == 1:
-            self.assertEqual(len(g.red_edge_weights), k)
+            self.assertEqual(len(g.red_edge_weights), 2*k)
             self.assertEqual(len(g.blue_edge_weights), 2)
         else:
             self.assertTrue(rejected)
 
-        # Pick a random in-edge
+        # Pick a random red-edge
         ek = random.choice(list(g.red_edge_weights.keys()))
         self.assertTrue(ek in g.red_edge_weights)
         # Attempt to delete it.
         rejected = g.del_edge(ek)
         # Check that deletion worked
         self.assertFalse(rejected)
-        self.assertEqual(len(g.red_edge_weights) + len(g.blue_edge_weights), k+1)
+        self.assertEqual(len(g.red_edge_weights) + len(g.blue_edge_weights), 2*k+1)
 
         # Pick a random leftnode
         mk = random.choice(list(g.left_nodes.keys()))
@@ -472,7 +510,7 @@ class TestBipartiteGraph(unittest.TestCase):
         rejected = g.del_node(mk)
         self.assertFalse(rejected)
         self.assertTrue(len(g.left_nodes) + len(g.right_nodes) == 2*n+1)
-        self.assertEqual(len(g.red_edge_weights) + len(g.blue_edge_weights), k+1 - edges_lost)
+        self.assertEqual(len(g.red_edge_weights) + len(g.blue_edge_weights), 2*k+1 - edges_lost)
 
     def test_bfs_simple(self):
         """ test_bfs_simple is a simple test of redd_bfs. """
