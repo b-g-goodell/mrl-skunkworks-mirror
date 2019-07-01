@@ -1,9 +1,21 @@
 import unittest
+from graphtheory import disjoint
+from graphtheory import symdif
 from graphtheory import *
 
-
 class TestSymDif(unittest.TestCase):
+    """ TestSymDif tests both disjoint() and symdif() """
+    def test_disjoint(self):
+        """ testing disjointness function disjoint() """
+        x = [1,2,3]
+        y = [5,6,7]
+        self.assertTrue(disjoint(x,y))
+        x = [1,2,3]
+        y = [3,4,5]
+        self.assertFalse(disjoint(x,y))
+
     def test(self):
+        """ testing symdif """
         x = [1, 2, 3]
         y = [5, 6, 7]
         self.assertTrue(x + y == symdif(x, y))
@@ -32,200 +44,335 @@ class TestSymDif(unittest.TestCase):
             self.assertTrue(i in zp)
             self.assertTrue((i in x and i not in y) or (i in y and i not in x))
 
-
-class TestNode(unittest.TestCase):
-    def test_init(self):
-        par = {'data': None, 'ident': None}
-        nelly = Node(par)
-        self.assertTrue(nelly.data is None)
-        self.assertTrue(nelly.ident is None)
-        self.assertTrue(nelly.in_edges == [])
-        self.assertTrue(nelly.out_edges == [])
-
-        par = {'data': 1.0, 'ident': 0}
-        nelly = Node(par)
-        self.assertFalse(nelly.data is None)
-        self.assertEqual(nelly.data, 1.0)
-        self.assertEqual(nelly.ident, 0)
-
-    def test_add_edge(self):
-        par = {'data': 1.0, 'ident': 0}
-        n = Node(par)
-
-        par = {'data': 2.0, 'ident': 1}
-        m = Node(par)
-
-        par = {'data': 3.0, 'ident': (0, 1), 'left': n, 'right': m, 'weight': 2.3}
-        e = Edge(par)
-
-        n.add_in_edge(e)
-        m.add_in_edge(e)
-
-        self.assertTrue(len(n.in_edges) == 1)
-        self.assertTrue(e in n.in_edges)
-        self.assertTrue(len(m.in_edges) == 1)
-        self.assertTrue(e in m.in_edges)
-
-    def test_del_edge(self):
-        x = 0
-        par = {'data': 1.0, 'ident': x}
-        n = Node(par)
-
-        x = 1
-        par = {'data': 2.0, 'ident': x}
-        m = Node(par)
-
-        x = (0, 1)
-        par = {'data': 3.0, 'ident': x, 'left': n, 'right': m, 'weight': 2.3}
-        e = Edge(par)
-        n.add_in_edge(e)
-        m.add_in_edge(e)
-
-        self.assertTrue(len(n.in_edges) == 1)
-        self.assertTrue(e in n.in_edges)
-        self.assertTrue(len(m.in_edges) == 1)
-        self.assertTrue(e in m.in_edges)
-
-        rejected = n.del_edge(e)
-        self.assertFalse(rejected)
-        self.assertTrue(len(n.in_edges) == 0)
-        self.assertFalse(e in n.in_edges)
-        self.assertTrue(len(m.in_edges) == 1)
-        self.assertTrue(e in m.in_edges)
-
-        rejected = m.del_edge(e)
-        self.assertFalse(rejected)
-        self.assertTrue(len(n.in_edges) == 0)
-        self.assertFalse(e in n.in_edges)
-        self.assertTrue(len(m.in_edges) == 0)
-        self.assertFalse(e in m.in_edges)
-
-
-class TestEdge(unittest.TestCase):
-    def test_init(self):
-        x = 0
-        par = {'data': 1.0, 'ident': x}
-        n = Node(par)
-
-        x = 1
-        par = {'data': 2.0, 'ident': x}
-        m = Node(par)
-
-        x = (0, 1)
-        par = {'data': 3.0, 'ident': x, 'left': n, 'right': m, 'weight': 2.3}
-        e = Edge(par)
-        n.add_in_edge(e)
-        m.add_in_edge(e)
-
-        self.assertTrue(len(n.in_edges) == 1)
-        self.assertTrue(e in n.in_edges)
-        self.assertTrue(len(m.in_edges) == 1)
-        self.assertTrue(e in m.in_edges)
-        self.assertTrue(e.data == 3.0)
-        self.assertFalse(e.data is None)
-        self.assertTrue(e.ident == x)
-        self.assertFalse(e.ident is None)
-        self.assertTrue(e.ident == (0, 1))
-        self.assertFalse(e.ident is None)
-        self.assertTrue(e.left == n)
-        self.assertFalse(e.weight < 0)
-        self.assertTrue(e.weight == 2.3)
-        self.assertFalse(e.weight == 2.4)
-
-
 class TestBipartiteGraph(unittest.TestCase):
+    """ TestBipartiteGraph tests BipartiteGraph objects """
     def test_init(self):
-        print("Testing init")
-        r = random.random()
-        x = str(hash(str(1.0) + str(r)))
-        par = {'data': 1.0, 'ident': x, 'left': [], 'right': [], 'in_edges': [], 'out_edges': []}
+        """ test_init tests initialization of a BipartiteGraph """
+        # self.data = par['data']   # str
+        # self.ident = par['ident']  # str
+        # self.left_nodes = {}.update(par['left'])
+        # self.right_nodes = {}.update(par['right'])
+        # self.red_edge_weights = {}.update(par['red'])
+        # self.blue_edge_weights = {}.update(par['blue'])
+        par = {'data': None, 'ident': 'han-tyumi', 'left': {}, 'right': {}, 'red_edges': {}, 'blue_edges': {}}
         g = BipartiteGraph(par)
+        
         n = 15  # nodeset size
         k = 5  # neighbor size
 
         ct = 0
-        while len(g.left) < n:
-            # print("Adding new leftnode: ", len(g.left))
-            while ct in g.left or ct in g.right:
+        while len(g.left_nodes) < n:
+            # print("Adding new leftnode: ", len(g.left_nodes))
+            while ct in g.left_nodes or ct in g.right_nodes:
                 ct += 1
-            par = {'data': 1.0, 'ident': ct}
-            nod = Node(par)
-            numleft = len(g.left)
-            rejected = g.add_left(nod)
-            newnumleft = len(g.left)
+            numleft = len(g.left_nodes)
+            rejected = g.add_left_node(ct)
+            newnumleft = len(g.left_nodes)
             self.assertTrue(not rejected and newnumleft - numleft == 1)
 
-        while len(g.right) < n:
+        while len(g.right_nodes) < n:
             # print("Adding new rightnode: ", len(G.right))
-            while ct in g.right or ct in g.left:
+            while ct in g.right_nodes or ct in g.left_nodes:
                 ct += 1
-            par = {'data': 1.0, 'ident': ct}
-            nod = Node(par)
-            numright = len(g.right)
-            rejected = g.add_right(nod)
-            newnumright = len(g.right)
+            numright = len(g.right_nodes)
+            rejected = g.add_right_node(ct)
+            newnumright = len(g.right_nodes)
             self.assertTrue(not rejected and newnumright - numright == 1)
 
-        leftnodekeys = list(g.left.keys())
-        rightnodekeys = list(g.right.keys())
-        for i in range(n):
-            sigidx = rightnodekeys[i]
-            rightnode = g.right[sigidx]
+        numRedEdges = len(g.red_edge_weights)
+        leftnodekeys = list(g.left_nodes.keys())
+        rightnodekeys = list(g.right_nodes.keys())
+        for i in range(n,2*n):
             idxs = random.sample(range(n), k)
             assert len(idxs) == k
             for j in idxs:
-                otkidx = leftnodekeys[j]  # one-time key (otk) index (idx)
-                leftnode = g.left[otkidx]
-                x = (leftnode.ident, rightnode.ident)
-                par = {'data': 1.0, 'ident': x, 'left': leftnode, 'right': rightnode, 'weight': 0.0}
-                e = Edge(par)
-                g.add_in_edge(e)
+                eid = (j,i)
+                rejected = g.add_red_edge(eid, 1.0)
+                assert not rejected
 
-        self.assertTrue(len(g.left) + len(g.right) == 2*n)
-        self.assertTrue(len(g.in_edges) == k*n)
+        self.assertTrue(len(g.red_edge_weights) - numRedEdges == k*n)
+        self.assertTrue(len(g.left_nodes) + len(g.right_nodes) == 2*n)
+        self.assertTrue(len(g.red_edge_weights) == k*n)
 
-    def test_add_delete(self):
+    def test_add_left_node(self):
+        """ test_add_left_node tests adding a left-node."""
         # Pick a random graph identity
-        par = {'data': 1.0, 'ident': 'han-tyumi', 'left': [], 'right': [], 'in_edges': [], 'out_edges': []}
+        par = {'data': 1.0, 'ident': 'han-tyumi', 'left': {}, 'right': {}, 'red_edges': {}, 'blue_edges': {}}
         g = BipartiteGraph(par)
-        n = 25  # nodeset size... G actually has 2*N nodes in total
-        k = 5  # neighbor size = ring size
-
-        # First: Throw all the 2N nodes into G
-        # For each new node, check that the node set size has increased by one
+        n = 25
         nodect = 0
-        while len(g.left) < n:
-            while nodect in g.left or nodect in g.right:
+        while len(g.left_nodes) < n:
+            while nodect in g.left_nodes:
                 nodect += 1
-            par = {'data': 1.0, 'ident': nodect}
-            nod = Node(par)
-            numleft = len(g.left)
-            rejected = g.add_left(nod)
+            numleft = len(g.left_nodes)
+            rejected = g.add_left_node(nodect)
             self.assertFalse(rejected)
-            newnumleft = len(g.left)
-            self.assertTrue(newnumleft - numleft == 1)            
+            newnumleft = len(g.left_nodes)
+            self.assertTrue(newnumleft - numleft == 1)
 
-        while len(g.right) < n:
-            while nodect in g.right or nodect in g.left:
+    def test_add_right_node(self):
+        """ test_add_right_node tests adding a right-node. """
+        # Pick a random graph identity
+        par = {'data': 1.0, 'ident': 'han-tyumi', 'left': {}, 'right': {}, 'red_edges': {}, 'blue_edges': {}}
+        g = BipartiteGraph(par)
+        n = 25
+        nodect = 0
+        while len(g.right_nodes) < n:
+            while nodect in g.right_nodes:
                 nodect += 1
-            par = {'data': 1.0, 'ident': nodect}
-            nod = Node(par)
-            numright = len(g.right)
-            rejected = g.add_right(nod)
+            numright = len(g.right_nodes)
+            rejected = g.add_right_node(nodect)
             self.assertFalse(rejected)
-            newnumright = len(g.right)
+            newnumright = len(g.right_nodes)
+            self.assertTrue(newnumright - numright == 1)
+
+    def test_add_red_edge(self):
+        """ test_add_red_edge tests adding a red edge."""
+        par = {'data': 1.0, 'ident': 'han-tyumi', 'left': {}, 'right': {}, 'red_edges': {}, 'blue_edges': {}}
+        g = BipartiteGraph(par)
+        n = 25
+        nodect = 0
+        while len(g.left_nodes) < n:
+            while nodect in g.left_nodes or nodect in g.right_nodes:
+                nodect += 1
+            numleft = len(g.left_nodes)
+            # print("\n",nodect, g.left_nodes)
+            rejected = g.add_left_node(nodect)
+            self.assertFalse(rejected)
+            newnumleft = len(g.left_nodes)
+            self.assertTrue(newnumleft - numleft == 1)
+        while len(g.right_nodes) < n:
+            while nodect in g.left_nodes or nodect in g.right_nodes:
+                nodect += 1
+            numright = len(g.right_nodes)
+            rejected = g.add_right_node(nodect)
+            self.assertFalse(rejected)
+            newnumright = len(g.right_nodes)
+            self.assertTrue(newnumright - numright == 1)
+
+        # print(g.left_nodes.keys())
+        # print(g.right_nodes.keys())
+        # print(g.red_edge_weights.keys())
+        # print(g.blue_edge_weights.keys())
+
+        i = random.randint(0,24)
+        j = random.randint(25,49)
+        self.assertTrue((i,j) not in g.red_edge_weights)
+        self.assertTrue((i,j) not in g.blue_edge_weights)
+        self.assertEqual(len(g.red_edge_weights),0)
+        rejected = g.add_red_edge((i,j), -1.0)
+        self.assertFalse(rejected)
+        self.assertEqual(len(g.red_edge_weights),1)
+        self.assertTrue((i,j) in g.red_edge_weights)
+        self.assertEqual(g.red_edge_weights[(i,j)],-1.0)
+
+    def test_add_blue_edge(self):
+        """ test_add_blue_edge tests adding a blue edge. """
+        par = {'data': 1.0, 'ident': 'han-tyumi', 'left': {}, 'right': {}, 'red_edges': {}, 'blue_edges': {}}
+        g = BipartiteGraph(par)
+        n = 25
+        nodect = 0
+        while len(g.left_nodes) < n:
+            while nodect in g.left_nodes or nodect in g.right_nodes:
+                nodect += 1
+            numleft = len(g.left_nodes)
+            # print("\n",nodect, g.left_nodes)
+            rejected = g.add_left_node(nodect)
+            self.assertFalse(rejected)
+            newnumleft = len(g.left_nodes)
+            self.assertTrue(newnumleft - numleft == 1)
+        while len(g.right_nodes) < n:
+            while nodect in g.left_nodes or nodect in g.right_nodes:
+                nodect += 1
+            numright = len(g.right_nodes)
+            rejected = g.add_right_node(nodect)
+            self.assertFalse(rejected)
+            newnumright = len(g.right_nodes)
+            self.assertTrue(newnumright - numright == 1)
+
+        i = random.randint(0,24)
+        j = random.randint(25,49)
+        self.assertTrue((i,j) not in g.red_edge_weights)
+        self.assertTrue((i,j) not in g.blue_edge_weights)
+        self.assertEqual(len(g.blue_edge_weights),0)
+        rejected = g.add_blue_edge((i,j), -1.0)
+        self.assertFalse(rejected)
+        self.assertEqual(len(g.blue_edge_weights),1)
+        self.assertTrue((i,j) in g.blue_edge_weights)
+        self.assertEqual(g.blue_edge_weights[(i,j)],-1.0)
+
+    def test_del_edge(self):
+        """ test_del_edge tests deletion of an edge. """
+        par = {'data': 1.0, 'ident': 'han-tyumi', 'left': {}, 'right': {}, 'red_edges': {}, 'blue_edges': {}}
+        g = BipartiteGraph(par)
+        n = 2
+        nodect = 0
+        while len(g.left_nodes) < n:
+            while nodect in g.left_nodes or nodect in g.right_nodes:
+                nodect += 1
+            numleft = len(g.left_nodes)
+            # print("\n",nodect, g.left_nodes)
+            rejected = g.add_left_node(nodect)
+            self.assertFalse(rejected)
+            newnumleft = len(g.left_nodes)
+            self.assertTrue(newnumleft - numleft == 1)
+        while len(g.right_nodes) < n:
+            while nodect in g.left_nodes or nodect in g.right_nodes:
+                nodect += 1
+            numright = len(g.right_nodes)
+            rejected = g.add_right_node(nodect)
+            self.assertFalse(rejected)
+            newnumright = len(g.right_nodes)
+            self.assertTrue(newnumright - numright == 1)
+        for i in range(n):
+            for j in range(n,2*n):
+                g.add_red_edge((i,j),0.0)
+
+        # print("LEFT NODES = ", list(g.left_nodes.keys()))
+        # print("RIGHT NODES = ", list(g.right_nodes.keys()))
+        # print("RED EDGES = ", list(g.red_edge_weights.keys()))
+        # print("BLUE EDGES = ", list(g.blue_edge_weights.keys()))
+        self.assertEqual(len(g.red_edge_weights),4)
+        i = random.randint(0,n-1)
+        j = random.randint(n,2*n-1)
+        # print("(i,j) = ", (i,j))
+        self.assertTrue((i,j) in g.red_edge_weights)
+        rejected = g.del_edge((i,j))
+        self.assertFalse(rejected)
+        self.assertEqual(len(g.red_edge_weights),3)
+
+    def test_check_red_match(self):
+        """ test_check_red_match tests the function that checks whether a given set of edges is a match of red edges. """
+        par = {'data': 1.0, 'ident': 'han-tyumi', 'left': {}, 'right': {}, 'red_edges': {}, 'blue_edges': {}}
+        g = BipartiteGraph(par)
+        n = 2
+        nodect = 0
+        while len(g.left_nodes) < n:
+            while nodect in g.left_nodes or nodect in g.right_nodes:
+                nodect += 1
+            numleft = len(g.left_nodes)
+            # print("\n",nodect, g.left_nodes)
+            rejected = g.add_left_node(nodect)
+            self.assertFalse(rejected)
+            newnumleft = len(g.left_nodes)
+            self.assertTrue(newnumleft - numleft == 1)
+        while len(g.right_nodes) < n:
+            while nodect in g.left_nodes or nodect in g.right_nodes:
+                nodect += 1
+            numright = len(g.right_nodes)
+            rejected = g.add_right_node(nodect)
+            self.assertFalse(rejected)
+            newnumright = len(g.right_nodes)
+            self.assertTrue(newnumright - numright == 1)
+        for i in range(n):
+            for j in range(n,2*n):
+                g.add_red_edge((i,j),0.0)
+
+        self.assertTrue(g._check_red_match([]))
+
+        self.assertTrue(g._check_red_match([(0,2)]))
+        self.assertTrue(g._check_red_match([(0,3)]))
+        self.assertTrue(g._check_red_match([(1,2)]))
+        self.assertTrue(g._check_red_match([(1,3)]))
+
+        self.assertFalse(g._check_red_match([(0,2),(0,3)]))
+        self.assertTrue(g._check_red_match([(0,2),(1,3)]))
+        self.assertFalse(g._check_red_match([(0,2),(1,2)]))
+        self.assertFalse(g._check_red_match([(0,3),(1,3)]))
+        self.assertTrue(g._check_red_match([(0,3),(1,2)]))
+        self.assertFalse(g._check_red_match([(1,2),(1,3)]))
+
+        self.assertFalse(g._check_red_match([(0,2),(0,3),(1,3)]))
+        self.assertFalse(g._check_red_match([(0,2),(0,3),(1,2)]))
+        self.assertFalse(g._check_red_match([(0,2),(1,3),(1,2)]))
+        self.assertFalse(g._check_red_match([(0,3),(1,3),(1,2)]))
+
+        self.assertFalse(g._check_red_match([(0,2),(0,3),(1,2),(1,3)]))
+
+    def test_check_blue_match(self):
+        """ test_check_blue_match tests the function that checks whether a set of edges is a match of blue edges. This is an unnecessary test because we do not use matchings of blue edges at all. """
+        par = {'data': 1.0, 'ident': 'han-tyumi', 'left': {}, 'right': {}, 'red_edges': {}, 'blue_edges': {}}
+        g = BipartiteGraph(par)
+        n = 2
+        nodect = 0
+        while len(g.left_nodes) < n:
+            while nodect in g.left_nodes or nodect in g.right_nodes:
+                nodect += 1
+            numleft = len(g.left_nodes)
+            # print("\n",nodect, g.left_nodes)
+            rejected = g.add_left_node(nodect)
+            self.assertFalse(rejected)
+            newnumleft = len(g.left_nodes)
+            self.assertTrue(newnumleft - numleft == 1)
+        while len(g.right_nodes) < n:
+            while nodect in g.left_nodes or nodect in g.right_nodes:
+                nodect += 1
+            numright = len(g.right_nodes)
+            rejected = g.add_right_node(nodect)
+            self.assertFalse(rejected)
+            newnumright = len(g.right_nodes)
+            self.assertTrue(newnumright - numright == 1)
+        for i in range(n):
+            for j in range(n,2*n):
+                g.add_blue_edge((i,j),0.0)
+
+        self.assertTrue(g._check_blue_match([]))
+
+        self.assertTrue(g._check_blue_match([(0,2)]))
+        self.assertTrue(g._check_blue_match([(0,3)]))
+        self.assertTrue(g._check_blue_match([(1,2)]))
+        self.assertTrue(g._check_blue_match([(1,3)]))
+
+        self.assertTrue(g._check_blue_match([(0,2),(1,3)]))
+        self.assertTrue(g._check_blue_match([(0,3),(1,2)]))
+        self.assertFalse(g._check_blue_match([(0,2),(0,3)]))
+        self.assertFalse(g._check_blue_match([(0,2),(1,2)]))
+        self.assertFalse(g._check_blue_match([(0,3),(1,3)]))
+        self.assertFalse(g._check_blue_match([(1,2),(1,3)]))
+
+        self.assertFalse(g._check_blue_match([(0,2),(0,3),(1,3)]))
+        self.assertFalse(g._check_blue_match([(0,2),(0,3),(1,2)]))
+        self.assertFalse(g._check_blue_match([(0,2),(1,3),(1,2)]))
+        self.assertFalse(g._check_blue_match([(0,3),(1,3),(1,2)]))
+
+        self.assertFalse(g._check_blue_match([(0,2),(0,3),(1,2),(1,3)]))
+
+    def test_add_delete_together(self):
+        """ test_add_delete_together tests addition and deletion of nodes and edges."""
+        par = {'data': 1.0, 'ident': 'han-tyumi', 'left': {}, 'right': {}, 'red_edges': {}, 'blue_edges': {}}
+        g = BipartiteGraph(par)
+        n = 25 # Add n nodes to each side
+        k = 5 # make a k-regular graph
+        nodect = 0
+        while len(g.left_nodes) < n:
+            while nodect in g.left_nodes or nodect in g.right_nodes:
+                nodect += 1
+            numleft = len(g.left_nodes)
+            # print("\n",nodect, g.left_nodes)
+            rejected = g.add_left_node(nodect)
+            self.assertFalse(rejected)
+            newnumleft = len(g.left_nodes)
+            self.assertTrue(newnumleft - numleft == 1)
+        while len(g.right_nodes) < n:
+            while nodect in g.left_nodes or nodect in g.right_nodes:
+                nodect += 1
+            numright = len(g.right_nodes)
+            rejected = g.add_right_node(nodect)
+            self.assertFalse(rejected)
+            newnumright = len(g.right_nodes)
             self.assertTrue(newnumright - numright == 1)
 
         # Check that there are 2N nodes in the node sets and no edges
-        self.assertTrue(len(g.left) + len(g.right) == 2*n)
-        self.assertTrue(len(g.in_edges) == 0)
-        self.assertTrue(len(g.out_edges) == 0)
+        self.assertTrue(len(g.left_nodes) + len(g.right_nodes) == 2*n)
+        self.assertTrue(len(g.red_edge_weights) == 0)
+        self.assertTrue(len(g.blue_edge_weights) == 0)
 
-        leftnodekeys = list(g.left.keys())
-        rightnodekeys = list(g.right.keys())
+        # Pick random signature, pick k random keys, add red edges:
+        leftnodekeys = list(g.left_nodes.keys())
+        rightnodekeys = list(g.right_nodes.keys())
         r = int(random.choice(rightnodekeys))  # Pick a random signature
         l = []
-        while len(l) < k:  # K = number of neighbors left neighbors adjacent to in-edges, i.e. ring size
+        while len(l) < k:  # k = number of neighbors left neighbors adjacent to red-edges, i.e. ring size
             nextl = random.choice(leftnodekeys)  # For now we will just pick neighbors uniformly at random with repl
             if nextl not in l:
                 l.append(nextl)
@@ -237,428 +384,342 @@ class TestBipartiteGraph(unittest.TestCase):
         
         for i in range(k):
             # For each ring member, create an edge, add it, and check that the edge was not rejected.
-            par = {'data': 1.0, 'ident': edge_idents[i], 'left': g.left[l[i]], 'right': g.right[r], 'weight': 0.0}
-            e = Edge(par)
-            self.assertTrue(e.ident not in g.in_edges)
-            self.assertTrue(e.ident not in g.out_edges)
-            rejected = g.add_in_edge(e)
-            self.assertTrue(e.ident in g.in_edges)
+            self.assertTrue(edge_idents[i] not in g.red_edge_weights)
+            self.assertTrue(edge_idents[i] not in g.blue_edge_weights)
+            rejected = g.add_red_edge(edge_idents[i],0.0)
+            self.assertTrue(edge_idents[i] in g.red_edge_weights)
             self.assertFalse(rejected)
         # Check that enough edges were added.
-        self.assertTrue(len(g.in_edges) == k)
+        self.assertTrue(len(g.red_edge_weights) == k)
 
         # Pick a random signature and key that are not connected with an in-edge
         r = random.choice(rightnodekeys)
         l = random.choice(leftnodekeys) 
-        while (l, r) in g.in_edges:
+        while (l, r) in g.red_edge_weights:
             r = random.choice(rightnodekeys)
             l = random.choice(leftnodekeys)
             
         # Create an out-edge for this pair
         eid = (l, r)
-        par = {'data': 1.0, 'ident': eid, 'left': g.left[l], 'right': g.right[r], 'weight': 0.0}
-        e = Edge(par)
         # Include the edge in the graph, verify not rejected, verify there is only one out-edge.
-        rejected = g.add_out_edge(e)
+        rejected = g.add_blue_edge(eid,0.0)
         self.assertFalse(rejected)
-        self.assertTrue(len(g.out_edges) == 1)
+        self.assertTrue(len(g.blue_edge_weights) == 1)
 
         # Find the next node identity that is not yet in the graph
-        while nodect in g.left or nodect in g.right:
+        while nodect in g.left_nodes or nodect in g.right_nodes:
             nodect += 1
         # Create that left node, add it to the left
-        l = nodect
-        par = {'data': 1.0, 'ident': l}
-        nod = Node(par)
-        rejected = g.add_left(nod)
+        left_ident = nodect
+        rejected = g.add_left_node(left_ident)
         # Verify node not rejected, that there are now N+1 left nodes, still N right nodes, K in edges and 1 out edge.
         self.assertFalse(rejected)
-        self.assertEqual(len(g.left), n+1)
-        self.assertEqual(len(g.right), n)
-        self.assertTrue(len(g.in_edges) == k)
-        self.assertTrue(len(g.out_edges) == 1)
+        self.assertEqual(len(g.left_nodes), n+1)
+        self.assertEqual(len(g.right_nodes), n)
+        self.assertTrue(len(g.red_edge_weights) == k)
+        self.assertTrue(len(g.blue_edge_weights) == 1)
 
         # Pick the next node identity that doesn't yet exist.
-        while nodect in g.right or nodect in g.left:
+        while nodect in g.right_nodes or nodect in g.left_nodes:
             nodect += 1
         # Create that node and add it to the right.
-        r = nodect
-        par = {'data': 2.0, 'ident': r}
-        nod = Node(par)
-        rejected = g.add_right(nod)
+        right_ident = nodect
+        rejected = g.add_right_node(right_ident)
         # Verify inclusion of point was not rejected, both sides have N+1 nodes, still only K in edges and 1 out edge
         self.assertFalse(rejected)
-        self.assertEqual(len(g.left), n+1)
-        self.assertEqual(len(g.right), n+1)
-        self.assertTrue(len(g.in_edges) == k)
-        self.assertTrue(len(g.out_edges) == 1)
+        self.assertEqual(len(g.left_nodes), n+1)
+        self.assertEqual(len(g.right_nodes), n+1)
+        self.assertTrue(len(g.red_edge_weights) == k)
+        self.assertTrue(len(g.blue_edge_weights) == 1)
 
         # Now create either an in-edge or an out-edge connecting l and r with 50% probability of each
         b = random.choice([0, 1])  # Pick a random bit
         # Construct the edge
-        par = {'data': 1.0, 'ident': (l, r), 'left': g.left[l], 'right': g.right[r], 'weight': 0.0}
-        e = Edge(par)
         rejected = None
         # Include edge as in-edge if b=0, out-edge if b=1, and mark the edge as rejected if neither work.
         if b == 0:
-            rejected = g.add_in_edge(e)
+            rejected = g.add_red_edge((left_ident, right_ident), 0.0)
         elif b == 1:
-            rejected = g.add_out_edge(e)
+            rejected = g.add_blue_edge((left_ident, right_ident), 0.0)
 
         self.assertTrue(rejected is not None)  # This should always be true since we've covered all possibilities.
         self.assertFalse(rejected)  # Check that the new edge was not rejected
         # Make sure that we have the right number of total edges and verify that the edge landed in the correct place
-        self.assertEqual(len(g.in_edges) + len(g.out_edges), k+2)
+        self.assertEqual(len(g.red_edge_weights) + len(g.blue_edge_weights), k+2)
         if b == 0:
-            self.assertEqual(len(g.in_edges), k+1)
-            self.assertEqual(len(g.out_edges), 1)
+            self.assertEqual(len(g.red_edge_weights), k+1)
+            self.assertEqual(len(g.blue_edge_weights), 1)
         elif b == 1:
-            self.assertEqual(len(g.in_edges), k)
-            self.assertEqual(len(g.out_edges), 2)
+            self.assertEqual(len(g.red_edge_weights), k)
+            self.assertEqual(len(g.blue_edge_weights), 2)
         else:
             self.assertTrue(rejected)
 
         # Pick a random in-edge
-        ek = random.choice(list(g.in_edges.keys()))
-        e = g.in_edges[ek]
-        self.assertEqual(e.ident, ek)
-        self.assertTrue(ek in g.in_edges)
+        ek = random.choice(list(g.red_edge_weights.keys()))
+        self.assertTrue(ek in g.red_edge_weights)
         # Attempt to delete it.
-        rejected = g.del_edge(e)
+        rejected = g.del_edge(ek)
         # Check that deletion worked
         self.assertFalse(rejected)
-        self.assertEqual(len(g.in_edges) + len(g.out_edges), k+1)
+        self.assertEqual(len(g.red_edge_weights) + len(g.blue_edge_weights), k+1)
 
         # Pick a random leftnode
-        mk = random.choice(list(g.left.keys()))
-        nod = g.left[mk]
+        mk = random.choice(list(g.left_nodes.keys()))
         # Collect the edge identities of edges that will be delted if this node is deleted
-        edges_lost = len(nod.in_edges)
+        edges_lost = len([eid for eid in g.red_edge_weights if eid[0]==mk])
         # Attempt to delete the node
-        rejected = g.del_node(nod)
+        rejected = g.del_node(mk)
         self.assertFalse(rejected)
-        self.assertTrue(len(g.left) + len(g.right) == 2*n+1)
-        self.assertEqual(len(g.in_edges) + len(g.out_edges), k+1 - edges_lost)
+        self.assertTrue(len(g.left_nodes) + len(g.right_nodes) == 2*n+1)
+        self.assertEqual(len(g.red_edge_weights) + len(g.blue_edge_weights), k+1 - edges_lost)
 
-    def test_make_graph(self):
-        for i in range(2, 20):
-            for r in range(2, i):
-                g = make_graph(i, r)
-                self.assertTrue(len(g.left)+len(g.right) == 2*i)
-                self.assertTrue(len(g.in_edges) == r*i)
-                for j in range(i):
-                    right_node_key = list(g.right.keys())[j]
-                    right_node = g.right[right_node_key]
-                    self.assertEqual(len(right_node.in_edges), r)
-
-    def test_bfs_one(self):
-        s = random.random()
-        x = str(hash(str(1.0) + str(s)))
-        par = {'data': 1.0, 'ident': x, 'left': [], 'right': [], 'in_edges': [], 'out_edges': []}
+    def test_bfs_simple(self):
+        """ test_bfs_simple is a simple test of redd_bfs. """
+        # 0 ---- 2
+        #    /  
+        # 1 /--- 3
+        # Edges (0,4), (1,4), (2,4), (2,5), (2,6), (3,7)
+        par = {'data': 1.0, 'ident': 'han-tyumi', 'left': {}, 'right': {}, 'red_edges': {}, 'blue_edges': {}}
         g = BipartiteGraph(par)
-        n = 2
-        ct = 0
-        while len(g.left) < n:
-            while ct in g.left:
-                ct += 1
-            par = {'data': 1.0, 'ident': ct}
-            nod = Node(par)
-            g.add_left(nod)
-            ct += 1
-        while len(g.right) < n:
-            while ct in g.right:
-                ct += 1
-            par = {'data': 1.0, 'ident': ct}
-            nod = Node(par)
-            g.add_right(nod)
-            ct += 1
+        n = 2 # Add n nodes to each side
+        nodect = 0
+        while len(g.left_nodes) < n:
+            while nodect in g.left_nodes or nodect in g.right_nodes:
+                nodect += 1
+            numleft = len(g.left_nodes)
+            # print("\n",nodect, g.left_nodes)
+            rejected = g.add_left_node(nodect)
+            self.assertFalse(rejected)
+            newnumleft = len(g.left_nodes)
+            self.assertTrue(newnumleft - numleft == 1)
+        while len(g.right_nodes) < n:
+            while nodect in g.left_nodes or nodect in g.right_nodes:
+                nodect += 1
+            numright = len(g.right_nodes)
+            rejected = g.add_right_node(nodect)
+            self.assertFalse(rejected)
+            newnumright = len(g.right_nodes)
+            self.assertTrue(newnumright - numright == 1)
 
-        leftkeys = list(g.left.keys())
-        self.assertTrue(0 in leftkeys)
-        self.assertTrue(1 in leftkeys)
-        self.assertEqual(len(leftkeys), 2)
+        self.assertTrue(0 in g.left_nodes)
+        self.assertTrue(1 in g.left_nodes)
+        self.assertEqual(len(g.left_nodes), 2)
 
-        rightkeys = list(g.right.keys())
-        self.assertTrue(2 in rightkeys)
-        self.assertTrue(3 in rightkeys)
-        self.assertEqual(len(rightkeys), 2)
+        self.assertTrue(2 in g.right_nodes)
+        self.assertTrue(3 in g.right_nodes)
+        self.assertEqual(len(g.right_nodes), 2)
 
-        l = g.left[0]
-        r = g.right[2]
-        x = (l.ident, r.ident)
-        par = {'data': 1.0, 'ident': x, 'left': l, 'right': r, 'weight': 0.0}
-        e = Edge(par)
-        g.add_in_edge(e)
+        g.add_red_edge((0,2), 0.0)
+        g.add_red_edge((1,2), 0.0)
+        g.add_red_edge((1,3), 0.0)
 
-        l = g.left[1]
-        r = g.right[2]
-        x = (l.ident, r.ident)
-        par = {'data': 1.0, 'ident': x, 'left': l, 'right': r, 'weight': 0.0}
-        e = Edge(par)
-        g.add_in_edge(e)
-
-        l = g.left[1]
-        r = g.right[3]
-        x = (l.ident, r.ident)
-        par = {'data': 1.0, 'ident': x, 'left': l, 'right': r, 'weight': 0.0}
-        e = Edge(par)
-        g.add_in_edge(e)
-
-        eid1 = (0, 2)
-        eid2 = (1, 2)
-        eid3 = (1, 3)
-
-        self.assertTrue(eid1 in g.in_edges)
-        self.assertTrue(eid2 in g.in_edges)
-        self.assertTrue(eid3 in g.in_edges)
+        self.assertTrue((0,2) in g.red_edge_weights)
+        self.assertTrue((1,2) in g.red_edge_weights)
+        self.assertTrue((1,3) in g.red_edge_weights)
+        self.assertEqual(len(g.red_edge_weights), 3)
 
         match = list()
-        match.append(g.in_edges[eid2])
+        match.append((1,2))
 
-        results = g.bfs(match)
-        self.assertTrue(len(results) == 1)
-        self.assertTrue(len(results[0]) == 3)
-        self.assertTrue(results[0][0].left.ident == 0)
-        self.assertTrue(results[0][0].right.ident == 2)
-        self.assertTrue(results[0][1].left.ident == 1)
-        self.assertTrue(results[0][1].right.ident == 2)
-        self.assertTrue(results[0][2].left.ident == 1)
-        self.assertTrue(results[0][2].right.ident == 3)
-        # print("results from bfs_one= " + str(results))
+        # print("\n\n======\n\n")
+        # print("Red edge weights = ", g.red_edge_weights)
+        # print("Match = ", match)
+        results = g.redd_bfs(match)
+        # print("Results = ", results)
+        self.assertEqual(results, [[(0,2),(1,2),(1,3)]])
+        
 
-    def test_bfs_disconnected(self):
-        s = random.random()
-        x = str(hash(str(1.0) + str(s)))
-        par = {'data': 1.0, 'ident': x, 'left': [], 'right': [], 'in_edges': [], 'out_edges': []}
+    def test_bfs_full(self):
+        """ test_bfs_full is a less-simple test of bfs_red. """
+        # 0 ---- 4
+        #    / /
+        # 1 / // 5
+        #    //
+        # 2 /--- 6
+        # 3 ---- 7
+        # Edges (0,4), (1,4), (2,4), (2,5), (2,6), (3,7)
+
+        par = {'data': 1.0, 'ident': 'han-tyumi', 'left': [], 'right': [], 'red_edges': [], 'blue_edges': []}
         g = BipartiteGraph(par)
+
+        # 4 nodes on each side
         n = 4
         ct = 0
-        while len(g.left) < n:
-            while ct in g.left:
+        # Add left nodes
+        while len(g.left_nodes) < n:
+            while ct in g.left_nodes:
                 ct += 1
-            par = {'data': 1.0, 'ident': ct}
-            nod = Node(par)
-            g.add_left(nod)
+            g.add_left_node(ct)
             ct += 1
-        while len(g.right) < n:
-            while ct in g.right:
+        # Add right nodes
+        while len(g.right_nodes) < n:
+            while ct in g.right_nodes:
                 ct += 1
-            par = {'data': 1.0, 'ident': ct}
-            nod = Node(par)
-            g.add_right(nod)
+            g.add_right_node(ct)
             ct += 1
 
-        leftkeys = list(g.left.keys())
+        # Check left keys have 0, 1, 2, 3.
+        leftkeys = list(g.left_nodes.keys())
         for i in range(n):
             self.assertTrue(i in leftkeys)
         self.assertEqual(len(leftkeys), n)
 
-        rightkeys = list(g.right.keys())
+        # Check that right keys have 4, 5, 6, 7.
+        rightkeys = list(g.right_nodes.keys())
         for i in range(n, 2*n):
             self.assertTrue(i in rightkeys)
         self.assertEqual(len(rightkeys), n)
 
-        edge_idents = [[0, 4], [1, 4], [2, 4], [2, 5], [2, 6], [3, 7]]
-        eid = []
+        # Edges to be added
+        edge_idents = [(0, 4), (1, 4), (2, 4), (2, 5), (2, 6), (3, 7)]
+          
         for ident in edge_idents:
-            l = g.left[ident[0]]
-            r = g.right[ident[1]]
-            x = (l.ident, r.ident)
-            par = {'data': 1.0, 'ident': x, 'left': l, 'right': r, 'weight': 0.0}
-            e = Edge(par)
-            g.add_in_edge(e)
-            eid.append(x)
+            g.add_red_edge(ident, 0.0)
 
-        match = []
-        match_edge = (2, 4)
-        match.append(g.in_edges[match_edge])
+        match = [(2,4)]
+        results = g.redd_bfs(match)
+        # print("\n\n====\n\n results = ", results, type(results), "\n\n====\n\n")
+        self.assertEqual(results, [[(3,7)]])
 
-        results = g.bfs(match)
-        # print(results, type(results))
-        self.assertTrue(len(results) == 1)
-        self.assertTrue(len(results[0]) == 1)
-        self.assertTrue(results[0][0].left.ident == 3)
-        self.assertTrue(results[0][0].right.ident == 7)
 
     def test_bfs_fourshortest(self):
-        s = random.random()
-        x = str(hash(str(1.0) + str(s)))
-        par = {'data': 1.0, 'ident': x, 'left': [], 'right': [], 'in_edges': [], 'out_edges': []}
+        """ test_bfs_full is a less-simple test of bfs_red. """
+        # 0 ---- 3
+        #    / /
+        # 1 / // 4
+        #    //
+        # 2 /--- 5
+        # Edges (0,3), (1,3), (2,3), (2,4), (2,5)
+        # Initial match: [(2,3)]
+
+        par = {'data': 1.0, 'ident': 'han-tyumi', 'left': [], 'right': [], 'red_edges': [], 'blue_edges': []}
         g = BipartiteGraph(par)
+
+        # 4 nodes on each side
         n = 3
         ct = 0
-        while len(g.left) < n:
-            while ct in g.left:
+        # Add left nodes
+        while len(g.left_nodes) < n:
+            while ct in g.left_nodes:
                 ct += 1
-            par = {'data': 1.0, 'ident': ct}
-            nod = Node(par)
-            g.add_left(nod)
+            g.add_left_node(ct)
             ct += 1
-        while len(g.right) < n:
-            while ct in g.right:
+        # Add right nodes
+        while len(g.right_nodes) < n:
+            while ct in g.right_nodes:
                 ct += 1
-            par = {'data': 1.0, 'ident': ct}
-            nod = Node(par)
-            g.add_right(nod)
+            g.add_right_node(ct)
             ct += 1
 
-        leftkeys = list(g.left.keys())
+        # Check left keys have 0, 1, 2
+        leftkeys = list(g.left_nodes.keys())
         for i in range(n):
             self.assertTrue(i in leftkeys)
         self.assertEqual(len(leftkeys), n)
 
-        rightkeys = list(g.right.keys())
+        # Check that right keys have 3, 4, 5.
+        rightkeys = list(g.right_nodes.keys())
         for i in range(n, 2*n):
             self.assertTrue(i in rightkeys)
         self.assertEqual(len(rightkeys), n)
 
-        edge_idents = [[0, 3], [1, 3], [2, 3], [2, 4], [2, 5]]
-        eid = []
+        # Edges to be added
+        edge_idents = [(0,3), (1,3), (2,3), (2,4), (2,5)]
+          
         for ident in edge_idents:
-            l = g.left[ident[0]]
-            r = g.right[ident[1]]
-            x = (l.ident, r.ident)
-            par = {'data': 1.0, 'ident': x, 'left': l, 'right': r, 'weight': 0.0}
-            e = Edge(par)
-            g.add_in_edge(e)
-            eid.append(x)
+            g.add_red_edge(ident, 0.0)
+        self.assertEqual(len(g.red_edge_weights),5)
 
-        # for e in G.in_edges:
-        #    print(e, type(e), str(e))
-        match = []
-        match_edge = (2, 3)
-        match.append(g.in_edges[match_edge])
-
-        results = g.bfs(match)
-        self.assertTrue(len(results) == 4)
-        # print("RESULTS FROM TEST BFS FOURSHORTEST")
-        for entry in results:
-            self.assertTrue(len(entry) == 3)
-            # print([e.ident for e in entry])
-
-        self.assertTrue(len(results) == 4)
-
-        self.assertTrue(len(results[0]) == 3)
-
-        self.assertTrue(results[0][0].left.ident in [0, 1])
-        self.assertTrue(results[0][0].right.ident == 3)
-        self.assertTrue(results[0][1].left.ident == 2 and results[0][1].right.ident == 3)
-        self.assertTrue(results[0][2].left.ident == 2 and results[0][2].right.ident in [4, 5])
+        match = [(2,3)]
+        results = g.redd_bfs(match)
+        print("\n\n====\n\n results = ", results, type(results), "\n\n====\n\n")
+        self.assertTrue([(0,3), (2,3), (2,4)] in results)
+        self.assertTrue([(0,3), (2,3), (2,5)] in results)
+        self.assertTrue([(1,3), (2,3), (2,4)] in results)
+        self.assertTrue([(1,3), (2,3), (2,5)] in results)
 
     def test_get_augmenting_path(self):
-        s = random.random()
-        x = str(hash(str(1.0) + str(s)))
-        par = {'data': 1.0, 'ident': x, 'left': [], 'right': [], 'in_edges': [], 'out_edges': []}
+        par = {'data': 1.0, 'ident': 'han-tyumi', 'left': [], 'right': [], 'red_edges': [], 'blue_edges': []}
         g = BipartiteGraph(par)
         n = 3
         ct = 0
-        while len(g.left) < n:
-            while ct in g.left:
+        while len(g.left_nodes) < n:
+            while ct in g.left_nodes:
                 ct += 1
-            par = {'data': 1.0, 'ident': ct}
-            nod = Node(par)
-            g.add_left(nod)
+            g.add_left_node(ct)
             ct += 1
-        while len(g.right) < n:
-            while ct in g.right:
+        while len(g.right_nodes) < n:
+            while ct in g.right_nodes:
                 ct += 1
-            par = {'data': 1.0, 'ident': ct}
-            nod = Node(par)
-            g.add_right(nod)
+            g.add_right_node(ct)
             ct += 1
 
-        leftkeys = list(g.left.keys())
+        leftkeys = list(g.left_nodes.keys())
         for i in range(n):
             self.assertTrue(i in leftkeys)
         self.assertEqual(len(leftkeys), n)
 
-        rightkeys = list(g.right.keys())
+        rightkeys = list(g.right_nodes.keys())
         for i in range(n, 2*n):
             self.assertTrue(i in rightkeys)
         self.assertEqual(len(rightkeys), n)
 
-        edge_idents = [[0, 3], [1, 3], [2, 3], [2, 4], [2, 5]]
-        eid = []
+        edge_idents = [(0, 3), (1, 3), (2, 3), (2, 4), (2, 5)]
         for ident in edge_idents:
-            l = g.left[ident[0]]
-            r = g.right[ident[1]]
-            x = (l.ident, r.ident)
-            par = {'data': 1.0, 'ident': x, 'left': l, 'right': r, 'weight': 0}
-            e = Edge(par)
-            g.add_in_edge(e)
-            eid.append(x)
+            g.add_red_edge(ident, 0.0)
 
-        match = []
-        match_edge = (2, 3)
-        match.append(g.in_edges[match_edge])
-
-        results = g.get_augmenting_paths(match, wt=False)
+        match = [(2,3)]
+        results = g.get_augmenting_red_paths(match)
         # line = [[e.ident for e in p] for p in results]
         # print("Results from _get_augmenting_paths = " + str(line))
-        self.assertTrue(len(results) == 1)
-        self.assertTrue(len(results[0]) == 3)
-        self.assertTrue(results[0][0].left.ident == 0 or results[0][0].left.ident == 1)
-        self.assertTrue(results[0][0].right.ident == 3)
-        self.assertTrue(results[0][1].left.ident == 2)
-        self.assertTrue(results[0][1].right.ident == 3)
-        self.assertTrue(results[0][2].left.ident == 2)
-        self.assertTrue(results[0][2].right.ident == 4 or results[0][2].right.ident == 5)
+        self.assertTrue(len(results) == 1) # one resulting path
+        self.assertTrue(len(results[0]) == 3) # with length 3
+        self.assertTrue(results[0][0][0] == 0 or results[0][0][0] == 1)
+        self.assertEqual(results[0][0][1], 3)
+        self.assertEqual(results[0][1][0], 2)
+        self.assertEqual(results[0][1][1], 3)
+        self.assertTrue(results[0][2][0], 2)
+        self.assertTrue(results[0][2][1] == 4 or results[0][2][1] == 5)
 
     def test_max_matching_weightless(self):
         # print("Beginning test_max_matching)")
-        s = random.random()
-        x = str(hash(str(1.0) + str(s)))
-        par = {'data': 1.0, 'ident': x, 'left': [], 'right': [], 'in_edges': [], 'out_edges': []}
+        par = {'data': 1.0, 'ident': 'han-tyumi', 'left': [], 'right': [], 'red_edges': [], 'blue_edges': []}
         g = BipartiteGraph(par)
         n = 3
         ct = 0
-        while len(g.left) < n:
-            while ct in g.left:
+        while len(g.left_nodes) < n:
+            while ct in g.left_nodes:
                 ct += 1
-            par = {'data': 1.0, 'ident': ct}
-            nod = Node(par)
-            g.add_left(nod)
+            g.add_left_node(ct)
             ct += 1
-        while len(g.right) < n:
-            while ct in g.right:
+        while len(g.right_nodes) < n:
+            while ct in g.right_nodes:
                 ct += 1
-            par = {'data': 1.0, 'ident': ct}
-            nod = Node(par)
-            g.add_right(nod)
+            g.add_right_node(ct)
             ct += 1
 
-        leftkeys = list(g.left.keys())
+        leftkeys = list(g.left_nodes.keys())
         for i in range(n):
             self.assertTrue(i in leftkeys)
         self.assertEqual(len(leftkeys), n)
 
-        rightkeys = list(g.right.keys())
+        rightkeys = list(g.right_nodes.keys())
         for i in range(n, 2*n):
             self.assertTrue(i in rightkeys)
         self.assertEqual(len(rightkeys), n)
 
-        edge_idents = [[0, 3], [1, 3], [2, 3], [2, 4], [2, 5]]
-        eid = []
-        for ident in edge_idents:
-            l = g.left[ident[0]]
-            r = g.right[ident[1]]
-            x = (l.ident, r.ident)
-            par = {'data': 1.0, 'ident': x, 'left': l, 'right': r, 'weight': 0}
-            e = Edge(par)
-            g.add_in_edge(e)
-            eid.append(x)
+        edge_idents = [(0, 3), (1, 3), (2, 3), (2, 4), (2, 5)]
+        for eid in edge_idents:
+            g.add_red_edge(eid, 0.0)
 
-        match = []
-        match_edge = (2, 3)
-        match.append(g.in_edges[match_edge])
-
-        results = g.max_matching(match)
-        eids = [e.ident for e in results]
-        self.assertTrue((0, 3) in eids or (1, 3) in eids)
-        self.assertTrue((2, 4) in eids or (2, 5) in eids)
-        self.assertFalse((2, 3) in eids)
-        self.assertEqual(len(eids), 2)
-
+        match = [(2,3)]
+        results = g.get_max_red_matching(match)
+        self.assertTrue((0, 3) in results or (1, 3) in results)
+        self.assertTrue((2, 4) in results or (2, 5) in results)
+        self.assertFalse((2, 3) in results)
+        self.assertEqual(len(results), 2)
+'''
     def test_max_matching_weighted(self):
         # print("Beginning test_max_matching)")
         s = random.random()
@@ -667,22 +728,18 @@ class TestBipartiteGraph(unittest.TestCase):
         g = BipartiteGraph(par)
         n = 3
         ct = 0
-        while len(g.left) < n:
-            while ct in g.left:
+        while len(g.left_nodes) < n:
+            while ct in g.left_nodes:
                 ct += 1
-            par = {'data': 1.0, 'ident': ct}
-            nod = Node(par)
-            g.add_left(nod)
+            g.add_left_node(ct)
             ct += 1
-        while len(g.right) < n:
-            while ct in g.right:
+        while len(g.right_nodes) < n:
+            while ct in g.right_nodes:
                 ct += 1
-            par = {'data': 1.0, 'ident': ct}
-            nod = Node(par)
-            g.add_right(nod)
+            g.add_right_node(ct)
             ct += 1
 
-        leftkeys = list(g.left.keys())
+        leftkeys = list(g.left_nodes.keys())
         for i in range(n):
             self.assertTrue(i in leftkeys)
         self.assertEqual(len(leftkeys), n)
@@ -695,8 +752,8 @@ class TestBipartiteGraph(unittest.TestCase):
         edge_idents_and_weights = [[0, 3, 1], [1, 3, 2], [2, 3, 3], [2, 4, 4], [2, 5, 5]]
         eid = []
         for ident in edge_idents_and_weights:
-            l = g.left[ident[0]]
-            r = g.right[ident[1]]
+            l = g.left_nodes[ident[0]]
+            r = g.right_nodes[ident[1]]
             x = (l.ident, r.ident)
             par = {'data': 1.0, 'ident': x, 'left': l, 'right': r, 'weight': ident[2]}
             e = Edge(par)
@@ -723,27 +780,23 @@ class TestBipartiteGraph(unittest.TestCase):
         g = BipartiteGraph(par)
         n = 4
         ct = 0
-        while len(g.left) < n:
-            while ct in g.left or ct in g.right:
+        while len(g.left_nodes) < n:
+            while ct in g.left_nodes or ct in g.right_nodes:
                 ct += 1
-            par = {'data': 1.0, 'ident': ct}
-            nod = Node(par)
-            g.add_left(nod)
+            g.add_left_node(ct)
             ct += 1
-        while len(g.right) < n:
-            while ct in g.right or ct in g.left:
+        while len(g.right_nodes) < n:
+            while ct in g.right_nodes or ct in g.left_nodes:
                 ct += 1
-            par = {'data': 1.0, 'ident': ct}
-            nod = Node(par)
-            g.add_right(nod)
+            g.add_right_node(ct)
             ct += 1
 
-        leftkeys = list(g.left.keys())
+        leftkeys = list(g.left_nodes.keys())
         for i in range(n):
             self.assertTrue(i in leftkeys)
         self.assertEqual(len(leftkeys), n)
 
-        rightkeys = list(g.right.keys())
+        rightkeys = list(g.right_nodes.keys())
         for i in range(n, 2*n):
             self.assertTrue(i in rightkeys)
         self.assertEqual(len(rightkeys), n)
@@ -751,8 +804,8 @@ class TestBipartiteGraph(unittest.TestCase):
         weids = [[0, 4, 0], [0, 5, 1], [1, 4, 2], [1, 5, 3], [1, 6, 4], [2, 5, 5], [2, 7, 6], [3, 6, 7], [3, 7, 8]]
         eids = []
         for ident in weids:
-            l = g.left[ident[0]]
-            r = g.right[ident[1]]
+            l = g.left_nodes[ident[0]]
+            r = g.right_nodes[ident[1]]
             x = (ident[0], ident[1])
             par = {'data': 1.0, 'ident': x, 'left': l, 'right': r, 'weight': ident[2]}
             e = Edge(par)
@@ -760,7 +813,7 @@ class TestBipartiteGraph(unittest.TestCase):
             eids.append(x)
 
         bad_ids = [(0, 4), (1, 6), (2, 5), (3, 7)]
-        bad_match = [g.in_edges[i] for i in bad_ids]
+        bad_match = [g.red_edge_weights[i] for i in bad_ids]
         for e in bad_match:
             self.assertTrue(isinstance(e, Edge))
         results = g.get_improving_cycles(bad_match)
@@ -791,37 +844,33 @@ class TestBipartiteGraph(unittest.TestCase):
             g = BipartiteGraph(par)
             n = 4
             ct = 0
-            while len(g.left) < n:
-                while ct in g.left:
+            while len(g.left_nodes) < n:
+                while ct in g.left_nodes:
                     ct += 1
-                par = {'data': 1.0, 'ident': ct}
-                nod = Node(par)
-                g.add_left(nod)
+                g.add_left_node(ct)
                 ct += 1
-            while len(g.right) < n:
-                while ct in g.right:
+            while len(g.right_nodes) < n:
+                while ct in g.right_nodes:
                     ct += 1
-                par = {'data': 1.0, 'ident': ct}
-                nod = Node(par)
-                g.add_right(nod)
+                g.add_right_node(ct)
                 ct += 1
 
-            leftkeys = list(g.left.keys())
+            leftkeys = list(g.left_nodes.keys())
             for i in range(n):
                 self.assertTrue(i in leftkeys)
             self.assertEqual(len(leftkeys), n)
 
-            rightkeys = list(g.right.keys())
+            rightkeys = list(g.right_nodes.keys())
             for i in range(n, 2*n):
                 self.assertTrue(i in rightkeys)
             self.assertEqual(len(rightkeys), n)
 
-            # print(g.left)
-            # print(g.right)
+            # print(g.left_nodes)
+            # print(g.right_nodes)
             for i in range(n):
                 for j in range(n):
-                    l = g.left[i]
-                    r = g.right[j+n]
+                    l = g.left_nodes[i]
+                    r = g.right_nodes[j+n]
                     x = (i, j+n)
                     par = {'data': 1.0, 'ident': x, 'left': l, 'right': r, 'weight': random.random()}
                     e = Edge(par)
@@ -878,8 +927,8 @@ class TestBipartiteGraph(unittest.TestCase):
                 for wm in weighted_matches:
                     print(str(wm[0]) + "\t" + str(wm[1]))
                     self.assertTrue(wm[0] <= net_weight)
+'''
 
-
-tests = [TestSymDif, TestNode, TestEdge, TestBipartiteGraph]
+tests = [TestSymDif, TestBipartiteGraph]
 for test in tests:
     unittest.TextTestRunner(verbosity=2, failfast=True).run(unittest.TestLoader().loadTestsFromTestCase(test))

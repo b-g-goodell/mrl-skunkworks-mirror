@@ -1,4 +1,5 @@
 from collections import deque
+from copy import deepcopy
 import random
 import sys
 
@@ -7,6 +8,14 @@ if sys.version_info[0] != 3:
     print("This script requires Python3")
     sys.exit(1)
 
+def disjoint(set_one, set_two):
+    """ Return boolean indicating whether set_one and set_two are vertex-disjoint lists.
+
+    Keyword arguments:
+        set_one -- first set
+        set_two -- second set
+    """
+    return len(set_one) + len(set_two) == len(symdif(set_one, set_two))
 
 def symdif(x=None, y=None):
     """ Compute symmetric difference of two lists, return a list.
@@ -21,630 +30,386 @@ def symdif(x=None, y=None):
         y = []
     return [e for e in x if e not in y] + [e for e in y if e not in x]
 
-
-class Node(object):
-    """ Node object representing a vertex in a graph
-    Attributes:
-        data : arbitrary
-        ident : string
-        in_edges : list of Edges (not edge identities)
-        out_edges : list of Edges
-    Functions:
-        add_in_edge : take edge(s) as input and add to self.in_edges
-        del_in_edge : take edge as input and remove from self.in_edges
-        add_out_edge : take edge(s) as input and add to self.in_edges
-        del_out_edge : take edge as input and remove from self.in_edges
-    """
-    par = None
-    e = None
-
-    def __init__(self, par):
-        self.data = par['data']  # any
-        self.ident = par['ident']  # int
-        self.in_edges = []
-        self.out_edges = []
-
-    def add_in_edge(self, edges):
-        rejected = False
-        if isinstance(edges, type([])):
-            for e in edges:
-                if isinstance(e, Edge):
-                    rejected = rejected or self.add_in_edge(e)
-        elif isinstance(edges, Edge):
-            rejected = rejected or edges in self.in_edges 
-            rejected = rejected or self not in [edges.left, edges.right]
-            if not rejected:
-                self.in_edges.append(edges)
-        return rejected
-
-    def add_out_edge(self, edges):
-        rejected = False
-        if isinstance(edges, type([])):
-            for e in edges:
-                if isinstance(e, Edge):
-                    rejected = rejected or self.add_out_edge(e)
-        elif isinstance(edges, Edge):
-            rejected = rejected or edges in self.out_edges 
-            rejected = rejected or self not in [edges.left, edges.right]
-            if rejected:
-                self.out_edges.append(edges)
-        return rejected
-
-    def del_edge(self, e):
-        # Remove an edge from self.in_edges or self.out_edges.
-        rejected = False
-        rejected = rejected or (e not in self.in_edges and e not in self.out_edges)
-        rejected = rejected or (e in self.in_edges and e in self.out_edges)
-        if not rejected:
-            assert e in self.in_edges or e in self.out_edges and not (e in self.in_edges and e in self.out_edges)
-            # This assertion should not be a problem if rejected still = False
-            if e in self.in_edges:
-                idx = self.in_edges.index(e)
-                del self.in_edges[idx]
-            elif e in self.out_edges:
-                idx = self.out_edges.index(e)
-                del self.out_edges[idx]
-        return rejected
-
-
-class Edge(object):
-    """ Edge object representing an edge in a graph.
-    Attributes:
-        data : arbitrary
-        ident : string
-        left : Node
-        right : Node
-        weight : None, float, int
-    """
-    # Passing unit tests (essentially a container so this should be easy)
-    par = None
-
-    def __init__(self, par):
-        # Initialize with par = {'data':data, 'ident':ident, 'endpoints':[Node, Node], 'weight':weight}
-        self.data = par['data']      # str
-        self.ident = par['ident']    # tuple of ints
-        self.left = par['left']      # Node
-        self.right = par['right']    # Node
-        self.weight = par['weight']  # None or float or int
-
-
 class BipartiteGraph(object):
     """ Graph object representing a graph
+
     Attributes:
         data : arbitrary
         ident : string
-        left : dict
-        right : dict
-        in_edges : dict
-        out_edges : dict
-        depth : int
+        left_nodes : dict, keys = node_idents, vals = node_idents
+        right_nodes : dict, keys = node_idents, vals = node_idents
+        red_edge_weights : dict, keys = (node_ident, node_ident) tuples (pairs), vals = weights
+        blue_edge_weights : dict, keys = (node_ident, node_ident) tuples (pairs), vals = weights
+
     Functions:
-        add_node : take node as input and add to self.nodes
-        del_node : take node as input, removes incident edges from self.edges, removes input from self.nodes
-        add_edge : take edge(s) as input and add to self.edges, adding endpoints to self.nodes if necessary
-        del_edge : take edge as input and remove from self.edges
-        get_augmenting_path : take a match as input and return an augmenting path as output.
-        get_bigger_matching : take match as input and return a larger match
-        maximal_matching : iteratively call _get_bigger_matching until matches of same size are returned
+        add_left_node : take node_ident as input and add to self.left_nodes
+        add_right_node : take node_ident as input and add to self.right_nodes
+        del_node : take node_ident as input, deletes related edges with del_edge, 
+            removes input from self.right_nodes or self.left_nodes
+        add_red_edge : take tuple (pair) of node_idents and a weight (int or float) 
+            as input. Add to self.red_edge_weights, adding endpoints to self.left_nodes 
+            or self.right_nodes if necessary
+        add_blue_edge : take tuple (pair) of node_idents and a weight (int or float) 
+            as input. Add to self.red_edge_weights, adding endpoints to self.left_nodes 
+            or self.right_nodes if necessary
+        del_edge : take tuple (pair) of node_idents and sets weight to str("-infty")
+        get_augmenting_path_of_reds : take a match of red edges as input and return an 
+            augmenting path of red edges as output.
+        get_bigger_red_matching : take match of red edges as input and return a 
+            larger match of red edges as ouptut
+        maximal_matching : iteratively call get_bigger_red_matching until matches of same 
+            size are returned.
+        optimize_max_matching : find a highest-weight matching.
     """
 
     def __init__(self, par):
         # par = {'data':data, 'ident':ident, 'left':list of Nodes, 'right':list of Node, 'edges':list of Edge}
         self.data = par['data']   # str
         self.ident = par['ident']  # str
-        self.left = {}
-        for n in par['left']:
-            self.add_left(n)
-        self.right = {}
-        for n in par['right']:
-            self.add_right(n)
-        self.in_edges = {}
-        for e in par['in_edges']:
-            self.add_in_edge(e)
-        self.out_edges = {}
-        for e in par['out_edges']:
-            self.add_out_edge(e)
-        self.depth = 0
+        self.left_nodes = {}
+        self.left_nodes.update(par['left'])
+        self.right_nodes = {}
+        self.right_nodes.update(par['right'])
+        self.red_edge_weights = {}
+        self.red_edge_weights.update(par['red_edges'])
+        self.blue_edge_weights = {}
+        self.blue_edge_weights.update(par['blue_edges'])
 
-    def report(self):
-        # Return a string summary of the graph. Spans multiple lines.
-        line = ""
-        line += "\n\t\t\t=====Reporting on Graph " + str(self.ident) + " ====="
-        line += "\nLeft nodes:"
-        for l in self.left:
-            line += "\n\t" + str(l) + ",\t\t\t" + str(self.left[l])
-        line += "\nRight nodes:"
-        for r in self.right:
-            line += "\n\t" + str(r) + ",\t\t\t" + str(self.right[r])
-        line += "\nIn-Edges:"
-        for e in self.in_edges:
-            line += "\n\t" + str(e) + ",\t\t\t"
-            line += str(self.in_edges[e]) + ",\t\t\twt = " + str(self.in_edges[e].weight)
-        line += "\nOut-Edges:"
-        for e in self.out_edges:
-            line += "\n\t" + str(e) + ",\t\t\t"
-            line += str(self.out_edges[e]) + ",\t\t\twt = " + str(self.out_edges[e].weight)
-        return line
-
-    def add_left(self, new_node):
+    def add_left_node(self, new_nid):
         # Add a new_node to self.left
         rejected = False
-        rejected = rejected or new_node.ident in self.left 
-        rejected = rejected or new_node.ident in self.right
+        # print(self.left_nodes, type(self.left_nodes))
+        rejected = rejected or new_nid in self.left_nodes
+        rejected = rejected or new_nid in self.right_nodes
         if not rejected:
-            self.left.update({new_node.ident: new_node})
+            self.left_nodes.update({new_nid:new_nid})
         return rejected
 
-    def add_right(self, new_node):
-        # Add a new_node to self.right
-        rejected = new_node.ident in self.right or new_node.ident in self.left
+    def add_right_node(self, new_nid):
+        # Add a new_node to self.left
+        rejected = False
+        rejected = rejected or new_nid in self.right_nodes
+        rejected = rejected or new_nid in self.left_nodes
         if not rejected:
-            self.right.update({new_node.ident: new_node})
+            self.right_nodes.update({new_nid:new_nid})
         return rejected
 
-    def del_node(self, old_node):
+    def del_node(self, old_nid):
         # Delete an old_node from self.left or self.right
-        rejected = old_node.ident not in self.left and old_node.ident not in self.right
+        rejected = old_nid not in self.left_nodes and old_nid not in self.right_nodes
         if not rejected:
-            for e in old_node.in_edges:  # list of edges
-                self.del_edge(e)
-            for e in old_node.out_edges:  # list of edges
-                self.del_edge(e)
-            if old_node.ident in self.left:  # dict of ident:nodes
-                del self.left[old_node.ident]
-            if old_node.ident in self.right:  # dict of ident:nodes
-                del self.right[old_node.ident]
+            to_be_deleted = []
+            for eid in self.red_edge_weights:
+                if old_nid == eid[0] or old_nid == eid[1]:
+                    to_be_deleted.append(eid)
+            new_red_edges = {}
+            for eid in self.red_edge_weights:
+                if eid not in to_be_deleted:
+                    new_red_edges[eid] = self.red_edge_weights[eid]
+            self.red_edge_weights = new_red_edges
+
+            to_be_deleted = []
+            for eid in self.blue_edge_weights:
+                if old_nid == eid[0] or old_nid == eid[1]:
+                    to_be_deleted.append(eid)
+            new_blue_edges = {}
+            for eid in self.blue_edge_weights:
+                if eid not in to_be_deleted:
+                    new_blue_edges[eid] = self.blue_edge_weights[eid]
+            self.blue_edge_weights = new_blue_edges
+
+            if old_nid in self.left_nodes:  
+                del self.left_nodes[old_nid]
+            if old_nid in self.right_nodes:  
+                del self.right_nodes[old_nid]
         return rejected
 
-    def add_in_edge(self, new_in_edge):
-        # Add a new_edge to self.in_edges (and possibly its endpoints)
-        rejected = new_in_edge.ident in self.in_edges or new_in_edge.ident in self.out_edges
+    def add_red_edge(self, eid, new_edge_weight):
+        ''' Throw a new red edge with edge identity eid into the graph. '''
+        rejected = (len(eid)!=2)
+        assert not rejected
+        rejected = rejected or eid in self.red_edge_weights 
+        assert not rejected
+        rejected = rejected or eid in self.blue_edge_weights 
+        assert not rejected
+        rejected = rejected or eid[0] not in self.left_nodes 
+        assert not rejected
+        rejected = rejected or eid[1] not in self.right_nodes
+        assert not rejected
         if not rejected:
-            if new_in_edge not in new_in_edge.left.in_edges:  # list of edges
-                new_in_edge.left.add_in_edge(new_in_edge)
-            if new_in_edge not in new_in_edge.right.in_edges:  # list of edges
-                new_in_edge.right.add_in_edge(new_in_edge)
-            if new_in_edge.left.ident not in self.left:  # dict of ident:nodes
-                self.add_left(new_in_edge.left)
-            if new_in_edge.right.ident not in self.right:  # dict of ident:nodes
-                self.add_right(new_in_edge.right)
-            self.in_edges.update({new_in_edge.ident: new_in_edge})
+            self.red_edge_weights.update({eid:new_edge_weight})
         return rejected
 
-    def add_out_edge(self, new_out_edge):
-        # Add a new_edge to self.out_edges (and possibly its endpoints)
-        rejected = new_out_edge.ident in self.out_edges or new_out_edge.ident in self.in_edges
+    def add_blue_edge(self, eid, new_edge_weight):
+        ''' Throw a new blue edge with edge identity eid into the graph. '''
+        rejected = (len(eid)!=2)
+        assert not rejected
+        rejected = rejected or eid in self.red_edge_weights 
+        assert not rejected
+        rejected = rejected or eid in self.blue_edge_weights 
+        assert not rejected
+        rejected = rejected or eid[0] not in self.left_nodes 
+        assert not rejected
+        rejected = rejected or eid[1] not in self.right_nodes
+        assert not rejected
         if not rejected:
-            if new_out_edge not in new_out_edge.left.out_edges:  # list of edges
-                new_out_edge.left.add_out_edge(new_out_edge)
-            if new_out_edge not in new_out_edge.right.out_edges:  # list of edges
-                new_out_edge.right.add_out_edge(new_out_edge)
-            if new_out_edge.left.ident not in self.left:  # dict of ident:nodes
-                self.add_left(new_out_edge.left)
-            if new_out_edge.right.ident not in self.right:  # dict of ident:nodes
-                self.add_right(new_out_edge.right)
-            self.out_edges.update({new_out_edge.ident: new_out_edge})
+            self.blue_edge_weights.update({eid:new_edge_weight})
         return rejected
 
-    def del_edge(self, old_edge):
+    def del_edge(self, old_eid):
         # Remove an old_edge from self.edges
-        rejected = old_edge.ident not in self.in_edges and old_edge.ident not in self.out_edges
+        rejected = old_eid not in self.red_edge_weights and old_eid not in self.blue_edge_weights
         if not rejected:
-            l = old_edge.left
-            r = old_edge.right
-            rejected = rejected or l.del_edge(old_edge)
-            rejected = rejected or r.del_edge(old_edge)
-            if not rejected and old_edge.ident in self.in_edges:
-                del self.in_edges[old_edge.ident]
-            if not rejected and old_edge.ident in self.out_edges:
-                del self.out_edges[old_edge.ident]
+            if not rejected and old_eid in self.red_edge_weights:
+                del self.red_edge_weights[old_eid]
+            if not rejected and old_eid in self.blue_edge_weights:
+                del self.blue_edge_weights[old_eid]
         return rejected
 
-    def _check_match(self, alleged_match):
+    def _check_red_match(self, alleged_match):
         # Return boolean indicating whether alleged_match is truly a match
-        # from the in-edges.
+        # from the red-edges.
         # The constraints:
         #  1) Each node adjacent to any edge in the match is adjacent to only one edge in the match.
-        #  2) All edges in the match are in_edges
-        # print("Checking alleged match")
-        # print([e.ident for e in alleged_match])
-        # print("Current state of in-edges")
-        # print(sorted(list(self.in_edges.keys())))
+        #  2) All edges in the match are red_edges
         tn = []
         ismatch = True
         if alleged_match is not None and len(alleged_match) > 0:
-            for e in alleged_match:
-                if e.ident not in self.in_edges or e.left in tn or e.right in tn:
+            for eid in alleged_match:
+                if eid not in self.red_edge_weights or eid[0] in tn or eid[1] in tn:
                     ismatch = False
                 else:
-                    tn.append(e.left)
-                    tn.append(e.right)
+                    tn.append(eid[0])
+                    tn.append(eid[1])
         return ismatch
 
-    def bfs(self, match=None):
-        # Carry out a breadth-first search with respect to input match, using only in-edges.
-        # Seeking a vertex-disjoint subset of paths from the set of all shortest paths whose 
-        # initial endpoint is an unmatched left endpoint and whose terminal endpoint is 
-        # an unmatched right endpoint.
-        if match is None:
-            match = []
-        result = []
-        if self._check_match(match):
-            # print("Passed check match")
-            # print("Assembling node sets for touchin")
-            # Assemble node sets for touchin
-            matched_lefts = []
-            matched_rights = []
-            for e in match:
-                assert e.ident in self.in_edges
-                if e.left not in matched_lefts:
-                    matched_lefts.append(e.left)
-                if e.right not in matched_rights:
-                    matched_rights.append(e.right)
-            unmatched_lefts = [self.left[n] for n in self.left if self.left[n] not in matched_lefts]
-            unmatched_rights = [self.right[n] for n in self.right if self.right[n] not in matched_rights]
+    def _check_blue_match(self, alleged_match):
+        # Return boolean indicating whether alleged_match is truly a match
+        # from the blue-edges.
+        # The constraints:
+        #  1) Each node adjacent to any edge in the match is adjacent to only one edge in the match.
+        #  2) All edges in the match are blue_edges
+        tn = []
+        ismatch = True
+        if alleged_match is not None and len(alleged_match) > 0:
+            for eid in alleged_match:
+                if eid not in self.blue_edge_weights or eid[0] in tn or eid[1] in tn:
+                    ismatch = False
+                else:
+                    tn.append(eid[0])
+                    tn.append(eid[1])
+        return ismatch
 
-            # print("initializing queue")
-            q = deque()
+    def redd_bfs(self, match=[]):
+        ''' Find all augmenting paths with respect to the match by using breadth-first search. '''
+        result = None # Receiving None as output means input was not a matching on the nodes.
+        q = deque()
+        found_shortest_path = False
+        len_shortest_path = None
 
-            # print("constructing first potential paths")
-            potential_paths = []
-            # Filling potential_paths with initial possible paths.
-            # print("Filling potential_paths with initial possible paths.")
-            for n in unmatched_lefts:
-                for e in n.in_edges:
-                    assert e not in match
-                    assert e.left == n
-                    if [e] not in potential_paths:
-                        potential_paths += [[e]]
-            q.append(potential_paths)
+        if self._check_red_match(match):
+            # At least pass back an empty list if match is a matching
+            result = [] 
 
-            # Entering main loop.
-            # print("Entering main loop.")
-            tn = []  # for touching nodes
-            spf = False  # shortest path found yet?
-            while len(q) > 0 and not spf:
-                # Take current list of potential paths
-                potential_paths = q.popleft()
-                # print("this level of potential paths = ")
-                # print(potential_paths)
+            # Seed empty match with a single edge, guaranteeing at least one matched node of either side
+            # TODO: Better solution: throw error if input is empty and write scripts to only call with nonempty
+            if len(match)==0:
+                pairFound = False
+                while not pairFound:
+                    for j in self.right_nodes.keys():
+                        for i in self.left_nodes.keys():
+                            if (i,j) in self.red_edge_weights:
+                                pairFound = True
+                                break
+                        if pairFound:
+                            break
+                assert pairFound
+                match = [(i,j)]
 
-                # Start next level of potential paths
-                next_paths = []
-                for p in potential_paths:
-                    parity = len(p) % 2
-                    if parity == 0:
-                        # print("Need to add at least one more edge")
-                        # In this case, the path has an even number of edges and needs at least one more to find
-                        # an unmatched right node (it started on the left)
-                        endpt = p[-1].left
-                        for e in endpt.in_edges:
-                            if e not in match and e not in p and e.right not in tn:
-                                pp = [f for f in p] + [e]
-                                next_paths += [pp]
-                    elif parity == 1:
-                        endpt = p[-1].right
-                        if endpt in unmatched_rights:
-                            # print("Success!")
-                            # In this case, the path is a success! We add to our result and touch nodes on the path.
-                            spf = True
-                            # l = len(result)
-                            result.append(p)
-                            # print("Size of result increased?")
-                            # print(l < len(result))
-                            for e in p:
-                                if e.left not in tn:
-                                    tn.append(e.left)
-                                if e.right not in tn:
-                                    tn.append(e.right)
+            # Assemble a few node lists for convenience
+            matched_lefts = [eid[0] for eid in match]
+            matched_rights = [eid[1] for eid in match]
+            unmatched_lefts = [nid for nid in self.left_nodes if nid not in matched_lefts]
+            unmatched_rights = [nid for nid in self.right_nodes if nid not in matched_rights]
+
+            if len(unmatched_rights) == 0 or len(unmatched_lefts) == 0:
+                print("UPDATING RESULT")
+                old_len = len(result)
+                result = match
+                new_len = len(result)
+                print(result)
+                assert new_len - old_len > 0
+            else:
+                for eid in self.red_edge_weights:
+                    if eid[0] in unmatched_lefts:
+                        if eid[1] in unmatched_rights:
+                            found_shortest_path = True
+                            if len_shortest_path is not None:
+                                assert len_shortest_path == 1
+                            else:
+                                len_shortest_path = 1
+                            print("UPDATING RESULT")
+                            old_len = len(result)
+                            result.append([eid])
+                            new_len = len(result)
+                            print(result)
+                            assert new_len - old_len > 0
                         else:
-                            # In this case, the path is not a success but has an odd number of edges. We add a matched
-                            # edge to get to the left.
-                            for e in endpt.in_edges:
-                                if e in match and e not in p and e.left not in tn:
-                                    pp = [f for f in p] + [e]
-                                    next_paths += [pp]
-                    else:
-                        # This should never occur
-                        print("lolwut")
-                if len(next_paths) > 0 and not spf:
-                    # if any potential paths are in next_paths, they are added to the queue
-                    # Of course, if spf = True, then we won't be going into that loop anyway.
-                    q.append(next_paths)
+                            q.append([eid])
+                if not found_shortest_path:
+                    while len(q) > 0:
+                        this_path = q.popleft()
+                        parity = len(this_path) % 2
+                        last_edge = this_path[-1]
+                        last_node = last_edge[parity]
+                        tn = [eid[0] for eid in this_path] + [eid[1] for eid in this_path]
+                        tn = list(dict.fromkeys(tn)) # dedupe
 
-            # check alternating and augmenting and in-edges
-            for p in result:
-                assert len(p) > 0
-                idx = 0
-                while idx < len(p):
-                    parity = idx % 2
-                    if parity == 0:
-                        assert p[idx] not in match
-                        assert p[idx].ident in self.in_edges
-                    else:
-                        assert p[idx] in match
-                        assert p[idx].ident in self.in_edges
-                    idx += 1
-
+                        for eid in self.red_edge_weights: 
+                            if eid[1-parity] not in tn and eid not in this_path and eid[parity] == last_node:
+                                next_path = this_path + [eid]
+                                if parity and eid in match and not found_shortest_path:
+                                    q.append(next_path)
+                                elif not parity and eid not in match:
+                                    if eid[1] in unmatched_rights:
+                                        found_shortest_path = True
+                                        if len_shortest_path is not None:
+                                            assert len_shortest_path == len(next_path)
+                                        else:
+                                            len_shortest_path = len(next_path)
+                                        print("UPDATING RESULT")
+                                        old_len = len(result)
+                                        result.append(next_path)
+                                        new_len = len(result)   
+                                        print(result)                            
+                                        assert new_len - old_len > 0
+                                    elif not found_shortest_path:
+                                        q.append(next_path)
+            print("lasting result 1 = ", result)  
+        print("lasting result 2 = ", result)
+        # Before returning our result, we check each path in the result is alternating
+        # with respect to the input match and all have the same length.
+        l = len(result[0])
+        for p in result:
+            assert len(p) == l
+            for i in range(l):
+                parity = (i+1)%2
+                if parity:
+                    assert p[i] not in match
+                elif not parity:
+                    assert p[i] in match
+            
         return result
 
-    def get_improving_cycles(self, match=None, cutoff=6):
-        # breadth-first search for alternating cycles inside matching
-        # stop if cycle length > 6 (or maybe 8?)
-        # Only works with weighted graphs
-
-        result = []
-        if match is None:
-            match = []
-        
-        if self._check_match(match):
-            # We first find all unmatched edges and sort them by weight
-            weighted_edges = []
-            for e in self.in_edges:
-                if self.in_edges[e] not in match:
-                    this_edge = self.in_edges[e]
-                    assert isinstance(this_edge, Edge)
-                    weighted_edges.append((this_edge.weight, self.in_edges[e]))
-
-            sorted_weighted_unmatched_edges = sorted(weighted_edges, key=lambda x: x[0], reverse=True)
-            swue = [x[1] for x in sorted_weighted_unmatched_edges]
-
-            # Each such edge may be the start of a potential_cycle
-            potential_cycles = []
-            q = deque()
-            tn = []
-            for e in swue:
-                if [e] not in potential_cycles:
-                    if e.left not in tn and e.right not in tn:
-                        potential_cycles += [[e]]
-            q.append(potential_cycles)
-
-            # Beginning main loop
-            current_path_length = 1
-            scpgf = False  # Shortest cycle with positive gain found? I.e. should we stop the while loop?
-            while len(q) > 0 and not scpgf and current_path_length < cutoff:
-
-                # Take current potential cycles, find their length, start next_cycles list
-                these_cycles = q.popleft()
-                current_path_length = len(these_cycles[0])
-                next_cycles = []
-
-                parity = current_path_length % 2
-                for c in these_cycles:
-                    # We will not keep adding onto this cycle if it has any touched nodes.
-                    any_touched_nodes = False
-                    for e in c:
-                        any_touched_nodes = any_touched_nodes or e.left in tn or e.right in tn
-                    if not any_touched_nodes:
-                        # Target vertex that completes the cycle
-                        target_vertex = c[0].left
-                        if parity == 1:
-                            # We began with an unmatched edge, no right node can be the target! This cycle needs
-                            # at least one more (matched) edge to become an alternating cycle
-                            current_endpt = c[-1].right
-                            for e in current_endpt.in_edges:
-                                if not scpgf and e not in c and e in match:
-                                    cp = c + [e]
-                                    if cp not in next_cycles:
-                                        next_cycles += [cp]
-                        elif parity == 0:
-                            current_endpt = c[-1].left
-                            if target_vertex.ident == current_endpt.ident:
-                                # In this case, the cycle has been completed.
-                                # If it has positive gain, we add it to our results and touch its nodes.
-                                gain = 0.0
-                                length_of_cycle = len(c)
-                                num_idxs = length_of_cycle//2
-                                for i in range(num_idxs):
-                                    gain += c[2*i].weight - c[2*i+1].weight
-                                if gain > 0.0:
-                                    scpgf = True
-                                    result += [c]
-                                    for e in c:
-                                        if e.left not in tn:
-                                            tn.append(e.left)
-                                        if e.right not in tn:
-                                            tn.append(e.right)
-                            elif not scpgf:
-                                # in this case, we have an even length path that is not a cycle, beginning with an
-                                # unmatched edge. So we need to add at least one more unmatched edge to find a cycle
-                                for e in current_endpt.in_edges:
-                                    if e not in c and e not in match:
-                                        cp = c + [e]
-                                        if cp not in next_cycles:
-                                            next_cycles += [cp]
-                        else:
-                            print("lolwut")
-                if len(next_cycles) > 0 and not scpgf:
-                    q.append(next_cycles)
-
-            # check each cycle is alternating and augmenting
-            for c in result:
-                assert len(c) > 0
-                idx = 0
-                while idx < len(c):
-                    parity = idx % 2
-                    if parity == 0:
-                        assert c[idx] not in match
-                        assert c[idx].ident in self.in_edges
-                    else:
-                        assert c[idx] in match
-                        assert c[idx].ident in self.in_edges
-                    idx += 1
-        return result
-
-    def get_augmenting_paths(self, match=None, wt=True):
-        # Returns vertex disjoint augmenting paths of in-edges
+    def get_augmenting_red_paths(self, match=None):
+        # Returns list of vertex disjoint augmenting paths of red-edges
         vertex_disjoint_choices = []
         if match is None:
             match = []
-
-        shortest_paths = self.bfs(match)
-        # sorted_paths = None
-        if wt:
+        shortest_paths = self.redd_bfs(match) # These are augmenting by construction
+        if shortest_paths is not None and len(shortest_paths) > 0:
+            # sort paths by weight
+            sorted_paths = None
             weighted_paths = []
             for p in shortest_paths:
                 s = 0.0
-                for e in p:
-                    s += e.weight
+                for eid in p:
+                    s += self.red_edge_weights[eid]
                 weighted_paths += [[s, p]]
             weighted_sorted_paths = sorted(weighted_paths, key=lambda x: x[0], reverse=True)
             sorted_paths = [x[1] for x in weighted_sorted_paths]
-        else:
-            x = [i for i in range(len(shortest_paths))]
-            random.shuffle(x)
-            sorted_paths = [shortest_paths[i] for i in x]
-        if sorted_paths is not None:
-            for p in sorted_paths:
-                d = True
-                if len(vertex_disjoint_choices) > 0:
-                    for pp in vertex_disjoint_choices:
-                        # print(pp, len(pp))
-                        d = d and self._disjoint(p, pp)
-                if d:
-                    vertex_disjoint_choices += [p]
+
+            # Add each path to vertex_disjoint_choices if they are vertex disjoint!
+            if sorted_paths is not None and len(sorted_paths) > 0:
+                for p in sorted_paths:        
+                    vertices_in_p = [eid[0] for eid in p] + [eid[1] for eid in p]
+                    d = True
+                    if len(vertex_disjoint_choices) > 0:
+                        for pp in vertex_disjoint_choices:
+                            # print(pp, len(pp))
+                            vertices_in_pp = [eid[0] for eid in pp] + [eid[1] for eid in pp]
+                            d = d and disjoint(vertices_in_p, vertices_in_pp)
+                    if d:
+                        vertex_disjoint_choices += [p]
         return vertex_disjoint_choices
 
-    def get_bigger_matching(self, match=None, wt=True):
-        # print("Beginning _get_bigger_matching")
+    def get_bigger_red_matching(self, match=None):
+        # print("Beginning _get_bigger_red_matching")
         result = None
         if match is None:
             match = []
-        if self._check_match(match):
-            vdc = self.get_augmenting_paths(match, wt)
-            for p in vdc:
-                # line1 = [e.ident for e in p]
-                # line2 = [e.ident for e in match]
-                # print("sym-diffing p = " + str(line1) + " with match = " + str(line2))
-                match = symdif(match, p)
-                # line = [e.ident for e in match]
-                # print("result = " + str(line))
+        if self._check_red_match(match):
+            vdc = self.get_augmenting_red_paths(match)
+            if len(vdc) > 0:
+                for p in vdc:
+                    temp = match
+                    swap = symdif(temp, p)
+                    match = swap
             result = match
         return result
 
-    def max_matching(self, match=None, wt=True):
+    def get_max_red_matching(self, match=None):
         # line = [e.ident for e in match]
         # print("\n\nBeginning max_matching with match = " + str(line))
         if match is None:
             match = []
-        next_match = self.get_bigger_matching(match, wt)
+        next_match = self.get_bigger_red_matching(match)
         # line = [e.ident for e in next_match]
         # print("First iteration gets us " + str(line))
         while len(next_match) > len(match):
             match = next_match
-            next_match = self.get_bigger_matching(match, wt)
+            next_match = self.get_bigger_red_matching(match)
             # line = [e.ident for e in next_match]
             # print("Next iteration gets us " + str(line))
         return match
 
-    def opt_matching(self, level_of_cycles=3):
-        ct = 0
-        match = []
-        wt = True
-        result = self.max_matching(match, wt)
-        # print("Result = " + str(result))
-        wt = 0.0
-        for e in result:
-            wt += e.weight
-        cycles = self.get_improving_cycles(result)
-        ct += 1
-        newresult = result
-        if len(cycles) > 0:
-            # print("found a cycle, augmenting")
-            for c in cycles:
-                newresult = symdif(newresult, c)
-                # print("New result = " + str(newresult))
-        newwt = 0.0
-        for e in newresult:
-            newwt += e.weight
-        while newwt > wt and ct < level_of_cycles:
-            wt = newwt
-            result = newresult
+    def get_alt_red_paths_with_pos_gain(self, match=None):
+        # Returns list of vertex disjoint alternating paths of red-edges with a positive gain
+        vertex_disjoint_choices = []
+        if match is None:
+            match = []
+        shortest_paths = self.bfs(match)
+        if len(shortest_paths) > 0:
+            sorted_paths = None
+            if wt:
+                weighted_paths = []
+                for p in shortest_paths:
+                    gain = 0.0
+                    for eid in p:
+                        if eid not in match:
+                            gain = gain + self.red_edge_weights[eid]
+                        else:
+                            gain = gain - self.red_edge_weights[eid]
+                    if gain > 0.0:
+                        weighted_paths += [[gain, p]]
+                weighted_sorted_paths = sorted(weighted_paths, key=lambda x: x[0], reverse=True)
+                sorted_paths = [x[1] for x in weighted_sorted_paths]
+            else:
+                x = [i for i in range(len(shortest_paths))]
+                random.shuffle(x)
+                sorted_paths = [shortest_paths[i] for i in x]
+            if sorted_paths is not None and len(sorted_paths) > 0:
+                for p in sorted_paths:
+                    d = True
+                    if len(vertex_disjoint_choices) > 0:
+                        for pp in vertex_disjoint_choices:
+                            # print(pp, len(pp))
+                            d = d and disjoint(p, pp)
+                    if d:
+                        vertex_disjoint_choices += [p]
+        return vertex_disjoint_choices
 
-            cycles = self.get_improving_cycles(result)
-            ct += 1
-            newresult = result
-            if len(cycles) > 0:
-                # print("found a cycle, augmenting")
-                for c in cycles:
-                    # print("Checking cycle = " + str(c))
-                    # print("Current match = " + str(newresult))
-                    newresult = symdif(newresult, c)
-                    # print("newresult = " + str(newresult))
-            newwt = 0.0
-            for e in newresult:
-                newwt += e.weight
-        identresult = [e.ident for e in newresult]
-        return identresult
-
-    @staticmethod
-    def _disjoint(set_one, set_two):
-        # Return boolean indicating whether set_one and set_two are vertex-disjoint lists of edges
-        set_one_nodes = [e.left for e in set_one] + [e.right for e in set_one]
-        set_two_nodes = [e.left for e in set_two] + [e.right for e in set_two]
-        # Note if vertex-disjoint, then symdif is a disjoint union
-        return len(set_one_nodes) + len(set_two_nodes) == len(symdif(set_one_nodes, set_two_nodes))
-
-
-def make_graph(i, r, wt=None):
-    """ Create a bipartite graph with 2*i nodes such that all right-hand nodes are K-regular and all edges are in-
-    edges. Return the graph.
-
-    Keyword arguments:
-        i -- graph will have 2*i nodes in total
-        r -- ring size/neighbor set size.
-    """
-    s = random.random()
-    x = str(hash(str(1.0) + str(s)))
-    par = {'data': 1.0, 'ident': x, 'left': [], 'right': [], 'in_edges': [], 'out_edges': []}
-    g = BipartiteGraph(par)
-    n = i  # nodeset size
-    k = r  # neighbor size = ring size
-    ct = 0
-    while len(g.left) < n:
-        while ct in g.left or ct in g.right:
-            ct += 1
-        par = {'data': 1.0, 'ident': ct}
-        nod = Node(par)
-        g.add_left(nod)
-        ct += 1
-    while len(g.right) < n:
-        while ct in g.right or ct in g.left:
-            ct += 1
-        par = {'data': 1.0, 'ident': ct}
-        nod = Node(par)
-        g.add_right(nod)
-        ct += 1
-
-    leftkeys = list(g.left.keys())
-    rightkeys = list(g.right.keys())
-    for i in range(n):
-        sig_idx = rightkeys[i]
-        right_node = g.right[sig_idx]
-        assert isinstance(right_node, Node)
-        idxs = random.sample(range(n), k)
-        assert len(idxs) == k
-        for j in idxs:
-            otk_idx = leftkeys[j]
-            left_node = g.left[otk_idx]
-            assert isinstance(left_node, Node)
-            x = (left_node.ident, right_node.ident)
-            par = {'data': 1.0, 'ident': x, 'left': left_node, 'right': right_node, 'weight': 0}
-            e = Edge(par)
-            g.add_in_edge(e)
-
-    if wt is not None:
-        if wt == "random":
-            for eid in g.in_edges:
-                g.in_edges[eid].weight = random.random()
-        else:
-            # Assume wt is dictionary of the form {edge.ident:edge.weight}
-            for eid in wt:
-                assert eid in g.in_edges
-                g.in_edges[eid].weight = wt[eid]
-    return g
+    def get_optimal_red_matching(self, match=None):
+        match = self.get_max_red_matching(match)
+        alt_paths_to_add = self.get_alt_red_paths_with_pos_gain(match)
+        while len(alt_paths_to_add) > 0:
+            for p in alt_paths_to_add:
+                match = symdif(match, p)
+            alt_paths_to_add = self.get_alt_red_paths_with_pos_gain(match)
+        return match
 
 
 def foo(x, y):
     if y:
         print(x)
+
