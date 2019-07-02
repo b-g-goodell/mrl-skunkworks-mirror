@@ -201,7 +201,8 @@ class BipartiteGraph(object):
         return ismatch
 
     def redd_bfs(self, match=[]):
-        ''' Find all augmenting paths with respect to the match by using breadth-first search. '''
+        ''' Find all augmenting paths with respect to non-empty input match using breadth-first search. '''
+        assert len(match) > 0
         result = None # Receiving None as output means input was not a matching on the nodes.
         q = deque()
         found_shortest_path = False
@@ -209,22 +210,7 @@ class BipartiteGraph(object):
 
         if self._check_red_match(match):
             # At least pass back an empty list if match is a matching
-            result = [] 
-
-            # Seed empty match with a single edge, guaranteeing at least one matched node of either side
-            # TODO: Better solution: throw error if input is empty and write scripts to only call with nonempty
-            if len(match)==0:
-                pairFound = False
-                while not pairFound:
-                    for j in self.right_nodes.keys():
-                        for i in self.left_nodes.keys():
-                            if (i,j) in self.red_edge_weights:
-                                pairFound = True
-                                break
-                        if pairFound:
-                            break
-                assert pairFound
-                match = [(i,j)]
+            result = []
 
             # Assemble a few node lists for convenience
             matched_lefts = [eid[0] for eid in match]
@@ -233,13 +219,15 @@ class BipartiteGraph(object):
             unmatched_rights = [nid for nid in self.right_nodes if nid not in matched_rights]
 
             if len(unmatched_rights) == 0 or len(unmatched_lefts) == 0:
-                print("UPDATING RESULT")
+                # print("UPDATING RESULT")
                 old_len = len(result)
                 result = match
                 new_len = len(result)
-                print(result)
+                # print(result)
                 assert new_len - old_len > 0
+                assert len(result) > 0
             else:
+                # prepare for main loop
                 for eid in self.red_edge_weights:
                     if eid[0] in unmatched_lefts:
                         if eid[1] in unmatched_rights:
@@ -248,26 +236,43 @@ class BipartiteGraph(object):
                                 assert len_shortest_path == 1
                             else:
                                 len_shortest_path = 1
-                            print("UPDATING RESULT")
+                            # print("UPDATING RESULT")
                             old_len = len(result)
                             result.append([eid])
                             new_len = len(result)
-                            print(result)
+                            # print(result)
                             assert new_len - old_len > 0
+                            assert len(result) > 0
                         else:
                             q.append([eid])
+                # some pre-loop checks
+                assert len(result) > 0 or len(q) > 0
+                assert not found_shortest_path or len(result) > 0  # Check if len(result) > 0 then found_shortest_path
+
+                # entering main loop
                 if not found_shortest_path:
                     while len(q) > 0:
-                        this_path = q.popleft()
-                        parity = len(this_path) % 2
-                        last_edge = this_path[-1]
-                        last_node = last_edge[parity]
-                        tn = [eid[0] for eid in this_path] + [eid[1] for eid in this_path]
-                        tn = list(dict.fromkeys(tn)) # dedupe
+                        # get next path in queue
+                        this_path, next_path = q.popleft(), None
 
-                        for eid in self.red_edge_weights: 
+                        # extract some info about path
+                        parity = len(this_path) % 2  # parity of path
+                        last_edge = this_path[-1]  # last edge in path
+                        last_node = last_edge[parity]  # last node in path
+                        tn = [eid[0] for eid in this_path] + [eid[1] for eid in this_path]  # touched nodes
+                        tn = list(dict.fromkeys(tn))  # deduplicate
+
+                        if not parity:
+                            edge_set = [x for x in self.red_edge_weights if x not in match if x not in this_path]
+                        elif parity:
+                            edge_set = match
+                        for eid in edge_set:
                             if eid[1-parity] not in tn and eid not in this_path and eid[parity] == last_node:
+                                # if parity == 1, add nonpath edge from match adj to the last edge with untchd endpoint
+                                # if parity == 0, add nonpath red edge adj to the last edge with untchd endpoint
                                 next_path = this_path + [eid]
+                                # next_path.append(eid)
+                                extensible = True
                                 if parity and eid in match and not found_shortest_path:
                                     q.append(next_path)
                                 elif not parity and eid not in match:
@@ -277,35 +282,41 @@ class BipartiteGraph(object):
                                             assert len_shortest_path == len(next_path)
                                         else:
                                             len_shortest_path = len(next_path)
-                                        print("UPDATING RESULT")
+                                        # print("UPDATING RESULT")
                                         old_len = len(result)
                                         result.append(next_path)
-                                        new_len = len(result)   
-                                        print(result)                            
+                                        new_len = len(result)
+                                        # print(result)
                                         assert new_len - old_len > 0
+                                        assert len(result) > 0
                                     elif not found_shortest_path:
                                         q.append(next_path)
-            print("lasting result 1 = ", result)  
-        print("lasting result 2 = ", result)
-        # Before returning our result, we check each path in the result is alternating
-        # with respect to the input match and all have the same length.
-        l = len(result[0])
-        for p in result:
-            assert len(p) == l
-            for i in range(l):
-                parity = (i+1)%2
-                if parity:
-                    assert p[i] not in match
-                elif not parity:
-                    assert p[i] in match
-            
+                        if not extensible:
+                            print("Error: We found a path that cannot be extended to a path that terminates at an " +
+                                    "unmatched right node. Path found = ", this_path)
+            # print("lasting result 1 = ", result)
+            # print("lasting result 2 = ", result)
+            # Before returning our result, we check each path in the result is alternating
+            # with respect to the input match and all have the same length.
+            assert isinstance(result, list)  # check result is a list
+            if len(result) == 0:
+                # if no paths stored in result, then input match is maximal.
+                result = [[eid] for eid in match]
+            else:
+                assert len_shortest_path > 0  # ensure we don't have empty paths as edge case
+                for p in result:
+                    assert len(p) == len_shortest_path  # check all shortest paths have the same length
+                    for i in range(len_shortest_path):
+                        parity = i % 2  # 0th edge is not in match, 1st edge is in match, 2nd edge is not, alternating
+                        if not parity:
+                            assert p[i] not in match
+                        elif parity:
+                            assert p[i] in match
         return result
 
-    def get_augmenting_red_paths(self, match=None):
+    def get_augmenting_red_paths(self, match=[]):
         # Returns list of vertex disjoint augmenting paths of red-edges
-        vertex_disjoint_choices = []
-        if match is None:
-            match = []
+        result = [] # vertex-disjoint choices
         shortest_paths = self.redd_bfs(match) # These are augmenting by construction
         if shortest_paths is not None and len(shortest_paths) > 0:
             # sort paths by weight
@@ -324,20 +335,18 @@ class BipartiteGraph(object):
                 for p in sorted_paths:        
                     vertices_in_p = [eid[0] for eid in p] + [eid[1] for eid in p]
                     d = True
-                    if len(vertex_disjoint_choices) > 0:
-                        for pp in vertex_disjoint_choices:
+                    if len(result) > 0:
+                        for pp in result:
                             # print(pp, len(pp))
                             vertices_in_pp = [eid[0] for eid in pp] + [eid[1] for eid in pp]
                             d = d and disjoint(vertices_in_p, vertices_in_pp)
                     if d:
-                        vertex_disjoint_choices += [p]
-        return vertex_disjoint_choices
+                        result += [p]
+        return result
 
-    def get_bigger_red_matching(self, match=None):
+    def get_bigger_red_matching(self, match=[]):
         # print("Beginning _get_bigger_red_matching")
         result = None
-        if match is None:
-            match = []
         if self._check_red_match(match):
             vdc = self.get_augmenting_red_paths(match)
             if len(vdc) > 0:
@@ -348,19 +357,12 @@ class BipartiteGraph(object):
             result = match
         return result
 
-    def get_max_red_matching(self, match=None):
-        # line = [e.ident for e in match]
-        # print("\n\nBeginning max_matching with match = " + str(line))
-        if match is None:
-            match = []
+    def get_max_red_matching(self, match=[]):
+        assert len(match) > 0
         next_match = self.get_bigger_red_matching(match)
-        # line = [e.ident for e in next_match]
-        # print("First iteration gets us " + str(line))
         while len(next_match) > len(match):
             match = next_match
             next_match = self.get_bigger_red_matching(match)
-            # line = [e.ident for e in next_match]
-            # print("Next iteration gets us " + str(line))
         return match
 
     def get_alt_red_paths_with_pos_gain(self, match=None):

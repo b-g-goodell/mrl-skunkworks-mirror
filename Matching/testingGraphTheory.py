@@ -1,4 +1,5 @@
 import unittest
+import random
 from graphtheory import disjoint
 from graphtheory import symdif
 from graphtheory import *
@@ -481,7 +482,8 @@ class TestBipartiteGraph(unittest.TestCase):
         self.assertTrue(rejected is not None)  # This should always be true since we've covered all possibilities.
         self.assertFalse(rejected)  # Check that the new edge was not rejected
         # Make sure that we have the right number of total edges and verify that the edge landed in the correct place
-        self.assertEqual(len(g.red_edge_weights) + len(g.blue_edge_weights), 2*k+2)
+        self.assertEqual(len(g.red_edge_weights), 2*k+(1-b))
+        self.assertEqual(len(g.blue_edge_weights), 1+b)
         self.assertEqual(len(g.left_nodes), n+1)
         self.assertEqual(len(g.right_nodes), n+1)
         if b == 0:
@@ -566,7 +568,6 @@ class TestBipartiteGraph(unittest.TestCase):
         results = g.redd_bfs(match)
         # print("Results = ", results)
         self.assertEqual(results, [[(0,2),(1,2),(1,3)]])
-        
 
     def test_bfs_full(self):
         """ test_bfs_full is a less-simple test of bfs_red. """
@@ -671,7 +672,7 @@ class TestBipartiteGraph(unittest.TestCase):
 
         match = [(2,3)]
         results = g.redd_bfs(match)
-        print("\n\n====\n\n results = ", results, type(results), "\n\n====\n\n")
+        # print("\n\n====\n\n results = ", results, type(results), "\n\n====\n\n")
         self.assertTrue([(0,3), (2,3), (2,4)] in results)
         self.assertTrue([(0,3), (2,3), (2,5)] in results)
         self.assertTrue([(1,3), (2,3), (2,4)] in results)
