@@ -801,7 +801,7 @@ class TestBipartiteGraph(unittest.TestCase):
         # line = [e.ident for e in results]
         # print("Maximal matching is " + str(line))
 
-    def test_get_improving_cycles(self):
+    def test_get_alt_red_paths_with_pos_gain(self):
         # print("Beginning test_max_matching)")
         par = {'data': 1.0, 'ident': 'han-tyumi', 'left': [], 'right': [], 'red_edges': [], 'blue_edges': []}
         g = BipartiteGraph(par)
@@ -828,26 +828,26 @@ class TestBipartiteGraph(unittest.TestCase):
             self.assertTrue(i in rightkeys)
         self.assertEqual(len(rightkeys), n)
 
-        weids = [[(0, 4), 0], [(0, 5), 1], [(1, 4), 2], [(1, 5), 3], [(1, 6), 4], [(2, 5), 5], [(2, 7), 6], [(3, 6), 7], [(3, 7), 8]]
+        weids = [[(0, 4), 7], [(1, 4), 1], [(1, 5), 3], [(2, 4), 3], [(2, 5), 1], [(3, 5), 7]]
         eids = []
         for ident in weids:
             g.add_red_edge(ident[0], ident[1])
             eids.append(ident[0])
 
-        bad_ids = [(0, 4), (1, 6), (2, 5), (3, 7)]
-        results = g.get_improving_cycles(bad_match)
-        self.assertEqual(len(results), 0)
+        bad_match = [(1, 4), (2, 5)]
+        results = g.get_improving_path(bad_match)
+        print(results)
 
-        g.red_edges[(3, 6)] = 100
-        results = g.get_improving_cycles(bad_match)
-        self.assertEqual(len(results), 1)
-        self.assertEqual(len(results[0]), 6)
-        self.assertTrue((3, 6) in results[0])
-        self.assertTrue((1, 6) in results[0])
-        self.assertTrue((1, 5) in results[0])
-        self.assertTrue((2, 5) in results[0])
-        self.assertTrue((2, 7) in results[0])
-        self.assertTrue((3, 7) in results[0])
+        #g.red_edge_weights[(3, 6)] = 100
+        #results = g.get_alt_red_paths_with_pos_gain(bad_match)
+        #self.assertEqual(len(results), 1)
+        #self.assertEqual(len(results[0]), 6)
+        #self.assertTrue((3, 6) in results[0])
+        #self.assertTrue((1, 6) in results[0])
+        #self.assertTrue((1, 5) in results[0])
+        #self.assertTrue((2, 5) in results[0])
+        #self.assertTrue((2, 7) in results[0])
+        #self.assertTrue((3, 7) in results[0])
 '''
     def test_get_opt_matching(self, sample_size=10**3, verbose=False):
         for tomato in range(sample_size):

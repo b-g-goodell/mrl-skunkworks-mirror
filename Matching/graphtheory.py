@@ -202,6 +202,7 @@ class BipartiteGraph(object):
 
     def redd_bfs(self, match=[]):
         ''' Find all augmenting paths with respect to non-empty input match using breadth-first search. '''
+        # TODO: Rename to reflect search from unmatched lefts to unmatched rights.
         assert len(match) > 0
         result = None # Receiving None as output means input was not a matching on the nodes.
         q = deque()
@@ -303,7 +304,9 @@ class BipartiteGraph(object):
                 # if no paths stored in result, then input match is maximal.
                 result = [[eid] for eid in match]
             else:
-                assert len_shortest_path > 0  # ensure we don't have empty paths as edge case
+                # print(result)
+                assert len_shortest_path is not None
+                assert len_shortest_path > 0 # ensure we don't have empty paths as edge case
                 for p in result:
                     assert len(p) == len_shortest_path  # check all shortest paths have the same length
                     for i in range(len_shortest_path):
@@ -364,6 +367,82 @@ class BipartiteGraph(object):
             match = next_match
             next_match = self.get_bigger_red_matching(match)
         return match
+
+    def get_improving_path(self, match=[]):
+        ''' Find all improving paths with respect to non-empty input match using breadth-first search. '''
+        # TODO: Rename to reflect search starts with unmatched lefts and terminates upon self-intersection
+        assert len(match) > 0
+        result = None # Receiving None as output means input was not a matching on the nodes.
+        q = deque()
+        found_shortest_path = False
+
+        if self._check_red_match(match):
+            # At least pass back an empty list if match is a matching
+            result = []
+
+            # Assemble a few node lists for convenience
+            matched_lefts = [eid[0] for eid in match]
+            matched_rights = [eid[1] for eid in match]
+            unmatched_lefts = [nid for nid in self.left_nodes if nid not in matched_lefts]
+            unmatched_rights = [nid for nid in self.right_nodes if nid not in matched_rights]
+
+            # prepare for main loop
+            for eid in self.red_edge_weights:
+                if eid[0] in unmatched_lefts:
+                    if eid[1] in unmatched_rights:
+                        found_shortest_path = True
+                        old_len = len(result)
+                        result.append([eid])
+                        new_len = len(result)
+                        assert new_len - old_len > 0
+                        assert len(result) > 0
+                    else:
+                        q.append([eid])
+                # some pre-loop checks
+                assert len(result) > 0 or len(q) > 0
+                assert not found_shortest_path or len(result) > 0  # Check if len(result) > 0 then found_shortest_path
+
+                # entering main loop
+                if not found_shortest_path:
+                    while len(q) > 0:
+                        # get next path in queue
+                        this_path, next_path = q.popleft(), None
+
+                        # extract some info about path
+                        parity = len(this_path) % 2  # parity of path
+                        last_edge = this_path[-1]  # last edge in path
+                        last_node = last_edge[parity]  # last node in path
+                        tn = [eid[0] for eid in this_path] + [eid[1] for eid in this_path]  # touched nodes
+                        tn = list(dict.fromkeys(tn))  # deduplicate
+
+                        path_is_done = False
+                        edge_set = None
+
+                        if not parity:
+                            edge_set = [x for x in self.red_edge_weights if x not in match and x not in this_path and x[1-parity] not in tn]
+                        elif parity:
+                            edge_set = [x for x in match if x not in this_path and x[1-parity] not in tn]
+                        path_is_done = (edge_set is None or len(edge_set) == 0)
+                        if path_is_done and sum([self.red_edge_weights[eid] for eid in this_path if eid not in match]) > sum([self.red_edge_weights[eid] for eid in this_path if eid in match]):
+                            found_shortest_path = True
+                            result.append(this_path)
+                        elif not found_shortest_path:
+                            for eid in edge_set:
+                                q.append(this_path + [eid])
+            assert isinstance(result, list)  # check result is a list
+            if len(result) == 0:
+                # if no paths stored in result, then input match is optimal.
+                result = [[eid] for eid in match]
+            else:
+                for p in result:
+                    for eid in p:
+                        i = p.index(eid)
+                        parity = i % 2  # 0th edge is not in match, 1st edge is in match, 2nd edge is not, alternating
+                        if not parity:
+                            assert eid not in match
+                        elif parity:
+                            assert eid in match
+        return result
 
     def get_alt_red_paths_with_pos_gain(self, match=[]):
         # Returns list of vertex disjoint alternating paths of red-edges with a positive gain
