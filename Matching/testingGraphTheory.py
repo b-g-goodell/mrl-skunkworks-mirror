@@ -758,12 +758,10 @@ class TestBipartiteGraph(unittest.TestCase):
         self.assertTrue((2, 4) in results or (2, 5) in results)
         self.assertFalse((2, 3) in results)
         self.assertEqual(len(results), 2)
-'''
-    def test_max_matching_weighted(self):
+
+    def test_get_optimal_red_matching(self):
         # print("Beginning test_max_matching)")
-        s = random.random()
-        x = str(hash(str(1.0) + str(s)))
-        par = {'data': 1.0, 'ident': x, 'left': [], 'right': [], 'in_edges': [], 'out_edges': []}
+        par = {'data': 1.0, 'ident': 'han-tyumi', 'left': [], 'right': [], 'red_edges': [], 'blue_edges': []}
         g = BipartiteGraph(par)
         n = 3
         ct = 0
@@ -783,39 +781,29 @@ class TestBipartiteGraph(unittest.TestCase):
             self.assertTrue(i in leftkeys)
         self.assertEqual(len(leftkeys), n)
 
-        rightkeys = list(g.right.keys())
+        rightkeys = list(g.right_nodes.keys())
         for i in range(n, 2*n):
             self.assertTrue(i in rightkeys)
         self.assertEqual(len(rightkeys), n)
 
-        edge_idents_and_weights = [[0, 3, 1], [1, 3, 2], [2, 3, 3], [2, 4, 4], [2, 5, 5]]
-        eid = []
+        edge_idents_and_weights = [[(0, 3), 1], [(1, 3), 2], [(2, 3), 3], [(2, 4), 4], [(2, 5), 5]]
         for ident in edge_idents_and_weights:
-            l = g.left_nodes[ident[0]]
-            r = g.right_nodes[ident[1]]
-            x = (l.ident, r.ident)
-            par = {'data': 1.0, 'ident': x, 'left': l, 'right': r, 'weight': ident[2]}
-            e = Edge(par)
-            g.add_in_edge(e)
-            eid.append(x)
+            eid = ident[0]
+            w = ident[1]
+            g.add_red_edge(eid, w)
 
-        match = []
-        match_edge = (2, 3)
-        match.append(g.in_edges[match_edge])
-
-        results = g.max_matching(match, True)
-        edge_idents = [e.ident for e in results]
-        assert (1, 3) in edge_idents
-        assert (2, 5) in edge_idents
+        match = [(2,3)]
+        results = g.get_optimal_red_matching(match)
+        self.assertEqual(len(results), 2)
+        self.assertTrue((1,3) in results)
+        self.assertTrue((2,5) in results)
 
         # line = [e.ident for e in results]
         # print("Maximal matching is " + str(line))
 
     def test_get_improving_cycles(self):
         # print("Beginning test_max_matching)")
-        s = random.random()
-        x = str(hash(str(1.0) + str(s)))
-        par = {'data': 1.0, 'ident': x, 'left': [], 'right': [], 'in_edges': [], 'out_edges': []}
+        par = {'data': 1.0, 'ident': 'han-tyumi', 'left': [], 'right': [], 'red_edges': [], 'blue_edges': []}
         g = BipartiteGraph(par)
         n = 4
         ct = 0
@@ -840,40 +828,27 @@ class TestBipartiteGraph(unittest.TestCase):
             self.assertTrue(i in rightkeys)
         self.assertEqual(len(rightkeys), n)
 
-        weids = [[0, 4, 0], [0, 5, 1], [1, 4, 2], [1, 5, 3], [1, 6, 4], [2, 5, 5], [2, 7, 6], [3, 6, 7], [3, 7, 8]]
+        weids = [[(0, 4), 0], [(0, 5), 1], [(1, 4), 2], [(1, 5), 3], [(1, 6), 4], [(2, 5), 5], [(2, 7), 6], [(3, 6), 7], [(3, 7), 8]]
         eids = []
         for ident in weids:
-            l = g.left_nodes[ident[0]]
-            r = g.right_nodes[ident[1]]
-            x = (ident[0], ident[1])
-            par = {'data': 1.0, 'ident': x, 'left': l, 'right': r, 'weight': ident[2]}
-            e = Edge(par)
-            g.add_in_edge(e)
-            eids.append(x)
+            g.add_red_edge(ident[0], ident[1])
+            eids.append(ident[0])
 
         bad_ids = [(0, 4), (1, 6), (2, 5), (3, 7)]
-        bad_match = [g.red_edge_weights[i] for i in bad_ids]
-        for e in bad_match:
-            self.assertTrue(isinstance(e, Edge))
         results = g.get_improving_cycles(bad_match)
-        # print("Readable results:")
-        # readable_results = [[e.ident for e in c] for c in results]
-        # for r in readable_results:
-        #     print("\n"+str(r))
         self.assertEqual(len(results), 0)
 
-        g.in_edges[(3, 6)].weight = 100
+        g.red_edges[(3, 6)] = 100
         results = g.get_improving_cycles(bad_match)
         self.assertEqual(len(results), 1)
         self.assertEqual(len(results[0]), 6)
-        resulting_identities = [e.ident for e in results[0]]
-        self.assertTrue((3, 6) in resulting_identities)
-        self.assertTrue((1, 6) in resulting_identities)
-        self.assertTrue((1, 5) in resulting_identities)
-        self.assertTrue((2, 5) in resulting_identities)
-        self.assertTrue((2, 7) in resulting_identities)
-        self.assertTrue((3, 7) in resulting_identities)
-
+        self.assertTrue((3, 6) in results[0])
+        self.assertTrue((1, 6) in results[0])
+        self.assertTrue((1, 5) in results[0])
+        self.assertTrue((2, 5) in results[0])
+        self.assertTrue((2, 7) in results[0])
+        self.assertTrue((3, 7) in results[0])
+'''
     def test_get_opt_matching(self, sample_size=10**3, verbose=False):
         for tomato in range(sample_size):
             # print("Beginning test_max_matching)")

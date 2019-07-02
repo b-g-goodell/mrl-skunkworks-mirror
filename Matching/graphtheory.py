@@ -365,31 +365,24 @@ class BipartiteGraph(object):
             next_match = self.get_bigger_red_matching(match)
         return match
 
-    def get_alt_red_paths_with_pos_gain(self, match=None):
+    def get_alt_red_paths_with_pos_gain(self, match=[]):
         # Returns list of vertex disjoint alternating paths of red-edges with a positive gain
         vertex_disjoint_choices = []
-        if match is None:
-            match = []
-        shortest_paths = self.bfs(match)
+        shortest_paths = self.redd_bfs(match)
         if len(shortest_paths) > 0:
             sorted_paths = None
-            if wt:
-                weighted_paths = []
-                for p in shortest_paths:
-                    gain = 0.0
-                    for eid in p:
-                        if eid not in match:
-                            gain = gain + self.red_edge_weights[eid]
-                        else:
-                            gain = gain - self.red_edge_weights[eid]
-                    if gain > 0.0:
-                        weighted_paths += [[gain, p]]
-                weighted_sorted_paths = sorted(weighted_paths, key=lambda x: x[0], reverse=True)
-                sorted_paths = [x[1] for x in weighted_sorted_paths]
-            else:
-                x = [i for i in range(len(shortest_paths))]
-                random.shuffle(x)
-                sorted_paths = [shortest_paths[i] for i in x]
+            weighted_paths = []
+            for p in shortest_paths:
+                gain = 0.0
+                for eid in p:
+                    if eid not in match:
+                        gain = gain + self.red_edge_weights[eid]
+                    else:
+                        gain = gain - self.red_edge_weights[eid]
+                if gain > 0.0:
+                    weighted_paths += [[gain, p]]
+            weighted_sorted_paths = sorted(weighted_paths, key=lambda x: x[0], reverse=True)
+            sorted_paths = [x[1] for x in weighted_sorted_paths]
             if sorted_paths is not None and len(sorted_paths) > 0:
                 for p in sorted_paths:
                     d = True
@@ -401,7 +394,7 @@ class BipartiteGraph(object):
                         vertex_disjoint_choices += [p]
         return vertex_disjoint_choices
 
-    def get_optimal_red_matching(self, match=None):
+    def get_optimal_red_matching(self, match=[]):
         match = self.get_max_red_matching(match)
         alt_paths_to_add = self.get_alt_red_paths_with_pos_gain(match)
         while len(alt_paths_to_add) > 0:
