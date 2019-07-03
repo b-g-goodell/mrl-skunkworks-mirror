@@ -388,25 +388,21 @@ class TestBipartiteGraph(unittest.TestCase):
         # (left nodes with ids 0, ..., k-1).
         rejected = None
         for i in range(k):
-            rejected = g.add_red_edge((i,n),0.0)
-            self.assertTrue((i,n) in g.red_edge_weights)
+            g.add_red_edge((i, n), 0.0)
+            self.assertTrue((i, n) in g.red_edge_weights)
+            self.assertEqual(g.red_edge_weights[(i,n)], 0.0)
 
         self.assertEqual(len(g.red_edge_weights), k)
         self.assertEqual(len(g.blue_edge_weights), 0)
         self.assertEqual(len(g.left_nodes), n)
         self.assertEqual(len(g.right_nodes), n)
         
-        # Pick a random signature (right-node) with no adjacent edges, pick k random keys (left-nodes), 
-        # add red edges between them. For simple test, we merely do this uniformly.
+        # Pick a random signature (right-node) with no adjacent edges (any with ids n+1, n+2, ..., 2n-1 are fair), pick
+        # k random keys (left-nodes), add red edges between them. For simple test, we do this uniformly.
         leftnodekeys = list(g.left_nodes.keys())
         rightnodekeys = list(g.right_nodes.keys())
-        r = random.choice(range(n+1,2*n))
-        l = []
-
-        while len(l) < k:  
-            nextl = random.choice(leftnodekeys)  
-            if nextl not in l:
-                l.append(nextl)
+        r = random.choice(range(n+1, 2*n))
+        l = random.sample(leftnodekeys, k)
 
         # Assemble identities of the edges to be added for this signature
         self.assertTrue(len(l) == k)
@@ -621,7 +617,6 @@ class TestBipartiteGraph(unittest.TestCase):
         # print("\n\n====\n\n results = ", results, type(results), "\n\n====\n\n")
         self.assertEqual(results, [[(3,7)]])
 
-
     def test_bfs_fourshortest(self):
         """ test_bfs_full is a less-simple test of bfs_red. """
         # 0 ---- 3
@@ -802,12 +797,14 @@ class TestBipartiteGraph(unittest.TestCase):
         # print("Maximal matching is " + str(line))
 
     def test_get_alt_red_paths_with_pos_gain(self):
-        # print("Beginning test_max_matching)")
+        ''' test_get_alt_red_paths_with_pos_gain tests whether, given a maximal match on a weighted graph,
+        whether we correctly extract another maximal match with higher weight'''
         par = {'data': 1.0, 'ident': 'han-tyumi', 'left': [], 'right': [], 'red_edges': [], 'blue_edges': []}
-        g = BipartiteGraph(par)
+        g = BipartiteGraph(par) # want four left nodes and two right nodes.
         n = 4
+        k = 3
         ct = 0
-        while len(g.left_nodes) < n:
+        while len(g.left_nodes) < 2*n:
             while ct in g.left_nodes or ct in g.right_nodes:
                 ct += 1
             g.add_left_node(ct)
@@ -819,42 +816,58 @@ class TestBipartiteGraph(unittest.TestCase):
             ct += 1
 
         leftkeys = list(g.left_nodes.keys())
-        for i in range(n):
+        for i in range(2*n):
             self.assertTrue(i in leftkeys)
-        self.assertEqual(len(leftkeys), n)
+        self.assertEqual(len(leftkeys), 2*n)
 
         rightkeys = list(g.right_nodes.keys())
-        for i in range(n, 2*n):
+        for i in range(2*n, 3*n):
             self.assertTrue(i in rightkeys)
         self.assertEqual(len(rightkeys), n)
 
-        weids = [[(0, 4), 7], [(1, 4), 1], [(1, 5), 3], [(2, 4), 3], [(2, 5), 1], [(3, 5), 7]]
+        weids = []
+        weids.append([(0, 8), 7])
+        weids.append([(1, 8), 6])
+        weids.append([(2, 8), 5])
+        weids.append([(2, 9), 6])
+        weids.append([(3, 9), 7])
+        weids.append([(4, 9), 8])
+        weids.append([(3, 10), 5])
+        weids.append([(4, 10), 6])
+        weids.append([(5, 10), 7])
+        weids.append([(5, 11), 1])
+        weids.append([(6, 11), 2])
+        weids.append([(7, 11), 3])
+
         eids = []
         for ident in weids:
-            g.add_red_edge(ident[0], ident[1])
+            rejected = g.add_red_edge(ident[0], ident[1])
+            assert not rejected
             eids.append(ident[0])
 
-        bad_match = [(1, 4), (2, 5)]
-        results = g.get_improving_path(bad_match)
-        print(results)
+        bad_match = [(1,8), (2, 9), (3, 10), (5, 11)]
+        self.assertTrue(g._check_red_match(bad_match))
 
-        #g.red_edge_weights[(3, 6)] = 100
-        #results = g.get_alt_red_paths_with_pos_gain(bad_match)
-        #self.assertEqual(len(results), 1)
-        #self.assertEqual(len(results[0]), 6)
-        #self.assertTrue((3, 6) in results[0])
-        #self.assertTrue((1, 6) in results[0])
-        #self.assertTrue((1, 5) in results[0])
-        #self.assertTrue((2, 5) in results[0])
-        #self.assertTrue((2, 7) in results[0])
-        #self.assertTrue((3, 7) in results[0])
-'''
+        matched_rights = [eid[1] for eid in bad_match]
+        self.assertEqual(len(matched_rights), len(g.right_nodes))
+
+        results = g.get_shortest_improving_paths_wrt_max_match(bad_match)
+        results = sorted(results, key=lambda x:x[1], reverse=True)
+        print(results)
+        self.assertTrue(([(0, 8), (1, 8)], 1) in results)
+        self.assertTrue(([(4, 9), (2, 9)], 2) in results)
+        self.assertTrue(([(4, 10), (3, 10)], 3) in results)
+        self.assertTrue(([(6, 11), (5, 11)], 1) in results)
+        self.assertTrue(([(7, 11), (5, 11)], 2) in results)
+
     def test_get_opt_matching(self, sample_size=10**3, verbose=False):
+        ''' test_get_opt_matching tests finding an optimal matching for a COMPLETE n=4 bipartite graph with random
+        edge weights. '''
         for tomato in range(sample_size):
             # print("Beginning test_max_matching)")
             s = random.random()
             x = str(hash(str(1.0) + str(s)))
-            par = {'data': 1.0, 'ident': x, 'left': [], 'right': [], 'in_edges': [], 'out_edges': []}
+            par = {'data': 1.0, 'ident': x, 'left': [], 'right': [], 'red_edges': [], 'blue_edges': []}
             g = BipartiteGraph(par)
             n = 4
             ct = 0
@@ -882,16 +895,11 @@ class TestBipartiteGraph(unittest.TestCase):
             # print(g.left_nodes)
             # print(g.right_nodes)
             for i in range(n):
-                for j in range(n):
-                    l = g.left_nodes[i]
-                    r = g.right_nodes[j+n]
-                    x = (i, j+n)
-                    par = {'data': 1.0, 'ident': x, 'left': l, 'right': r, 'weight': random.random()}
-                    e = Edge(par)
-                    g.add_in_edge(e)
+                for j in range(n,2*n):
+                    g.add_red_edge((i,j), random.random())
             # print(g.in_edges)
 
-            results = g.opt_matching(level_of_cycles=3)
+            results = g.get_optimal_red_matching()
             readable_results = []
             for eid in results:
                 assert eid in g.in_edges or eid in g.out_edges and not (eid in g.in_edges and eid in g.out_edges)
@@ -941,7 +949,7 @@ class TestBipartiteGraph(unittest.TestCase):
                 for wm in weighted_matches:
                     print(str(wm[0]) + "\t" + str(wm[1]))
                     self.assertTrue(wm[0] <= net_weight)
-'''
+
 
 tests = [TestSymDif, TestBipartiteGraph]
 for test in tests:
