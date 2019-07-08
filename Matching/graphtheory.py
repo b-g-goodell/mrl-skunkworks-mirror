@@ -60,6 +60,8 @@ class BipartiteGraph(object):
         maximal_matching : iteratively call get_bigger_red_matching until matches of same 
             size are returned.
         optimize_max_matching : find a highest-weight matching.
+
+    TODO: paths need to be checked to verify they aren't walks! Walks can return to a node or edge, paths can't.
     """
 
     def __init__(self, par):
@@ -346,10 +348,17 @@ class BipartiteGraph(object):
         return match
 
     def get_shortest_improving_paths_wrt_max_match(self, match=[]):
-        ''' Find all paths with respect to non-empty and maximal input match using breadth-first search. We call such a
-        path improving if it is half-augmenting in the sense that the path must alternate and begin with a nonmatch
-        edge but can terminate with a match edge. '''
-        # TODO: Rename to reflect search starts with unmatched lefts and terminates upon self-intersection
+        ''' Take as input a given match. Produce as output the shortest paths from the set of all paths that are
+            (i)   alternating with respect to input match,
+            (ii)  starting with an unmatched node,
+            (iii) maximal length (edges adjacent to terminal endpoint are either (a) adjacent to another node on the
+                  path already or (b) not alternating with respect to input match), and
+            (iv)  have positive gain with respect to input match.
+        That is to say: find the shortest of all longest alternating positive-gain paths starting with an unmatched
+        node. We say a path is IMPROVING if it satisfies (i), (ii), (iii), and (iv).
+
+        Do the job using breadth-first search starting with unmatched nodes.
+        '''
         assert len(match) > 0
         result = None # Receiving None as output means input was not a matching on the nodes.
         q = deque()
@@ -368,63 +377,65 @@ class BipartiteGraph(object):
 
             # Check for maximality
             assert len(unmatched_rights)==0 or len(unmatched_lefts)==0
+
             # Note that for a monero or zcash-style application, len(unmatched_lefts) is never zero (in practice)
             # and in these cases the goal is to match all right nodes (not necessarily all left nodes).
 
             # prepare for main loop
             for eid in self.red_edge_weights:
                 if eid[0] in unmatched_lefts:
-                    if eid[1] in unmatched_rights:
-                        found_shortest_path = True
-                        old_len = len(result)
-                        result.append([eid])
-                        new_len = len(result)
-                        assert new_len - old_len > 0
-                        assert len(result) > 0
-                    else:
+                    if eid[1] in matched_rights:
                         q.append([eid])
-            # some pre-loop checks
-            assert len(result) > 0 or len(q) > 0
-            assert not found_shortest_path or len(result) > 0  # Check that len(result) > 0 implies found_shortest_path = True
+            assert len(q) > 0
+
+            # Note that since this matching is maximal, there are necessarily no edges from unmatched lefts to
+            # unmatched rights, for otherwise the match could be made bigger.
 
             # entering main loop
             if not found_shortest_path:
                 while len(q) > 0:
                     # get next path in queue
                     this_path, next_path = q.popleft(), None
-                    if not found_shortest_path or (found_shortest_path and len(this_path) <= critical_path_length):
-                        # extract some info about path
-                        parity = len(this_path) % 2  # parity of path
-                        last_edge = this_path[-1]  # last edge in path
-                        last_node = last_edge[parity]  # last node in path
-                        tn = [eid[0] for eid in this_path] + [eid[1] for eid in this_path]  # touched nodes
-                        tn = list(dict.fromkeys(tn))  # deduplicate
 
-                        path_is_done = False
-                        edge_set = None
+                    # extract some info about path
+                    parity = len(this_path) % 2  # parity of path
+                    last_edge = this_path[-1]  # last edge in path
+                    last_node = last_edge[parity]  # last node in path
+                    tn = [eid[0] for eid in this_path] + [eid[1] for eid in this_path]  # touched nodes
+                    tn = list(dict.fromkeys(tn))  # deduplicate
 
-                        if not parity:
-                            # Only need to check touched nodes since matching is already maximal, there are no unmatched
-                            # rightnodes (since a maximal match covers all rightnodes)
-                            edge_set = [x for x in self.red_edge_weights if x not in match and x not in this_path and x[1-parity] not in tn and x[parity]==last_node]
-                        elif parity:
-                            edge_set = [x for x in match if x not in this_path and x[1-parity] not in tn and x[parity]==last_node]
-                        path_is_done = (edge_set is None or len(edge_set) == 0)
-                        if path_is_done:
-                            gain = sum([self.red_edge_weights[eid] for eid in this_path if eid not in match])
-                            gain = gain - sum([self.red_edge_weights[eid] for eid in this_path if eid in match])
-                            if gain > 0:
-                                found_shortest_path = True
-                                if critical_path_length is None:
-                                    critical_path_length = len(this_path)
-                                else:
-                                    assert critical_path_length <= len(this_path)
-                                    assert found_shortest_path
-                                result.append((this_path, gain))
-                        else:
+                    path_is_done = False
+                    edge_set = None
+                    if not parity:
+                        # Only need to check touched nodes since matching is already maximal, there are no unmatched
+                        # rightnodes (since a maximal match covers all rightnodes)
+                        edge_set = [x for x in self.red_edge_weights if x not in match and x not in this_path and x[1-parity] not in tn and x[parity]==last_node]
+                    elif parity:
+                        edge_set = [x for x in match if x not in this_path and x[1-parity] not in tn and x[parity]==last_node]
+                    path_is_done = (edge_set is None or len(edge_set) == 0)
+
+                    if path_is_done:
+                        gain = sum([self.red_edge_weights[eid] for eid in this_path if eid not in match])
+                        gain = gain - sum([self.red_edge_weights[eid] for eid in this_path if eid in match])
+                        if gain > 0:
+                            found_shortest_path = True
+                            if critical_path_length is None:
+                                critical_path_length = len(this_path)
+                            else:
+                                assert critical_path_length <= len(this_path)
+                                assert found_shortest_path
+                            if critical_path_length == len(this_path):
+                                result += [(this_path, gain)]
+                    else:
+                        if not found_shortest_path:
                             for eid in edge_set:
                                 q.append(this_path + [eid])
-            assert isinstance(result, list)  # check result is a list
+                        elif len(this_path)+1 <= critical_path_length:
+                            for eid in edge_set:
+                                q.append(this_path + [eid])
+
+            assert isinstance(result, list)  # fail if result is not a list.
+
             if len(result) == 0:
                 # if no paths stored in result, then input match is optimal.
                 result = [([eid], 0.0) for eid in match]

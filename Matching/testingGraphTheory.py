@@ -503,7 +503,7 @@ class TestBipartiteGraph(unittest.TestCase):
         # Pick a random leftnode
         mk = random.choice(list(g.left_nodes.keys()))
         # Collect the edge identities of edges that will be delted if this node is deleted
-        edges_lost = len([eid for eid in g.red_edge_weights if eid[0]==mk])
+        edges_lost = len([eid for eid in g.red_edge_weights if mk in eid]) + len([eid for eid in g.blue_edge_weights if mk in eid])
         # Attempt to delete the node
         rejected = g.del_node(mk)
         self.assertFalse(rejected)
@@ -845,20 +845,20 @@ class TestBipartiteGraph(unittest.TestCase):
             assert not rejected
             eids.append(ident[0])
 
-        bad_match = [(1,8), (2, 9), (3, 10), (5, 11)]
+        bad_match = [(1,8), (2, 9), (3, 10), (5,11)]  # must be maximal
         self.assertTrue(g._check_red_match(bad_match))
-
-        matched_rights = [eid[1] for eid in bad_match]
-        self.assertEqual(len(matched_rights), len(g.right_nodes))
-
         results = g.get_shortest_improving_paths_wrt_max_match(bad_match)
-        results = sorted(results, key=lambda x:x[1], reverse=True)
-        print(results)
-        self.assertTrue(([(0, 8), (1, 8)], 1) in results)
-        self.assertTrue(([(4, 9), (2, 9)], 2) in results)
-        self.assertTrue(([(4, 10), (3, 10)], 3) in results)
-        self.assertTrue(([(6, 11), (5, 11)], 1) in results)
-        self.assertTrue(([(7, 11), (5, 11)], 2) in results)
+        self.assertTrue(([(0,8), (1,8)], 1) in results)
+        self.assertTrue(len(results)==1)
+        self.assertTrue(isinstance(results[0], tuple))
+        self.assertTrue(isinstance(results[0][0], list))
+        for eid in results[0][0]:
+            self.assertTrue(isinstance(eid, tuple))
+            self.assertTrue(eid in g.red_edge_weights)
+            s = sum([g.red_edge_weights[eid] for eid in results[0][0] if eid not in bad_match])
+            s = s - sum([g.red_edge_weights[eid] for eid in results[0][0] if eid in bad_match])
+            self.assertEqual(s, results[0][1])
+
 
     def test_get_opt_matching(self, sample_size=10**3, verbose=False):
         ''' test_get_opt_matching tests finding an optimal matching for a COMPLETE n=4 bipartite graph with random
