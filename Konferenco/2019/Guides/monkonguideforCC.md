@@ -1,7 +1,7 @@
 # A Guide for Konferenco Content Committees
-## Adaptation Author: Surae Noether (Brandon Goodell, surae at get monero dot org
-## Original Document: A Guide for HotNets General Chairs
-## Original Author: Dave Levin, distributeddave at gmail dot com
+#### Adaptation Author: Surae Noether (Brandon Goodell, surae at get monero dot org
+#### Original Document: A Guide for HotNets General Chairs
+#### Original Author: Dave Levin, distributeddave at gmail dot com
 
 Congratulations on selecting content and designing the schedule for a Monero Konferenco!  Hosting can be a really rewarding experience.  This document is intended to help make the process as easy for you as possible.
 
@@ -24,7 +24,7 @@ As the steering committee, you make most of the biggest decisions of how money i
 
 Your right-hand-person and their right-hand person is the _Konferenco Organizer_ and their program manager, respectively. They work together to act as a bridge between you, the content committee, and all other groups that make a Konferenco run, like the venue/rental/catering/hotel representatives, A/V, web developers, and of course speakers, sponsors, panelists, moderators, and other Konferenco personnel. 
 
-Hereís what some of these are broadly responsible for.
+Here‚Äôs what some of these are broadly responsible for.
   * Konferenco Organizer (KO): The Konferenco Organizer may be the program manager and not know it. The KO is responsible for, among other things, the following:
     * Budget design and reporting
     * Venue
@@ -38,7 +38,7 @@ Hereís what some of these are broadly responsible for.
     * More.
     * More than that.
     * No, even more.
-    * All the little things that make a Konferenco work but are easy to take for granted (badges, posters, power, wifi, Ö).
+    * All the little things that make a Konferenco work but are easy to take for granted (badges, posters, power, wifi, ‚Ä¶).
     * Speaker dinner
     * Handling money: getting money in, getting invoices out.
   * Program manager (PM): The Konferenco Organizer may be the program manager and not know it. The Konferenco Organizer will probably seek approval from the SC to hire an independent program manager. We recommend event organizers with experience in organizing academic conferences or organizing engineering, medicine, science, or technology conferences outside of academia. The program manager is responsible for, among other things:
@@ -52,20 +52,20 @@ Hereís what some of these are broadly responsible for.
 
 ## 2. SELECT A CZAR.
 
-Have one or more meeting. Select an individual who will act as the contact point for invited speakers (the ìinvitation czarî). 
+Have one or more meeting. Select an individual who will act as the contact point for invited speakers (the ‚Äúinvitation czar‚Äù). 
 
 ## 3. NAIL DOWN DATES & HEADCOUNT
 
-Have one or more meeting. Select an individual who will act as the contact point for invited speakers (the ìinvitation czarî). Select a target number of speakers and panelists based on the performance of last yearsí Konferenco, and how many of these will be invited instead of submitted. 
+Have one or more meeting. Select an individual who will act as the contact point for invited speakers (the ‚Äúinvitation czar‚Äù). Select a target number of speakers and panelists based on the performance of last years‚Äô Konferenco, and how many of these will be invited instead of submitted. 
   * What to look for:
     * The KO will communicate the dates of the event, the total allowable headcount, and the date of registration to you from the SC.
   * What you need to do: 
     * Decide on dates:
-      * Dates that CFP opens on the website (ìCFP dateî).
-      * Dates that first round of invitations will be sent to speakers (ìinvitation dateî).
-      * Deadlines for open submissions (ìsubmission deadlineî).
-      * Date that Czar sends first round of speaker acceptance/rejection letters (ìA/R dateî).
-      * Dates for each round of acceptance/rejection letters indicating when RSVPs are required or the speaker is assumed to have forfeited (ìRSVP dateî).
+      * Dates that CFP opens on the website (‚ÄúCFP date‚Äù).
+      * Dates that first round of invitations will be sent to speakers (‚Äúinvitation date‚Äù).
+      * Deadlines for open submissions (‚Äúsubmission deadline‚Äù).
+      * Date that Czar sends first round of speaker acceptance/rejection letters (‚ÄúA/R date‚Äù).
+      * Dates for each round of acceptance/rejection letters indicating when RSVPs are required or the speaker is assumed to have forfeited (‚ÄúRSVP date‚Äù).
     * Decide on headcount:
       * How many speakers in total? 
       * How many speakers will be invited (as opposed to submitting an abstract)? 
@@ -75,11 +75,15 @@ Have one or more meeting. Select an individual who will act as the contact point
     * Start reaching out to possible speakers to take their temperature on attending and speaking. Keep in mind folks who are keen on the idea.
   * What you should not do: send out formal invitations yet.
 
-## 4. DESIGN SAMPLE SCHEDULE AND SUBMISSION REQUIREMENTS.
+## 4. DESIGN SAMPLE SCHEDULE, SUBMISSION REQUIREMENTS, PUBLICATION INFORMATION
+
 See the bottom of this document for the sample schedule we began with (and note that one such schedule is required for each room!).
   * Picking session titles too early can be beneficial (it shows speakers where they may fit into the conference, so unrelated abstracts are not submitted).
   * It can also be a drawback (it shoehorns speakers unfairly).
+  
 The first Konferenco had no submission requirements except an abstract.
+
+Determine whether the Konferenco will be publishing proceedings; if so, modify this document with the details of how you do it!
 
 ## 5. COMPILE LISTS OF SPEAKERS TO INVITE
 
@@ -87,25 +91,25 @@ Compile some ranked lists of speakers and panelists at least a week before the i
 
 Stuff to keep in mind: 
   * Finding good invited speakers may be a long process. Make sure your process is flexible enough to include good invited speakers late in the process.
-  * Inviting someone last-minute to speak is usually a ìnoî for obvious reasons.
+  * Inviting someone last-minute to speak is usually a ‚Äúno‚Äù for obvious reasons.
   * Panelists should be given an opportunity to speak for a short speaking slot.
   * Highly sought-after speakers have many engagements and should be invited early. 
-  * Certainly if you invite boring-to-listen-to speakers or speakers with boring content early on, theyíll snatch up the chance, but then youíll only have boring content.
-  * However, if many top tier speakers are already engaged and your first round of invitations only include them, then you have wasted time asking top-tier speakers who are already busy and you will get a lot of ìNoî and you have to send out a new round of invitationsÖ which may have the same problem...
-  * There is a balancing act here. I donít pretend to know the game-theoretic solution.
+  * Certainly if you invite boring-to-listen-to speakers or speakers with boring content early on, they‚Äôll snatch up the chance, but then you‚Äôll only have boring content.
+  * However, if many top tier speakers are already engaged and your first round of invitations only include them, then you have wasted time asking top-tier speakers who are already busy and you will get a lot of ‚ÄúNo‚Äù and you have to send out a new round of invitations‚Ä¶ which may have the same problem...
+  * There is a balancing act here. I don‚Äôt pretend to know the game-theoretic solution.
 
-## 6. GET LAST YEAR INVITATION EMAILS, DRAFT THIS YEARSí.
+## 6. GET LAST YEAR INVITATION EMAILS, DRAFT THIS YEARS‚Äô.
 
-At least two weeks before the invitation date, get old sample emails and use them to draft this yearsí emails, or draft your own. 
+At least two weeks before the invitation date, get old sample emails and use them to draft this years‚Äô emails, or draft your own. 
   * Each invitation letter should have an RSVP deadline for the speaker.
   * This RSVP deadline will depend on whether the speaker was invited by the CC without a submitted abstract, or whether the speaker is going through the submission process.
     * Speakers should be given at least a month to respond before they forfeit their spot.
-    * Invited speakers should be given at least two months to respondÖ but these speakers should have an interactive/live conversation with the invitation czar, so the deadline for these speakers should not be an issue. 
-  * Each invitation should request to use the speakerís likeness on the website, and request that we record and/or stream the presentation. Acceptance of the speaking engagement is implicit agreement to these terms, unless otherwise specified.
+    * Invited speakers should be given at least two months to respond‚Ä¶ but these speakers should have an interactive/live conversation with the invitation czar, so the deadline for these speakers should not be an issue. 
+  * Each invitation should request to use the speaker‚Äôs likeness on the website, and request that we record and/or stream the presentation. Acceptance of the speaking engagement is implicit agreement to these terms, unless otherwise specified.
   * Each invitation e-mail should request information from the speaker like a photo, a one-two sentence blurb about themselves, and any dietary restrictions necessary to take into account for the speaker dinner.
   * In 2019, we did not have a formal invitation letter, but you can see a sample at the end of this document. 
   * In 2020, please draft an email template inviting speakers to speak at the Konferenco to include in this document. 
-  * In 2021 and beyond, use these templates and append your yearís templates to the end of this file for future committees.
+  * In 2021 and beyond, use these templates and append your year‚Äôs templates to the end of this file for future committees.
 
 ## 7. SEND OUT (THE NEXT) ROUND OF INVITATIONS
 
@@ -115,12 +119,12 @@ The Czar will, beginning on the invitation date, do the following in iterated ro
   * place speaker information as they accept invitations into a big file to dump on the KO when they ask for it, and
   * place speaker information as they reject or ignore invitations into a separate file for future years, or for emergency backup speakers, etc.
 
-The Czar will iterate to the next round of speaker invitations no more rapidly than once a week. If the quota is filled, the Czar should informally invite the remaining individuals on the list to submit proposals/abstracts (as well as any speakers on the list who declined an invitationÖ their travel situations may have changed).
+The Czar will iterate to the next round of speaker invitations no more rapidly than once a week. If the quota is filled, the Czar should informally invite the remaining individuals on the list to submit proposals/abstracts (as well as any speakers on the list who declined an invitation‚Ä¶ their travel situations may have changed).
 In each round, the Czar should respect the RSVP deadline of the speaker and assume they are rejecting their invitation of the RSVP deadline has passed.
 
 ## 8. COMPILE FIRST DRAFT SCHEDULE 
 
-Once a sufficient number of invited speakers have agreed to attend, the CC can populate their names into the schedule, keeping in mind this wonít reflect their actual speaking slots until much later. 
+Once a sufficient number of invited speakers have agreed to attend, the CC can populate their names into the schedule, keeping in mind this won‚Äôt reflect their actual speaking slots until much later. 
 Send this to the KO, along with speaker contact information and any dietary restrictions from the speakers.
 
 ## 9. REVIEW SUBMITTED TALKS. 
@@ -141,7 +145,7 @@ Once the submission deadline has passed (or, if the number of submissions is lar
   * Promotional presentations about ICO shitcoins are not welcome. 
   * Avoid TED-style inspiration talks.
   * Avoid low-information-density talks.
-  * Avoid selecting bad communicators as speakers. Some conferences require a video submission of the talk, for example, to guarantee that speakers have practiced their talk at least once. We donít recommend this unless it becomes systemically problematic.
+  * Avoid selecting bad communicators as speakers. Some conferences require a video submission of the talk, for example, to guarantee that speakers have practiced their talk at least once. We don‚Äôt recommend this unless it becomes systemically problematic.
 
 ## 10. SEND OUT (NEXT) ROUND OF ACCEPTANCE LETTERS.
 
@@ -157,16 +161,16 @@ All of the following should begin before the A/R date and should be completed by
 At least one month before the Konferenco, ensure that all invited speakers have sent the CC their abstracts. Once the quota is met, call a meeting to decide on the final schedule. This includes session titles. 
 Be sure to do this: Confirm with all speakers before finishing off the draft schedule.
 
-**What to look for:** The KO will contact you for speaker and schedule information for the website. Itís okay to send partial information; they will be updating the website organically as you finish negotiating with speakers and send them schedule information.
+**What to look for:** The KO will contact you for speaker and schedule information for the website. It‚Äôs okay to send partial information; they will be updating the website organically as you finish negotiating with speakers and send them schedule information.
 
 **Things to look out for:**
-  * Every session needs a master-or-mistress-of-ceremony (ìemceeî) from the Content Committee or chosen by the CC.
+  * Every session needs a master-or-mistress-of-ceremony (‚Äúemcee‚Äù) from the Content Committee or chosen by the CC.
   * Lunch breaks should be at least an hour, preferably 90 minutes or 2 hours. If the venue has a restaurant on premises or if there is catering, an hour is possibly okay, but try to maintain 90 minute or longer lunches.
   * Each session should be 2-4 speakers with 20-30 minutes each (unless the CC decides differently). 
     * Talks longer than a typical college lecture (40-50 minutes) are discouraged; attendees get bored.
     * Talks shorter than 20 minutes are generally not worth it.
     * Assume 5-7 minutes for Q&A and 2-5 minutes for setting up between speakers.
-  * Top talks should be at the top of the dayÖ but this isnít a rule we followed very well, some of the best talks were at the very end of the first Konferenco. Why? Travel restrictions!
+  * Top talks should be at the top of the day‚Ä¶ but this isn‚Äôt a rule we followed very well, some of the best talks were at the very end of the first Konferenco. Why? Travel restrictions!
   * Travel times for speakers are critical; you cannot schedule someone to speak if they have already left for the airport.
   * Traveling to the east is harder for jet lag than traveling to west. 
     * If a speaker is coming from east of the Konferenco, then they are traveling west, and they are likely to be good choices for early-morning talks.
@@ -178,11 +182,11 @@ Be sure to do this: Confirm with all speakers before finishing off the draft sch
 
 ## 12. SEND OUT THE REGISTRATION INFORMATION.
 
-Sometimes the CC will have to meet once or more in the weeks leading up to the event (for example if the details for some conference-call-style panel requires extra discussion, or if speakers have to cancel). Donít be afraid to meet again.
+Sometimes the CC will have to meet once or more in the weeks leading up to the event (for example if the details for some conference-call-style panel requires extra discussion, or if speakers have to cancel). Don‚Äôt be afraid to meet again.
 
-Sometimes speakers cancel last-minute for personal reasons like deaths in the family or illness, and so on. Itís not personal. 
+Sometimes speakers cancel last-minute for personal reasons like deaths in the family or illness, and so on. It‚Äôs not personal. 
 
-You have a backup list of speakers in case this happens. If speakers canít be replaced, sessions can be made shorter and coffee breaks can be extended.
+You have a backup list of speakers in case this happens. If speakers can‚Äôt be replaced, sessions can be made shorter and coffee breaks can be extended.
 
 **What to do:**
   * At least three weeks before the event, the invitation czar should contact each speaker and confirm with them (or should have before drafting the schedule)
@@ -196,7 +200,7 @@ You have a backup list of speakers in case this happens. If speakers canít be re
 **What to do:** Provide final confirmation of the schedule to the KO, who will post it online.
 
 **What happens next:**
-  * The KO will respond with a ìrun-of-show,î a minute-by-minute break-down of the dayís events. 
+  * The KO will respond with a ‚Äúrun-of-show,‚Äù a minute-by-minute break-down of the day‚Äôs events. 
   * Approve this run-of-show or ask for modifications until you approve it.
 
 From here on out, the CC and the KO will use the run-of-show instead of the schedule. Any last minute cancellations go on here.
@@ -238,66 +242,66 @@ Here is a sample schedule mimicking the first Konferenco in 2019.
 
 |               |          Day 0 - Room A             |
 | ------------- |------------------------------------:|
-| 08:30 ñ 09:00 | Same-day registration and breakfast |
-| 09:00 ñ 10:30 | Speaker Session 1                   |
-| 10:30 ñ 10:45 | Coffee Break                        |
+| 08:30 ‚Äì 09:00 | Same-day registration and breakfast |
+| 09:00 ‚Äì 10:30 | Speaker Session 1                   |
+| 10:30 ‚Äì 10:45 | Coffee Break                        |
 | 10:45 - 12:15 | Speaker Session 2                   |
-| 12:15 ñ 13:45 | Lunch Break                         |
-| 13:45 ñ 15:00 | Speaker Session 2                   |
-| 15:00 ñ 15:15 | Coffee Break                        |
-| 15:15 ñ 16:45 | Speaker Session 3                   |
+| 12:15 ‚Äì 13:45 | Lunch Break                         |
+| 13:45 ‚Äì 15:00 | Speaker Session 2                   |
+| 15:00 ‚Äì 15:15 | Coffee Break                        |
+| 15:15 ‚Äì 16:45 | Speaker Session 3                   |
 | ------------- |------------------------------------:|
 |               |          Day 1 - Room A             |
 | ------------- |------------------------------------:|
-| 08:30 ñ 09:00 | Breakfast                           |
-| 09:00 ñ 10:30 | Panel Session                       |
-| 10:30 ñ 10:45 | Coffee Break                        |
-| 10:45 ñ 12:15 | Speaker Session 4                   |
-| 12:15 ñ 13:45 | Lunch Break                         |
-| 13:45 ñ 15:15 | Speaker Session 5                   |
-| 15:15 ñ 15:30 | Coffee Break                        |
-| 15:30 ñ 17:00 | Speake Session 6                    |
+| 08:30 ‚Äì 09:00 | Breakfast                           |
+| 09:00 ‚Äì 10:30 | Panel Session                       |
+| 10:30 ‚Äì 10:45 | Coffee Break                        |
+| 10:45 ‚Äì 12:15 | Speaker Session 4                   |
+| 12:15 ‚Äì 13:45 | Lunch Break                         |
+| 13:45 ‚Äì 15:15 | Speaker Session 5                   |
+| 15:15 ‚Äì 15:30 | Coffee Break                        |
+| 15:30 ‚Äì 17:00 | Speake Session 6                    |
 
 Here is a sample schedule for a day-and-a-half event with two rooms hosting sessions and panels simultaneously for the entire event. Having mutiple rooms splits turnout, which has benefits and drawbacks. Having a day-and-a-half event makes the event seem short, but ensures that attendees don't have trouble fitting travel into their schedules.
 
 |               |          Day 0 - Room A             |          Day 0 - Room B             |
 | ------------- |------------------------------------:|------------------------------------:|
-| 08:30 ñ 09:00 | Same-day registration and breakfast |                                     |
-| 09:00 ñ 10:00 | Keynote Speaker(s)                  |                                     |
-| 10:00 ñ 11:45 | Speaker Session 1                   | Panel Session 1                     |
-| 11:45 ñ 13:15 | Lunch Break                         |                                     |
-| 13:15 ñ 14:45 | Speaker Session 2                   | Panel Session 2                     |
-| 14:45 ñ 15:15 | Coffee Break                        |                                     |
-| 15:15 ñ 16:45 | Panel Session 3                     | Speaker Session 3                   |
+| 08:30 ‚Äì 09:00 | Same-day registration and breakfast |                                     |
+| 09:00 ‚Äì 10:00 | Keynote Speaker(s)                  |                                     |
+| 10:00 ‚Äì 11:45 | Speaker Session 1                   | Panel Session 1                     |
+| 11:45 ‚Äì 13:15 | Lunch Break                         |                                     |
+| 13:15 ‚Äì 14:45 | Speaker Session 2                   | Panel Session 2                     |
+| 14:45 ‚Äì 15:15 | Coffee Break                        |                                     |
+| 15:15 ‚Äì 16:45 | Panel Session 3                     | Speaker Session 3                   |
 | ------------- |------------------------------------:|------------------------------------:|
 |               |          Day 1 - Room A             |          Day 2 - Room B             |
 | ------------- |------------------------------------:|------------------------------------:|
-| 08:30 ñ 09:00 | Breakfast                           |                                     |
-| 09:00 ñ 10:30 | Panel Session 4                     | Speaker Session 4                   |
-| 10:30 ñ 10:45 | Coffee Break                        |                                     |
-| 10:45 ñ 12:15 | Speaker Session 4                   | Panel Session 5                     |
+| 08:30 ‚Äì 09:00 | Breakfast                           |                                     |
+| 09:00 ‚Äì 10:30 | Panel Session 4                     | Speaker Session 4                   |
+| 10:30 ‚Äì 10:45 | Coffee Break                        |                                     |
+| 10:45 ‚Äì 12:15 | Speaker Session 4                   | Panel Session 5                     |
 
 Here is a sample schedule for a full two-day event with two rooms hosting sessions and panels simultaneously in two separate rooms.
 
 |               |          Day 0 - Room A             |          Day 0 - Room B             |
 | ------------- |------------------------------------:|------------------------------------:|
-| 08:30 ñ 09:00 | Same-day registration and breakfast |                                     |
-| 09:00 ñ 10:00 | Keynote Speaker(s)                  |                                     |
-| 10:00 ñ 11:45 | Speaker Session 1                   | Panel Session 1                     |
-| 11:45 ñ 13:15 | Lunch Break                         |                                     |
-| 13:45 ñ 15:00 | Speaker Session 2                   | Panel Session 2                     |
-| 15:00 ñ 15:15 | Coffee Break                        | Coffee Break                        |
-| 15:15 ñ 16:45 | Panel Session 3                     | Speaker Session 3                   |
+| 08:30 ‚Äì 09:00 | Same-day registration and breakfast |                                     |
+| 09:00 ‚Äì 10:00 | Keynote Speaker(s)                  |                                     |
+| 10:00 ‚Äì 11:45 | Speaker Session 1                   | Panel Session 1                     |
+| 11:45 ‚Äì 13:15 | Lunch Break                         |                                     |
+| 13:45 ‚Äì 15:00 | Speaker Session 2                   | Panel Session 2                     |
+| 15:00 ‚Äì 15:15 | Coffee Break                        | Coffee Break                        |
+| 15:15 ‚Äì 16:45 | Panel Session 3                     | Speaker Session 3                   |
 | ------------- |------------------------------------:|------------------------------------:|
 |               |          Day 1 - Room A             |          Day 2 - Room B             |
 | ------------- |------------------------------------:|------------------------------------:|
-| 08:30 ñ 09:00 | Breakfast                           |                                     |
-| 09:00 ñ 10:30 | Panel Session 4                     | Speaker Session 4                   |
-| 10:30 ñ 10:45 | Coffee Break                        |                                     |
-| 10:45 ñ 12:15 | Speaker Session 5                   | Panel Session 5                     |
-| 12:15 ñ 13:45 | Lunch Break                         |                                     |
-| 13:45 ñ 15:00 | Speaker Session 6                   | Panel Session 6                     |
-| 15:00 ñ 15:15 | Coffee Break                        |                                     |
-| 15:15 ñ 16:45 | Panel Session 7                     | Speaker Session 7                   |
+| 08:30 ‚Äì 09:00 | Breakfast                           |                                     |
+| 09:00 ‚Äì 10:30 | Panel Session 4                     | Speaker Session 4                   |
+| 10:30 ‚Äì 10:45 | Coffee Break                        |                                     |
+| 10:45 ‚Äì 12:15 | Speaker Session 5                   | Panel Session 5                     |
+| 12:15 ‚Äì 13:45 | Lunch Break                         |                                     |
+| 13:45 ‚Äì 15:00 | Speaker Session 6                   | Panel Session 6                     |
+| 15:00 ‚Äì 15:15 | Coffee Break                        |                                     |
+| 15:15 ‚Äì 16:45 | Panel Session 7                     | Speaker Session 7                   |
 
 Events much larger than this may be difficult to plan content for... we'll see in 2020 and beyond!
