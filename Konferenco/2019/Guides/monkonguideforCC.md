@@ -238,34 +238,34 @@ Here are some handy checklists; these should be edited and amended in future ver
 
 ## 15. SAMPLE SCHEDULE
 
-Here is a sample schedule mimicking the first Konferenco in 2019.
+Here is a sample schedule mimicking the first Konferenco in 2019. Total is 8 sessions.
 
-|               |          Day 0 - Room A             |
+|               |          Konferenco 2019            |
 | ------------- |------------------------------------:|
+|               |          Day 0                      |
 | 08:30 – 09:00 | Same-day registration and breakfast |
 | 09:00 – 10:30 | Speaker Session 1                   |
 | 10:30 – 10:45 | Coffee Break                        |
 | 10:45 - 12:15 | Speaker Session 2                   |
 | 12:15 – 13:45 | Lunch Break                         |
-| 13:45 – 15:00 | Speaker Session 2                   |
+| 13:45 – 15:00 | Speaker Session 3                   |
 | 15:00 – 15:15 | Coffee Break                        |
-| 15:15 – 16:45 | Speaker Session 3                   |
-| ------------- |------------------------------------:|
-|               |          Day 1 - Room A             |
-| ------------- |------------------------------------:|
+| 15:15 – 16:45 | Speaker Session 4                   |
+|               |          Day 1                      |
 | 08:30 – 09:00 | Breakfast                           |
 | 09:00 – 10:30 | Panel Session                       |
 | 10:30 – 10:45 | Coffee Break                        |
-| 10:45 – 12:15 | Speaker Session 4                   |
+| 10:45 – 12:15 | Speaker Session 5                   |
 | 12:15 – 13:45 | Lunch Break                         |
-| 13:45 – 15:15 | Speaker Session 5                   |
+| 13:45 – 15:15 | Speaker Session 6                   |
 | 15:15 – 15:30 | Coffee Break                        |
-| 15:30 – 17:00 | Speake Session 6                    |
+| 15:30 – 17:00 | Speaker Session 7                   |
 
-Here is a sample schedule for a day-and-a-half event with two rooms hosting sessions and panels simultaneously for the entire event. Having mutiple rooms splits turnout, which has benefits and drawbacks. Having a day-and-a-half event makes the event seem short, but ensures that attendees don't have trouble fitting travel into their schedules.
+Here is a sample schedule for a day-and-a-half event with two rooms hosting sessions and panels simultaneously for the entire event. Having mutiple rooms splits turnout... but having talks late into the afternoon causes attendance to flag as folks leave to catch their flights. So there's a trade-off. Having a day-and-a-half event makes the event seem short, but ensures that attendees don't have trouble fitting travel into their schedules. Total is 10 sessions.
 
 |               |          Day 0 - Room A             |          Day 0 - Room B             |
 | ------------- |------------------------------------:|------------------------------------:|
+|               |          Day 0 - Room A             |          Day 0 - Room B             |
 | 08:30 – 09:00 | Same-day registration and breakfast |                                     |
 | 09:00 – 10:00 | Keynote Speaker(s)                  |                                     |
 | 10:00 – 11:45 | Speaker Session 1                   | Panel Session 1                     |
@@ -279,9 +279,9 @@ Here is a sample schedule for a day-and-a-half event with two rooms hosting sess
 | 08:30 – 09:00 | Breakfast                           |                                     |
 | 09:00 – 10:30 | Panel Session 4                     | Speaker Session 4                   |
 | 10:30 – 10:45 | Coffee Break                        |                                     |
-| 10:45 – 12:15 | Speaker Session 4                   | Panel Session 5                     |
+| 10:45 – 12:15 | Speaker Session 5                   | Panel Session 5                     |
 
-Here is a sample schedule for a full two-day event with two rooms hosting sessions and panels simultaneously in two separate rooms.
+Here is a sample schedule for a full two-day event with two rooms hosting sessions and panels simultaneously in two separate rooms, totalling 14 sessions.
 
 |               |          Day 0 - Room A             |          Day 0 - Room B             |
 | ------------- |------------------------------------:|------------------------------------:|
