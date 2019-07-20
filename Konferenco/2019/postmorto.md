@@ -138,7 +138,7 @@ If (i) the market had held steady at around 100-105 USD per XMR and (ii) we had 
       * On the other hand, our web development costs if we re-use our system will approach zero very quickly in future years; it may be worth using it once or twice more to get some use out of it.
     * We recommend against brew-it-yourself approaches here; just go with Big Neon.
 
-7. RECOMMENDATIONS FOR 2020.
+## 7. RECOMMENDATIONS FOR 2020.
 
 We recommend the following ways to mitigate costs and improve income in the future:
   * Mitigating expenses: 
