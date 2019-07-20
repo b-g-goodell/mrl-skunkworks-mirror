@@ -260,7 +260,9 @@ There are several things you need from the caterer over all days of the Konferen
     * If folks don’t have to leave the venue for lunch and you are catering, you can get away with 1 hour in a buffet situation.
   * Afternoon snack (15 minutes, typically around 3:30 pm): Cookies, granola bars, nuts, fruits, candy bars.
   * Things you need to do: Get three estimates from three caterers, including taxes, staff costs, etc.  The SC will direct which should be added to the budget under projected expenses and will sign contracts.
-     13. CHOOSE AND RESERVE THE RESTAURANT. 
+  
+## 13. CHOOSE AND RESERVE THE RESTAURANT. 
+
 Konferenco hosts a speaker-sponsor dinner the first evening of the Konferenco.  Because Konferenco is relatively small, you have the opportunity to set up a really nice dinner. The SC will let you pick the restaurant, unless the resulting budget is far out of historical norms.
   * Location & transportation:  Dinner doesn’t have to be at the Konferenco venue, but you will want to make sure there is a way for all invited speakers (10-15 a day per room) to get there without knowing your city all that well; the first Konferenco, we walked together down the street. Look for places close enough to travel to for under something like $10, either by Uber/Lyft, train, bus, or some other public transportation. Ask the SC if you should budget for transportation, like Metro fare cards or a charter bus.  These can be non-trivial costs, so you should nail down those details as much as you can before preparing the budget.
   * Budget: It can be a bit tricky to budget this meal until you have an idea of how many corporate sponsors there will be and how much the registration fee will be. Try to budget at least $40 per diner before wine, or otherwise you are not going to have a very nice dinner at all; usually $100 per diner is usually overkill.
@@ -272,7 +274,9 @@ Konferenco hosts a speaker-sponsor dinner the first evening of the Konferenco.  
       * Sometimes, restaurants will allow a large party to work like this: each attendant can order from a prepared wine list with no limit, and sometimes there is also a cash bar.
       * Pick a red and a white wine.  Ask your contact at the restaurant what they recommend, but averaging about half a bottle per person should be fine.  Let them know that you are going to be on a pretty strictly defined budget, so the wait staff should not push the wine too hard or open the bar (unless attendees pay for it individually).
 Be a bit adventurous with the menu, but not to the point that you alienate anyone. Make it memorable and delicious.
-     14. ESTIMATE WELCOME BAG, POSTER PROGRAMS, BADGES. 
+
+## 14. ESTIMATE WELCOME BAG, POSTER PROGRAMS, BADGES. 
+
 Attendees will often forget sparse swag bags or bags filled with useless garbage. Attendees will often remember really good swag bags filled with useful things. No matter what, swag bags are a big source of plastic waste for these events; try to minimize this. We recommend the following for the projected expenses part of the budget.
   * Get an estimate from a graphic designer (ask Thunderosa or The Monera) about designing a thematic graphic for the Konferenco, as well as badges, t-shirts, posters, flyers, and print advertisement using the thematic graphic (which should have the Konferenco logo somewhere in it).
     * Budget more than you think for this.
@@ -298,14 +302,16 @@ Attendees will often forget sparse swag bags or bags filled with useless garbage
     * Use this projected number to determine how many welcome bags and gifts to order.
   * Popularity of the shirts at the Cyphermarket table seems to indicate that selling Konferenco shirts could be a good way to mitigate costs of the event, if the event is of sufficient size… on the other hand, if the headcount is smaller (say under 200), skip the t-shirts unless you get a few extra sponsorships, and expect to not sell too many.
   * If the budget is wildly different than previous years, the SC will ask questions. Otherwise, you don’t need SC approval to design your own unique welcome bag.
-     15. COMPILE AND FINISH BUDGET. 
+  
+## 15. COMPILE AND FINISH BUDGET. 
 You should at this point have most of the information you need to fill out the projected expenses of budget. 
   * What you need to do: Get the previous years’ budgets and just modify them: replace all projected expenses with your figures, add any expenses already incurred under actual expenses, empty the actual income section, and modify the projected income section to reflect the headcount of various ticket types as directed by the SC.  Here are a few notes:
     * Add in corporate sponsors here (nail down corporate sponsorship early and often, but don’t ever stop looking for sponsorships, even the day before the event: it will be a significant portion of your budget).  Note: you can only include amounts already paid by corporate supporters under projected income and not what you have been “promised”. 
     * Registration/ticket fees: Leave registration fees/ticket prices equal to those of the previous year; the SC will direct you on how/whether to modify prices before final approval after they have anticipated expenses (including ticket management fees).
     * If the SC has included speaker lodging in the budget, then the corresponding rooms in the block of rooms at the hotel need to be added to the budget under projected expenses.
 Send the budget to the SC to get it finalized; they will respond with modifications, and you will ping-pong back and forth until it is approved by the SC.
-     16. GET CONTRACTS DRAWN UP, RESERVATIONS MADE, DEPOSITS PAID.
+
+## 16. GET CONTRACTS DRAWN UP, RESERVATIONS MADE, DEPOSITS PAID.
 What you need to do: 
   * You or your program manager now need to negotiate contracts for venue, caterer, hotel, and restaurant. 
   * Send these contracts to the SC.
@@ -313,7 +319,8 @@ What you need to do:
   * After signing, obtain invoices and add to the projected expenses portion of the budget.
   * Either pay the invoices or pass them along to the SC (however invoices are to be paid this year). Make sure deposits are paid ASAP, not last-minute and add these to the actual expenses portion of the budget.
   * Any contracts with time-sensitive contractual conditions (such as a certain amount must be paid to the venue by a certain date) should have that data put into the budget under projected expenses. The deadlines should be marked on a calendar and after those expenses are paid, they should be added to the actual expenses portion of the budget.
-     17. WEBSITE AND OUTREACH. 
+  
+## 17. WEBSITE AND OUTREACH. 
 What you need to do: Ask the SC whether promotion, website, and outreach budgets should be copied from the previous year; the SC may decide to increase or decrease the amount of marketing, for example.
   * The budget should include posters to put up at local coffee shops, hacker/makerspaces, universities, and so on.
   * The budget may include some local print or radio advertising; these are often bundled with some sort of social media package, which is usually Facebook. How you handle that is up to you.
@@ -389,7 +396,8 @@ Reach out to the CC to obtain the final version of the schedule for printing on 
     * The answer: the schedule will almost certainly change between now and the event, and the schedule is on a 15-minute time resolution (approximately) which is insufficient for audio/visual.
     * From here on out, the run-of-show is the only schedule document to be modified (the schedule has already been finalized, remember?!)
   * Confirm the run-of-show with the CC, making changes if needed.
-     22. MAKE BADGES, EVENT POSTERS, PROGRAMS, WELCOME BADGES. 
+
+## 22. MAKE BADGES, EVENT POSTERS, PROGRAMS, WELCOME BADGES. 
 Your graphic designer should have a badge, a poster, and a t-shirt design ready. We recommend sharpies be made available and badges be writable so that attendees can write their own name and affiliation in.
 What goes on the badge: 
   * The Konferenco logo
