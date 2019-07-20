@@ -31,13 +31,12 @@ Someone’s gotta write the checks.
 
 In other words, Surae acted as KO (Konferenco Organzier), SC (Steering Committee), and CC (Content Committee). These are definitely at least 3 separate jobs, and possibly the KO should be split also (we used a paid program manager with a decade of experience organizing conferences in the pharmaceutical industry).
 
-**What we recommend:**
-  * We recommend that the Konferenco organization be largely handled by three individuals or groups:
-    * A steering committee (SC). These folks make most final decisions, sign contracts, negotiating sponsorships, and have final approval of budget items. 
-      * Whoever is legally and financially responsible for the Konferenco should sit on this committee as chair.
-      * If a corporation or LLC is running the Konferenco, then the corporation or LLC should select a representative to act as chair of the SC.
-    * A content committee (CC). These folks are in charge of obtaining speakers and panelists for your Konferenco and planning the schedule.
-    * A Konferenco organizer (KO). This individual (and their program manager) is in charge of basically everything else, from getting estimates to the SC to getting invoices in and payments out, and has some responsibilities that overlap with both the SC and the CC.
+**What we recommend:** We recommend that the Konferenco organization be largely handled by three individuals or groups:
+  * A steering committee (SC). These folks make most final decisions, sign contracts, negotiating sponsorships, and have final approval of budget items. 
+    * Whoever is legally and financially responsible for the Konferenco should sit on this committee as chair.
+    * If a corporation or LLC is running the Konferenco, then the corporation or LLC should select a representative to act as chair of the SC.
+  * A content committee (CC). These folks are in charge of obtaining speakers and panelists for your Konferenco and planning the schedule.
+  * A Konferenco organizer (KO). This individual (and their program manager) is in charge of basically everything else, from getting estimates to the SC to getting invoices in and payments out, and has some responsibilities that overlap with both the SC and the CC.
 
 ## 3. IN WHAT ORDER SHOULD THINGS PROCEED?
 
@@ -62,38 +61,42 @@ Check the guides written [for the Konferenco Organizer](https://github.com/b-g-g
 
 **What happened last time:** The net profits from the first Konferenco were pledged to future Konferencos, but any losses were to be suffered by the Konferenco Organizer (Surae). We don't recommend this in the future, because it disincentivizes organization of the Konferenco. In total, the first Konferenco left Surae in the red.
 
+Conferences are, by nature, events that should _make_ money rather than cost money. However, since Konferencos are presently are community funded events (and this unlikely to change in the coming years), net profits belong to the community. However, the risk of losing money is taken by the individuals hosting the conference. To square this circle, it is fair to compensate the contributing folks, from organizers to the steering committee, for taking on the risk of the event.
+
 **What should happen next time:**
-  * The Konferenco needs a line item in the total budget for promotion and outreach.
-    * The SC and the KO should develop a marketing plan for the event.
-    * Track ticket sales and try to project based on previous years; if you are off-target, increase promotional activity.
-    * Spending too much on promotional activity will eat your profits, too. Spend this money wisely according to the marekting plan.
-  * The Konferenco needs to budget a bookkeeper to meet with the KO regularly to keep the budget and books up to date. 
-    * Previous estimates indicate this would cost two hours a month at 50 USD per hour for three to four months.
-    * Assembling the budget post-hoc is a humongous waste of time and resources.
-  * Future Konferencos do not need to fly speakers to the event or pay for their hotels, but should if possible.
-    * This is a luxury, one that Surae insisted upon for this conference.
-    * Most conferences do not pay for travel costs for their speakers.
-    * Some conferences will hold lotteries for speaker airfare support, or have some needs-based approach. 
-    * The way your local Konferenco does it will be up to your steering committee (see below).
-  * Audio/Visual is an absolute must-have. 
-    * We were wildly over budget because the plan changed:
-      * Initially we were only going to record talks, later edit videos, and then post them on youtube.
-      * We ended up streaming everything, editing slides into speaker talks live, recording the result as well as the inputs.
-      * We still saved money:
-        * The venue provided some complimentary A/V equipment for use by the Konferenco.
-        * RIAT (parasew and marcvvs) brought A/V equipment for use by the Konferenco.
-        * sgp broughght A/V equipment for use by the Konferenco.
-    * If talks are to be streamed, picking a single room from which they should stream is a good way to mitigate on costs.
-    * Streaming content will triple (at least) the budget for A/V compared to merely recording.
-  * Reducing market volatility:
-    * The Konferenco should cash out 100% of CCS funds as soon as they are received, up to the amount in fiat required to run the conference.
-      * Since the majority of expenses are paid in fiat, it is extremely difficult to budget without knowing exactly how much money you have. 
-      * We are all fans of hodling in our personal financial lives, but when you must plan for expenses months in the future, hodling is merely gambling.
-      * The remainder should be held in crypto. This money is already outside of the projected budget, so save it for later.
+  * _How money is handled_:
+    * The Konferenco Organizer must be compensated for their work. We recommend that organizers estimate a flat event organization fee in their proposed budget.
+    * The folks with financial risk associated with the event probably sit on the SC. They should be paid up to the sum of (i) a flat risk compensation fee for taking on the risk of the event and (ii) estimated taxes from the event. This amount should be paid out of net profits, if there are enough net profits to pay this.
+    * See below for comments on the remaining profits.
+  * _Budget stuff_:
+    * The Konferenco needs a line item in the total budget for promotion and outreach.
+      * The SC and the KO should develop a marketing plan for the event.
+      * Track ticket sales and try to project based on previous years; if you are off-target, increase promotional activity.
+      * Spending too much on promotional activity will eat your profits, too. Spend this money wisely according to the marekting plan.
+    * The Konferenco needs to budget a bookkeeper to meet with the KO regularly to keep the budget and books up to date. 
+      * Previous estimates indicate this would cost two hours a month at 50 USD per hour for three to four months.
+      * Assembling the budget post-hoc is a humongous waste of time and resources.
+    * Future Konferencos do not need to fly speakers to the event or pay for their hotels, but should if possible.
+      * This is a luxury, one that Surae insisted upon for this conference.
+      * Most conferences do not pay for travel costs for their speakers.
+      * Some conferences will hold lotteries for speaker airfare support, or have some needs-based approach. 
+      * The way your local Konferenco does it will be up to your steering committee (see below).
+    * Audio/Visual is an absolute must-have. 
+      * We were wildly over budget because the plan changed:
+        * Initially we were only going to record talks, later edit videos, and then post them on youtube. We ended up streaming everything, editing slides into speaker talks live, recording the result as well as the inputs.
+        * We still saved money:
+          * The venue provided some complimentary A/V equipment for use by the Konferenco.
+          * RIAT (parasew and marcvvs) brought A/V equipment for use by the Konferenco.
+          * sgp brought A/V equipment for use by the Konferenco.
+      * If talks are to be streamed, picking a single room from which they should stream is a good way to mitigate on costs.
+      * Streaming content will triple (at least) the budget for A/V compared to merely recording.
+  * _Other money stuff_:
+    * Reducing market volatility:
+      * The Konferenco should cash out 100% of CCS funds as soon as they are received, up to the amount in fiat required to run the conference.
+        * Since the majority of expenses are paid in fiat, it is extremely difficult to budget without knowing exactly how much money you have. 
+        * We are all fans of hodling in our personal financial lives, but when you must plan for expenses months in the future, hodling is merely gambling.
+        * The remainder should be held in crypto. This money is already outside of the projected budget, so save it for later.
       * If funding comes up short due to market volatility, make a follow-up CCS request to make up for the shortfall.
-  * Reducing Organizer or Steering Committee financial risk:
-    * The Konferenco should not pledge 100% of net profits to future Konferencos. This makes organizing a Konferenco a negative-sum game for the organizer and any financially connected parties like members of the steering committee.
-    * The Konferenco Organizer should charge a flat rate, similar to the program manager, for the number of hours of work spent on the event.
     * Konferencos should be designed to become self-sustaining and should be designed to pay back the community somehow:
       * The event itself is paying back the community for the donated funds. However, we should do more for the community.
       * The events should be designed so that net profits from the previous year could pay for a substantial portion of projected expenses for a future year, if possible.
