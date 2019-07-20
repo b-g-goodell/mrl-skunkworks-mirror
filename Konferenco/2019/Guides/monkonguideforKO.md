@@ -428,56 +428,56 @@ The programs should be a quick and easy reference for attendees to look at the s
 Here are some handy checklists; these should be edited and amended in future versions of this document, possibly with timelines attached.
 
   * **Early-on checklist**:
-    - [] Corporate sponsor invoices sent
-    - [] Hotel block reserved
-    - [] Venue priced and reserved
-    - [] Caterer priced and reserved: All-day beverage service, Breakfast, Morning snack, Afternoon snack
-    - [] Dinner restaurant priced and reserved
-    - [] Budget submitted and approved
-    - [] Contracts signed and delivered (Venue, Caterer, Dinner)
-    - [] Local information on website
-    - [] Registration information sent to invited speakers
-    - [] Konferenco schedule on website
-    - [] Posters and badges designed
-    - [] Begin media outreach
-    - [] If sponsors are contributing items to welcome bags, contact them with headcounts and ask for gifts to include; they need at least 4 weeks.
-    - [] Pay invoices for deposits toward venue, caterer, hotel, restaurant, and possibly A/V, if relevant.
-    - [] Pay invoices for speaker lodging assistance for the hotel room block, if relevant.
+    - [ ] Corporate sponsor invoices sent
+    - [ ] Hotel block reserved
+    - [ ] Venue priced and reserved
+    - [ ] Caterer priced and reserved: All-day beverage service, Breakfast, Morning snack, Afternoon snack
+    - [ ] Dinner restaurant priced and reserved
+    - [ ] Budget submitted and approved
+    - [ ] Contracts signed and delivered (Venue, Caterer, Dinner)
+    - [ ] Local information on website
+    - [ ] Registration information sent to invited speakers
+    - [ ] Konferenco schedule on website
+    - [ ] Posters and badges designed
+    - [ ] Begin media outreach
+    - [ ] If sponsors are contributing items to welcome bags, contact them with headcounts and ask for gifts to include; they need at least 4 weeks.
+    - [ ] Pay invoices for deposits toward venue, caterer, hotel, restaurant, and possibly A/V, if relevant.
+    - [ ] Pay invoices for speaker lodging assistance for the hotel room block, if relevant.
   * **30 days before checklist**:
-    - [] Deposits for venue, caterer, hotel, and restaurant due
-    - [] Guaranteed payment for room block due to hotel
-    - [] Contact sponsors about welcome-bag gifts and to see if they need anything.
-    - [] Record actuals-to-date in budget (actual income, actual expenses).
+    - [ ] Deposits for venue, caterer, hotel, and restaurant due
+    - [ ] Guaranteed payment for room block due to hotel
+    - [ ] Contact sponsors about welcome-bag gifts and to see if they need anything.
+    - [ ] Record actuals-to-date in budget (actual income, actual expenses).
   * **Weeks-before checklist**:
-    - [] Order the welcome bag gifts
-    - [] Contact sponsors re: welcome bag gifts and headcounts
-    - [] Get invoices for all minimum payments and pay them. Often venues, caterers, hotels, and restaurants may require a minimum payment in the weeks before the event, and then provide a final invoice after the event.
-    - [] Update actuals-to-date in budget (actual income, actual expenses).
+    - [ ] Order the welcome bag gifts
+    - [ ] Contact sponsors re: welcome bag gifts and headcounts
+    - [ ] Get invoices for all minimum payments and pay them. Often venues, caterers, hotels, and restaurants may require a minimum payment in the weeks before the event, and then provide a final invoice after the event.
+    - [ ] Update actuals-to-date in budget (actual income, actual expenses).
   * **Days-before checklist**:
-    - [] Print the badges and posters.
-    - [] Send the dinner restaurant the latest information on headcount and dietary restrictions (they might need it sooner, or possibly not at all).
-    - [] Verify that everything is ready to go with: Venue, Caterer, Dinner, A/V, Transportation to dinner (if any), Hotel, Inform the SC and CC chairs that everything’s good to go (or if there are problems).
-    - [] Assemble welcome bags.
-    - [] Update actuals-to-date in budget (actual income, actual expenses).
+    - [ ] Print the badges and posters.
+    - [ ] Send the dinner restaurant the latest information on headcount and dietary restrictions (they might need it sooner, or possibly not at all).
+    - [ ] Verify that everything is ready to go with: Venue, Caterer, Dinner, A/V, Transportation to dinner (if any), Hotel, Inform the SC and CC chairs that everything’s good to go (or if there are problems).
+    - [ ] Assemble welcome bags.
+    - [ ] Update actuals-to-date in budget (actual income, actual expenses).
   * **Day-of checklist**:
-    - [] Arrive early.  Ideally 1 hour or more ahead of time. Assist with A/V setup if required.
-    - [] Make sure the Konferenco venue is allowing access to attendees.
-    - [] Lay out the badges.
-    - [] Make sure the projector and microphones are working.
-    - [] Make sure video and audio recording is working.
-    - [] Make sure livestreaming is working, if relevant.
-    - [] If you have transportation to the dinner location, check to see if there are any delays.
+    - [ ] Arrive early.  Ideally 1 hour or more ahead of time. Assist with A/V setup if required.
+    - [ ] Make sure the Konferenco venue is allowing access to attendees.
+    - [ ] Lay out the badges.
+    - [ ] Make sure the projector and microphones are working.
+    - [ ] Make sure video and audio recording is working.
+    - [ ] Make sure livestreaming is working, if relevant.
+    - [ ] If you have transportation to the dinner location, check to see if there are any delays.
   * **Day-after checklist**:
-    - [] Put your caterer, venue, dinner restaurant, and whoever else necessary in touch with the program manager so they know where to send invoices.
-    - [] Write all final checks and update actuals-to-date in budget and send to the SC.
-    - [] If you have a budget surplus, ask the SC:
-      - [] Consider donating to the Monero Outreach team. They all work on a volunteer basis and none of them expect any profit from any Konferenco, but without them, the event would be bland and literally artless. 
-      - [] Consider contributing to the Monero general fund or any open funding requests. 
-      - [] Consider contributing to the non-profit supporters of the event. 
-      - [] Consider donating as much as possible to the next year’s Konferenco; it will make the sponsorship struggle much easier.
-      - [] Lastly and finally, if you have suggested all of the above in selfless amounts, then you consider asking the SC for a cut of the profits; you did a fuckton of work.
-    - [] Write a Monero Konferenco Post Morto
-    - [] Update this document :)
+    - [ ] Put your caterer, venue, dinner restaurant, and whoever else necessary in touch with the program manager so they know where to send invoices.
+    - [ ] Write all final checks and update actuals-to-date in budget and send to the SC.
+    - [ ] If you have a budget surplus, ask the SC:
+      - [ ] Consider donating to the Monero Outreach team. They all work on a volunteer basis and none of them expect any profit from any Konferenco, but without them, the event would be bland and literally artless. 
+      - [ ] Consider contributing to the Monero general fund or any open funding requests. 
+      - [ ] Consider contributing to the non-profit supporters of the event. 
+      - [ ] Consider donating as much as possible to the next year’s Konferenco; it will make the sponsorship struggle much easier.
+      - [ ] Lastly and finally, if you have suggested all of the above in selfless amounts, then you consider asking the SC for a cut of the profits; you did a fuckton of work.
+    - [ ] Write a Monero Konferenco Post Morto
+    - [ ] Update this document :)
 
 ## 24. A FINAL NOTE.
 
