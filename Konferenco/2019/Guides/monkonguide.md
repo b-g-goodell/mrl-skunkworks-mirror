@@ -41,7 +41,7 @@ In other words, Surae acted as KO (Konferenco Organzier), SC (Steering Committee
 
 ## 3. IN WHAT ORDER SHOULD THINGS PROCEED?
 
-Check the guides written [for the Konferenco Organizer](https://github.com/b-g-goodell/mrl-skunkworks/Konferenco/2019/Guides/monkonguideKO.md), [for the steering committee](https://github.com/b-g-goodell/mrl-skunkworks/Konferenco/2019/Guides/monkonguideSC.md), and [for the content committee](https://github.com/b-g-goodell/mrl-skunkworks/Konferenco/2019/Guides/monkonguideCC.md) for extensive details  _WARNING:_ This bullet list glosses over many details. Make sure you check the three guide documents, or otherwise you’re going to miss out on a whole lot.
+Check the guides written [for the Konferenco Organizer](https://github.com/b-g-goodell/mrl-skunkworks/Konferenco/2019/Guides/monkonguideKO.md), [for the steering committee](https://github.com/b-g-goodell/mrl-skunkworks/Konferenco/2019/Guides/monkonguideSC.md), and [for the content committee](https://github.com/b-g-goodell/mrl-skunkworks/Konferenco/2019/Guides/monkonguideCC.md) for extensive details. _WARNING:_ This bullet list glosses over many details. Make sure you check the three guide documents, or otherwise you’re going to miss out on a whole lot.
   * **Basically, things start like this:**
     * The KO starts getting estimates from venues, caterers, hotels, restuarants, and A/V options.
     * The SC starts seeking corporate sponsorships, non-profit supporters, and media partners.
