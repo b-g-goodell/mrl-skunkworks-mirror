@@ -240,9 +240,9 @@ Here are some handy checklists; these should be edited and amended in future ver
 
 Here is a sample schedule mimicking the first Konferenco in 2019. Total is 8 sessions.
 
-|               |          Konferenco 2019            |
+|               |        **Konferenco 2019**          |
 | ------------- |------------------------------------:|
-|               |          Day 0                      |
+|               |         _Day 0_                     |
 | 08:30 – 09:00 | Same-day registration and breakfast |
 | 09:00 – 10:30 | Speaker Session 1                   |
 | 10:30 – 10:45 | Coffee Break                        |
@@ -251,7 +251,7 @@ Here is a sample schedule mimicking the first Konferenco in 2019. Total is 8 ses
 | 13:45 – 15:00 | Speaker Session 3                   |
 | 15:00 – 15:15 | Coffee Break                        |
 | 15:15 – 16:45 | Speaker Session 4                   |
-|               |          Day 1                      |
+|               |         _Day 1_                     |
 | 08:30 – 09:00 | Breakfast                           |
 | 09:00 – 10:30 | Panel Session                       |
 | 10:30 – 10:45 | Coffee Break                        |
@@ -263,9 +263,9 @@ Here is a sample schedule mimicking the first Konferenco in 2019. Total is 8 ses
 
 Here is a sample schedule for a day-and-a-half event with two rooms hosting sessions and panels simultaneously for the entire event. Having mutiple rooms splits turnout... but having talks late into the afternoon causes attendance to flag as folks leave to catch their flights. So there's a trade-off. Having a day-and-a-half event makes the event seem short, but ensures that attendees don't have trouble fitting travel into their schedules. Total is 10 sessions.
 
-|               |          Day 0 - Room A             |          Day 0 - Room B             |
+|               |     **Mallonga Konferenco**          |                                     |
 | ------------- |------------------------------------:|------------------------------------:|
-|               |          Day 0 - Room A             |          Day 0 - Room B             |
+|               |         _Day 0 - Room A_            |         _Day 0 - Room B_            |
 | 08:30 – 09:00 | Same-day registration and breakfast |                                     |
 | 09:00 – 10:00 | Keynote Speaker(s)                  |                                     |
 | 10:00 – 11:45 | Speaker Session 1                   | Panel Session 1                     |
@@ -273,9 +273,7 @@ Here is a sample schedule for a day-and-a-half event with two rooms hosting sess
 | 13:15 – 14:45 | Speaker Session 2                   | Panel Session 2                     |
 | 14:45 – 15:15 | Coffee Break                        |                                     |
 | 15:15 – 16:45 | Panel Session 3                     | Speaker Session 3                   |
-| ------------- |------------------------------------:|------------------------------------:|
-|               |          Day 1 - Room A             |          Day 2 - Room B             |
-| ------------- |------------------------------------:|------------------------------------:|
+|               |         _Day 1 - Room A_            |         _Day 2 - Room B_            |
 | 08:30 – 09:00 | Breakfast                           |                                     |
 | 09:00 – 10:30 | Panel Session 4                     | Speaker Session 4                   |
 | 10:30 – 10:45 | Coffee Break                        |                                     |
@@ -283,8 +281,9 @@ Here is a sample schedule for a day-and-a-half event with two rooms hosting sess
 
 Here is a sample schedule for a full two-day event with two rooms hosting sessions and panels simultaneously in two separate rooms, totalling 14 sessions.
 
-|               |          Day 0 - Room A             |          Day 0 - Room B             |
+|               |       **Duobla Konferenco**         |                                     |
 | ------------- |------------------------------------:|------------------------------------:|
+|               |         _Day 0 - Room A_            |         _Day 0 - Room B_            |
 | 08:30 – 09:00 | Same-day registration and breakfast |                                     |
 | 09:00 – 10:00 | Keynote Speaker(s)                  |                                     |
 | 10:00 – 11:45 | Speaker Session 1                   | Panel Session 1                     |
@@ -292,9 +291,7 @@ Here is a sample schedule for a full two-day event with two rooms hosting sessio
 | 13:45 – 15:00 | Speaker Session 2                   | Panel Session 2                     |
 | 15:00 – 15:15 | Coffee Break                        | Coffee Break                        |
 | 15:15 – 16:45 | Panel Session 3                     | Speaker Session 3                   |
-| ------------- |------------------------------------:|------------------------------------:|
-|               |          Day 1 - Room A             |          Day 2 - Room B             |
-| ------------- |------------------------------------:|------------------------------------:|
+|               |         _Day 1 - Room A_            |         _Day 2 - Room B_            |
 | 08:30 – 09:00 | Breakfast                           |                                     |
 | 09:00 – 10:30 | Panel Session 4                     | Speaker Session 4                   |
 | 10:30 – 10:45 | Coffee Break                        |                                     |
