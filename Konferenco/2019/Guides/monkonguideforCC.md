@@ -209,32 +209,32 @@ From here on out, the CC and the KO will use the run-of-show instead of the sche
 Here are some handy checklists; these should be edited and amended in future versions of this document, possibly with timelines attached.
 
   * Before the submission deadline:
-    - [] Select czar
-    - [] Decide on number of speakers, panels, and panelists-per-panel.
-    - [] Decide on dates. 
-    - [] Design sample schedule and submission requirements.
-    - [] Compile lists of invited speakers split into invitation rounds
-    - [] Draft invitation emails
-    - [] Czar sends rounds of invitations.
-    - [] Compile first draft schedule and send to KO.
+    - [ ] Select czar
+    - [ ] Decide on number of speakers, panels, and panelists-per-panel.
+    - [ ] Decide on dates. 
+    - [ ] Design sample schedule and submission requirements.
+    - [ ] Compile lists of invited speakers split into invitation rounds
+    - [ ] Draft invitation emails
+    - [ ] Czar sends rounds of invitations.
+    - [ ] Compile first draft schedule and send to KO.
   * After the submission deadline and before the A/R date.
-    - [] Review submitted abstracts and split into invitation rounds.
-    - [] Czar sends rounds of invitations.
-    - [] Update drafted schedule and send to KO.
+    - [ ] Review submitted abstracts and split into invitation rounds.
+    - [ ] Czar sends rounds of invitations.
+    - [ ] Update drafted schedule and send to KO.
   * 30 days before
-    - [] Collect abstracts from all speakers and panel summaries from all moderators.
-    - [] Update drafted schedule and send to KO.
-    - [] Send speaker contact info to the KO and any other information (like photo, blurb, or food restrictions).
-    - [] Send out registration links/codes to speakers and panelists.
+    - [ ] Collect abstracts from all speakers and panel summaries from all moderators.
+    - [ ] Update drafted schedule and send to KO.
+    - [ ] Send speaker contact info to the KO and any other information (like photo, blurb, or food restrictions).
+    - [ ] Send out registration links/codes to speakers and panelists.
   * Week before
-    - [] Finalize schedule for KO to print on programs
-    - [] Receive run-of-show from KO for last-minute modifications.
+    - [ ] Finalize schedule for KO to print on programs
+    - [ ] Receive run-of-show from KO for last-minute modifications.
   * Day of the event
-    - [] Get run-of-show and emcee the event.
-    - [] Make any last-minute content decisions
+    - [ ] Get run-of-show and emcee the event.
+    - [ ] Make any last-minute content decisions
   * Day after the event
-    - [] Send thank-you e-mails to all speakers, panelists, and moderators.
-    - [] Update this document :)
+    - [ ] Send thank-you e-mails to all speakers, panelists, and moderators.
+    - [ ] Update this document :)
 
 ## 15. SAMPLE SCHEDULE
 
