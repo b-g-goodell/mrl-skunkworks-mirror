@@ -1027,40 +1027,51 @@ class TestBipartiteGraph(unittest.TestCase):
         self.assertTrue(g.check_colored_match(b, result))
         self.assertTrue(len(g.red_edges) == 0 or len(result) > len(input_match))
 
-    # def test_dd_boost_match(self):
-    #     g = make_dd_graph()
-    #     b = 1
-    #     input_match = [(1, 7), (3, 9)]
-    #
-    #     self.assertTrue(g.check_colored_maximal_match(b, input_match))
-    #
-    #     result = g.boost_match(b, input_match)
-    #     self.assertEqual(len(result), 2)
-    #     self.assertTrue((5, 9) in result)
-    #     self.assertTrue((3, 7) in result)
+    def test_d_boost_match(self):
+        g = make_d_graph()
+        # The graph from make_d_graph has at least two matchings with equal weight. We tweaked
+        # that graph for this example to ensure that the edge case isn't relevant to our test.
+        b = 1
+        input_match = [(1, 7), (3, 9)]
 
-    #
-    # def test_r_boost_match(self):
-    #     g = make_r_graph()
-    #     b = 1
-    #
-    #     input_match = []
-    #     result = g.extend_match(b, input_match)
-    #     while result != input_match:
-    #         input_match = deepcopy(result)
-    #         result = g.extend_match(b, input_match)
-    #         self.assertTrue(len(result) >= len(input_match))
-    #
-    #     next_result = g.boost_match(b, input_match)
-    #     while next_result != input_match:
-    #         input_match = deepcopy(next_result)
-    #         next_result = g.boost_match(b, input_match)
-    #         self.assertEqual(len(next_result), len(input_match))
-    #         temp = sum([g.red_edges[eid] for eid in next_result])
-    #         gain = temp - sum([g.red_edges[eid] for eid in input_match])
-    #         self.assertTrue(gain >= 0.0)
-    #
+        self.assertTrue(g.check_colored_maximal_match(b, input_match))
+        result = g.boost_match(b, input_match)
+        self.assertEqual(len(result), 3)
+        self.assertTrue((5, 9) in result)
+        self.assertTrue((3, 7) in result)
+        self.assertTrue((1, 9) in result)
 
+    def test_dd_boost_match(self):
+        g = make_dd_graph()
+        # The graph from make_d_graph has at least two matchings with equal weight. We tweaked
+        # that graph for this example to ensure that the edge case isn't relevant to our test.
+        b = 1
+        input_match = [(1, 7), (3, 9)]
+
+        self.assertTrue(g.check_colored_maximal_match(b, input_match))
+        result = g.boost_match(b, input_match)
+        self.assertEqual(len(result), 2)
+        self.assertTrue((1, 9) in result)
+        self.assertTrue((3, 7) in result)
+
+    def test_r_boost_match(self):
+        g = make_r_graph()
+        b = 1
+
+        input_match = []
+        result = g.extend_match(b, input_match)
+        while result != input_match:
+            input_match = deepcopy(result)
+            result = g.extend_match(b, input_match)
+            self.assertTrue(len(result) >= len(input_match))
+        next_result = g.boost_match(b, input_match)
+        while next_result != input_match:
+            input_match = deepcopy(next_result)
+            next_result = g.boost_match(b, input_match)
+            self.assertEqual(len(next_result), len(input_match))
+            temp = sum([g.red_edges[eid] for eid in next_result])
+            gain = temp - sum([g.red_edges[eid] for eid in input_match])
+            self.assertTrue(gain >= 0.0)
 
 tests = [TestBipartiteGraph]
 for test in tests:

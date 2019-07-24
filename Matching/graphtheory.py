@@ -472,15 +472,15 @@ class BipartiteGraph(object):
                                                    (eid not in next_path and eid[p] == last_node)]
                         extensible = len(this_edge_set_to_search) > 0
                         if extensible:
-                            for eid in this_edge_set_to_search:
-                                if path_length is None or len(next_path) + 1 <= path_length:
+                            if path_length is None or len(next_path) + 1 <= path_length:
+                                for eid in this_edge_set_to_search:
                                     path_to_add = next_path + [eid]
                                     q.append(path_to_add) # TODO: SET PATH_TO_ADD TO NONE WHEN DONE
-                        elif gain > 0.0 and path_length is None or len(path_to_add) < path_length:
+                        elif gain > 0.0 and (path_length is None or len(path_to_add) < path_length):
                             found_shortest_path = True
                             path_length = len(next_path)
                             shortest_paths = [(next_path, gain)]
-                        elif gain > 0.0 and path_length is not None and len(next_path) == path_length:
+                        elif gain > 0.0 and (path_length is not None and len(next_path) == path_length):
                             shortest_paths += [(next_path, gain)]
 
             result = self._cleanup(b, shortest_paths, non_match_edges, input_match)
