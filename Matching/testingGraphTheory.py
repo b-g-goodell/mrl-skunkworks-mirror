@@ -1,956 +1,834 @@
 import unittest
 import random
-from graphtheory import disjoint
-from graphtheory import symdif
+import math
 from graphtheory import *
+from copy import deepcopy
 
-class TestSymDif(unittest.TestCase):
-    """ TestSymDif tests both disjoint() and symdif() """
-    def test_disjoint(self):
-        """ testing disjointness function disjoint() """
-        x = [1,2,3]
-        y = [5,6,7]
-        self.assertTrue(disjoint(x,y))
-        x = [1,2,3]
-        y = [3,4,5]
-        self.assertFalse(disjoint(x,y))
 
-    def test(self):
-        """ testing symdif """
-        x = [1, 2, 3]
-        y = [5, 6, 7]
-        self.assertTrue(x + y == symdif(x, y))
+def make_r_graph():
+    g = BipartiteGraph(None)
 
-        y.append(3)
-        y.append(2)
-        x.append(5)
-        x.append(6)
-        self.assertTrue(1 in symdif(x, y))
-        self.assertTrue(7 in symdif(x, y))
-        self.assertTrue(len(symdif(x, y)) == 2)
+    # Generate a small random graph for use in random tests below.
+    num_left_nodes = random.randint(3, 5)
+    for i in range(num_left_nodes):
+        g.add_node(0)
+    num_right_nodes = random.randint(3, 5)
+    for i in range(num_left_nodes):
+        g.add_node(1)
 
-        x.append(0)
-        self.assertTrue(0 in symdif(x, y))
-        self.assertTrue(1 in symdif(x, y))
-        self.assertTrue(7 in symdif(x, y))
-        self.assertTrue(len(symdif(x, y)) == 3)
+    # We will assume the graph is complete and flip a fair coin to determine which edges are red and blue.
+    for xid in g.left_nodes:
+        for yid in g.right_nodes:
+            g.add_edge(random.getrandbits(1), (xid, yid), math.log(random.random()))
 
-        x = random.sample(range(100), 60)
-        y = random.sample(range(100), 60)  # Pigeonhole principle implies at least 20 collisions
-        z = symdif(x, y)
-        self.assertTrue(len(z) >= 20)
-        zp = [w for w in x if w not in y] + [w for w in y if w not in x]
-        self.assertEqual(len(z), len(zp))
-        for i in z:
-            self.assertTrue(i in zp)
-            self.assertTrue((i in x and i not in y) or (i in y and i not in x))
+    return g
+
+
+def make_rr_graph():
+    g = BipartiteGraph(None)
+
+    # Generate a small random graph for use in random tests below.
+    for i in range(3):
+        g.add_node(0)
+    for i in range(3):
+        g.add_node(1)
+
+    # We will assume the graph is complete and flip a fair coin to determine which edges are red and blue.
+    for xid in g.left_nodes:
+        for yid in g.right_nodes:
+            g.add_edge(random.getrandbits(1), (xid, yid), math.log(random.random()))
+
+    return g
+
+
+def make_d_graph():
+    g = BipartiteGraph(None)
+
+    # Generate a small random graph for use in random tests below.
+    num_left_nodes = 5
+    for i in range(num_left_nodes):
+        g.add_node(0)
+    num_right_nodes = 5
+    for i in range(num_left_nodes):
+        g.add_node(1)
+
+    # First, we set the color of (x, y) is (x*y) % 2.
+    # Next will set the graph to be complete.
+    # Next weight edges by starting with weight 0.0, iterating through all 25 edges up in increments of 4...
+    # Formulaically, edge (i, j) with i in [1, 2, 3, 4, 5] and j in [6, 7, 8, 9, 10] has weight:
+    #    wt(i, j) = 20*(i-1) + 4*(j-6)
+    # Providing the following weights:
+    #  (1,  6):   0.0, blue
+    #  (1,  7):   4.0, red
+    #  (1,  8):   8.0, blue
+    #  (1,  9):  12.0, red
+    #  (1, 10):  16.0, blue
+    #  (2,  6):  20.0, blue
+    #  (2,  7):  24.0, blue
+    #  (2,  8):  28.0, blue
+    #  (2,  9):  32.0, blue
+    #  (2, 10):  36.0, blue
+    #  (3,  6):  40.0, blue
+    #  (3,  7):  44.0, red
+    #  (3,  8):  48.0, blue
+    #  (3,  9):  52.0, red
+    #  (3, 10):  56.0, blue
+    #  (4,  6):  60.0, blue
+    #  (4,  7):  64.0, blue
+    #  (4,  8):  68.0, blue
+    #  (4,  9):  72.0, blue
+    #  (4, 10):  76.0, blue
+    #  (5,  6):  80.0, blue
+    #  (5,  7):  84.0, red
+    #  (5,  8):  88.0, blue
+    #  (5,  9):  92.0, red
+    #  (5, 10):  96.0, blue
+    # Formulaically: (i, j) has weight 20.0*(i-1) + 4.0*((j
+
+    wt = 0.0
+    for xid in g.left_nodes:
+        for yid in g.right_nodes:
+            g.add_edge((xid*yid) % 2, (xid, yid), wt)
+            wt += 4.0
+
+    return g
+
 
 class TestBipartiteGraph(unittest.TestCase):
     """ TestBipartiteGraph tests BipartiteGraph objects """
-    def test_init(self):
+    def test_d_init(self):
+        g = make_d_graph()
+
+        self.assertTrue(isinstance(g, BipartiteGraph))
+        self.assertEqual(len(g.left_nodes), 5)
+        self.assertEqual(len(g.right_nodes), 5)
+        self.assertEqual(len(g.red_edges)+len(g.blue_edges), 25)
+        wt = 0.0
+        for xid in g.left_nodes:
+            for yid in g.right_nodes:
+                # Check that if the product of the identities mod 2 is 1 then the edges is red with weight 1.0
+                self.assertTrue((xid*yid) % 2 == 0 or ((xid, yid) in g.red_edges and g.red_edges[(xid, yid)] == wt))
+                # Check that if the product of the identities mod 2 is 0 then the edge is blue with weight 1.0
+                self.assertTrue((xid*yid) % 2 == 1 or ((xid, yid) in g.blue_edges and g.blue_edges[(xid, yid)] == wt))
+                wt += 4.0
+
+    def test_d_init_by_hand(self):
         """ test_init tests initialization of a BipartiteGraph """
-        # self.data = par['data']   # str
-        # self.ident = par['ident']  # str
-        # self.left_nodes = {}.update(par['left'])
-        # self.right_nodes = {}.update(par['right'])
-        # self.red_edge_weights = {}.update(par['red'])
-        # self.blue_edge_weights = {}.update(par['blue'])
-        par = {'data': None, 'ident': 'han-tyumi', 'left': {}, 'right': {}, 'red_edges': {}, 'blue_edges': {}}
-        g = BipartiteGraph(par)
-        
-        n = 15  # nodeset size
-        k = 5  # neighbor size
-
-        ct = 0
-        while len(g.left_nodes) < n:
-            # print("Adding new leftnode: ", len(g.left_nodes))
-            while ct in g.left_nodes or ct in g.right_nodes:
-                ct += 1
-            numleft = len(g.left_nodes)
-            rejected = g.add_left_node(ct)
-            newnumleft = len(g.left_nodes)
-            self.assertTrue(not rejected and newnumleft - numleft == 1)
-
-        while len(g.right_nodes) < n:
-            # print("Adding new rightnode: ", len(G.right))
-            while ct in g.right_nodes or ct in g.left_nodes:
-                ct += 1
-            numright = len(g.right_nodes)
-            rejected = g.add_right_node(ct)
-            newnumright = len(g.right_nodes)
-            self.assertTrue(not rejected and newnumright - numright == 1)
-
-        numRedEdges = len(g.red_edge_weights)
-        leftnodekeys = list(g.left_nodes.keys())
-        rightnodekeys = list(g.right_nodes.keys())
-        for i in range(n,2*n):
-            idxs = random.sample(range(n), k)
-            assert len(idxs) == k
-            for j in idxs:
-                eid = (j,i)
-                rejected = g.add_red_edge(eid, 1.0)
-                assert not rejected
-
-        self.assertTrue(len(g.red_edge_weights) - numRedEdges == k*n)
-        self.assertTrue(len(g.left_nodes) + len(g.right_nodes) == 2*n)
-        self.assertTrue(len(g.red_edge_weights) == k*n)
-
-    def test_add_left_node(self):
-        """ test_add_left_node tests adding a left-node."""
-        # Pick a random graph identity
-        par = {'data': 1.0, 'ident': 'han-tyumi', 'left': {}, 'right': {}, 'red_edges': {}, 'blue_edges': {}}
-        g = BipartiteGraph(par)
-        n = 25
-        nodect = 0
-        while len(g.left_nodes) < n:
-            while nodect in g.left_nodes:
-                nodect += 1
-            numleft = len(g.left_nodes)
-            rejected = g.add_left_node(nodect)
-            self.assertFalse(rejected)
-            newnumleft = len(g.left_nodes)
-            self.assertTrue(newnumleft - numleft == 1)
-
-    def test_add_right_node(self):
-        """ test_add_right_node tests adding a right-node. """
-        # Pick a random graph identity
-        par = {'data': 1.0, 'ident': 'han-tyumi', 'left': {}, 'right': {}, 'red_edges': {}, 'blue_edges': {}}
-        g = BipartiteGraph(par)
-        n = 25
-        nodect = 0
-        while len(g.right_nodes) < n:
-            while nodect in g.right_nodes:
-                nodect += 1
-            numright = len(g.right_nodes)
-            rejected = g.add_right_node(nodect)
-            self.assertFalse(rejected)
-            newnumright = len(g.right_nodes)
-            self.assertTrue(newnumright - numright == 1)
-
-    def test_add_red_edge(self):
-        """ test_add_red_edge tests adding a red edge."""
-        par = {'data': 1.0, 'ident': 'han-tyumi', 'left': {}, 'right': {}, 'red_edges': {}, 'blue_edges': {}}
-        g = BipartiteGraph(par)
-        n = 25
-        nodect = 0
-        while len(g.left_nodes) < n:
-            while nodect in g.left_nodes or nodect in g.right_nodes:
-                nodect += 1
-            numleft = len(g.left_nodes)
-            # print("\n",nodect, g.left_nodes)
-            rejected = g.add_left_node(nodect)
-            self.assertFalse(rejected)
-            newnumleft = len(g.left_nodes)
-            self.assertTrue(newnumleft - numleft == 1)
-        while len(g.right_nodes) < n:
-            while nodect in g.left_nodes or nodect in g.right_nodes:
-                nodect += 1
-            numright = len(g.right_nodes)
-            rejected = g.add_right_node(nodect)
-            self.assertFalse(rejected)
-            newnumright = len(g.right_nodes)
-            self.assertTrue(newnumright - numright == 1)
-
-        # print(g.left_nodes.keys())
-        # print(g.right_nodes.keys())
-        # print(g.red_edge_weights.keys())
-        # print(g.blue_edge_weights.keys())
-
-        i = random.randint(0,24)
-        j = random.randint(25,49)
-        self.assertTrue((i,j) not in g.red_edge_weights)
-        self.assertTrue((i,j) not in g.blue_edge_weights)
-        self.assertEqual(len(g.red_edge_weights),0)
-        rejected = g.add_red_edge((i,j), -1.0)
-        self.assertFalse(rejected)
-        self.assertEqual(len(g.red_edge_weights),1)
-        self.assertTrue((i,j) in g.red_edge_weights)
-        self.assertEqual(g.red_edge_weights[(i,j)],-1.0)
-
-    def test_add_blue_edge(self):
-        """ test_add_blue_edge tests adding a blue edge. """
-        par = {'data': 1.0, 'ident': 'han-tyumi', 'left': {}, 'right': {}, 'red_edges': {}, 'blue_edges': {}}
-        g = BipartiteGraph(par)
-        n = 25
-        nodect = 0
-        while len(g.left_nodes) < n:
-            while nodect in g.left_nodes or nodect in g.right_nodes:
-                nodect += 1
-            numleft = len(g.left_nodes)
-            # print("\n",nodect, g.left_nodes)
-            rejected = g.add_left_node(nodect)
-            self.assertFalse(rejected)
-            newnumleft = len(g.left_nodes)
-            self.assertTrue(newnumleft - numleft == 1)
-        while len(g.right_nodes) < n:
-            while nodect in g.left_nodes or nodect in g.right_nodes:
-                nodect += 1
-            numright = len(g.right_nodes)
-            rejected = g.add_right_node(nodect)
-            self.assertFalse(rejected)
-            newnumright = len(g.right_nodes)
-            self.assertTrue(newnumright - numright == 1)
-
-        i = random.randint(0,24)
-        j = random.randint(25,49)
-        self.assertTrue((i,j) not in g.red_edge_weights)
-        self.assertTrue((i,j) not in g.blue_edge_weights)
-        self.assertEqual(len(g.blue_edge_weights),0)
-        rejected = g.add_blue_edge((i,j), -1.0)
-        self.assertFalse(rejected)
-        self.assertEqual(len(g.blue_edge_weights),1)
-        self.assertTrue((i,j) in g.blue_edge_weights)
-        self.assertEqual(g.blue_edge_weights[(i,j)],-1.0)
-
-    def test_del_edge(self):
-        """ test_del_edge tests deletion of an edge. """
-        par = {'data': 1.0, 'ident': 'han-tyumi', 'left': {}, 'right': {}, 'red_edges': {}, 'blue_edges': {}}
-        g = BipartiteGraph(par)
-        n = 2
-        nodect = 0
-        while len(g.left_nodes) < n:
-            while nodect in g.left_nodes or nodect in g.right_nodes:
-                nodect += 1
-            numleft = len(g.left_nodes)
-            # print("\n",nodect, g.left_nodes)
-            rejected = g.add_left_node(nodect)
-            self.assertFalse(rejected)
-            newnumleft = len(g.left_nodes)
-            self.assertTrue(newnumleft - numleft == 1)
-        while len(g.right_nodes) < n:
-            while nodect in g.left_nodes or nodect in g.right_nodes:
-                nodect += 1
-            numright = len(g.right_nodes)
-            rejected = g.add_right_node(nodect)
-            self.assertFalse(rejected)
-            newnumright = len(g.right_nodes)
-            self.assertTrue(newnumright - numright == 1)
-        for i in range(n):
-            for j in range(n,2*n):
-                g.add_red_edge((i,j),0.0)
-
-        # print("LEFT NODES = ", list(g.left_nodes.keys()))
-        # print("RIGHT NODES = ", list(g.right_nodes.keys()))
-        # print("RED EDGES = ", list(g.red_edge_weights.keys()))
-        # print("BLUE EDGES = ", list(g.blue_edge_weights.keys()))
-        self.assertEqual(len(g.red_edge_weights),4)
-        i = random.randint(0,n-1)
-        j = random.randint(n,2*n-1)
-        # print("(i,j) = ", (i,j))
-        self.assertTrue((i,j) in g.red_edge_weights)
-        rejected = g.del_edge((i,j))
-        self.assertFalse(rejected)
-        self.assertEqual(len(g.red_edge_weights),3)
-
-    def test_check_red_match(self):
-        """ test_check_red_match tests the function that checks whether a given set of edges is a match of red edges. """
-        par = {'data': 1.0, 'ident': 'han-tyumi', 'left': {}, 'right': {}, 'red_edges': {}, 'blue_edges': {}}
-        g = BipartiteGraph(par)
-        n = 2
-        nodect = 0
-        while len(g.left_nodes) < n:
-            while nodect in g.left_nodes or nodect in g.right_nodes:
-                nodect += 1
-            numleft = len(g.left_nodes)
-            # print("\n",nodect, g.left_nodes)
-            rejected = g.add_left_node(nodect)
-            self.assertFalse(rejected)
-            newnumleft = len(g.left_nodes)
-            self.assertTrue(newnumleft - numleft == 1)
-        while len(g.right_nodes) < n:
-            while nodect in g.left_nodes or nodect in g.right_nodes:
-                nodect += 1
-            numright = len(g.right_nodes)
-            rejected = g.add_right_node(nodect)
-            self.assertFalse(rejected)
-            newnumright = len(g.right_nodes)
-            self.assertTrue(newnumright - numright == 1)
-        for i in range(n):
-            for j in range(n,2*n):
-                g.add_red_edge((i,j),0.0)
-
-        self.assertTrue(g._check_red_match([]))
-
-        self.assertTrue(g._check_red_match([(0,2)]))
-        self.assertTrue(g._check_red_match([(0,3)]))
-        self.assertTrue(g._check_red_match([(1,2)]))
-        self.assertTrue(g._check_red_match([(1,3)]))
-
-        self.assertFalse(g._check_red_match([(0,2),(0,3)]))
-        self.assertTrue(g._check_red_match([(0,2),(1,3)]))
-        self.assertFalse(g._check_red_match([(0,2),(1,2)]))
-        self.assertFalse(g._check_red_match([(0,3),(1,3)]))
-        self.assertTrue(g._check_red_match([(0,3),(1,2)]))
-        self.assertFalse(g._check_red_match([(1,2),(1,3)]))
-
-        self.assertFalse(g._check_red_match([(0,2),(0,3),(1,3)]))
-        self.assertFalse(g._check_red_match([(0,2),(0,3),(1,2)]))
-        self.assertFalse(g._check_red_match([(0,2),(1,3),(1,2)]))
-        self.assertFalse(g._check_red_match([(0,3),(1,3),(1,2)]))
-
-        self.assertFalse(g._check_red_match([(0,2),(0,3),(1,2),(1,3)]))
-
-    def test_check_blue_match(self):
-        """ test_check_blue_match tests the function that checks whether a set of edges is a match of blue edges. This is an unnecessary test because we do not use matchings of blue edges at all. """
-        par = {'data': 1.0, 'ident': 'han-tyumi', 'left': {}, 'right': {}, 'red_edges': {}, 'blue_edges': {}}
-        g = BipartiteGraph(par)
-        n = 2
-        nodect = 0
-        while len(g.left_nodes) < n:
-            while nodect in g.left_nodes or nodect in g.right_nodes:
-                nodect += 1
-            numleft = len(g.left_nodes)
-            # print("\n",nodect, g.left_nodes)
-            rejected = g.add_left_node(nodect)
-            self.assertFalse(rejected)
-            newnumleft = len(g.left_nodes)
-            self.assertTrue(newnumleft - numleft == 1)
-        while len(g.right_nodes) < n:
-            while nodect in g.left_nodes or nodect in g.right_nodes:
-                nodect += 1
-            numright = len(g.right_nodes)
-            rejected = g.add_right_node(nodect)
-            self.assertFalse(rejected)
-            newnumright = len(g.right_nodes)
-            self.assertTrue(newnumright - numright == 1)
-        for i in range(n):
-            for j in range(n,2*n):
-                g.add_blue_edge((i,j),0.0)
-
-        self.assertTrue(g._check_blue_match([]))
-
-        self.assertTrue(g._check_blue_match([(0,2)]))
-        self.assertTrue(g._check_blue_match([(0,3)]))
-        self.assertTrue(g._check_blue_match([(1,2)]))
-        self.assertTrue(g._check_blue_match([(1,3)]))
-
-        self.assertTrue(g._check_blue_match([(0,2),(1,3)]))
-        self.assertTrue(g._check_blue_match([(0,3),(1,2)]))
-        self.assertFalse(g._check_blue_match([(0,2),(0,3)]))
-        self.assertFalse(g._check_blue_match([(0,2),(1,2)]))
-        self.assertFalse(g._check_blue_match([(0,3),(1,3)]))
-        self.assertFalse(g._check_blue_match([(1,2),(1,3)]))
-
-        self.assertFalse(g._check_blue_match([(0,2),(0,3),(1,3)]))
-        self.assertFalse(g._check_blue_match([(0,2),(0,3),(1,2)]))
-        self.assertFalse(g._check_blue_match([(0,2),(1,3),(1,2)]))
-        self.assertFalse(g._check_blue_match([(0,3),(1,3),(1,2)]))
-
-        self.assertFalse(g._check_blue_match([(0,2),(0,3),(1,2),(1,3)]))
-
-    def test_add_delete_together(self):
-        """ test_add_delete_together tests addition and deletion of nodes and edges."""
-
-        # Create graph
-        par = {'data': 1.0, 'ident': 'han-tyumi', 'left': {}, 'right': {}, 'red_edges': {}, 'blue_edges': {}}
-        g = BipartiteGraph(par)
-        n = 25 # Add n nodes to each side
-        k = 5 # make a k-regular graph; k = number of red edges adjacent to right nodes, i.e. ring size
-        
-        self.assertEqual(len(g.red_edge_weights), 0)
-        self.assertEqual(len(g.blue_edge_weights), 0)
+        g = BipartiteGraph()
+        self.assertTrue(isinstance(g, BipartiteGraph))
         self.assertEqual(len(g.left_nodes), 0)
         self.assertEqual(len(g.right_nodes), 0)
+        self.assertEqual(len(g.blue_edges), 0)
+        self.assertEqual(len(g.red_edges), 0)
+        self.assertEqual(g.count, 1)
+        self.assertEqual(g.data, 'han-tyumi')
 
-        # Add left nodes
-        nodect = 0
-        while len(g.left_nodes) < n:
-            while nodect in g.left_nodes or nodect in g.right_nodes:
-                nodect += 1
-            numleft = len(g.left_nodes)
-            # print("\n",nodect, g.left_nodes)
-            rejected = g.add_left_node(nodect)
-            self.assertFalse(rejected)
-            newnumleft = len(g.left_nodes)
-            self.assertTrue(newnumleft - numleft == 1)
+        par = {}
+        par.update({'data': 'han-tyumi'})
+        par.update({'count': 12})
+        par.update({'left_nodes': {0: 0, 1: 1, 2: 2}})
+        par.update({'right_nodes': {3: 3, 4: 4, 5: 5}})
+        par.update({'blue_edges': {(0, 3): 100, (1, 4): 101, (1, 5): 99, (2, 5): 75, (2, 3):1000}})
+        par.update({'red_edges': {(0, 4): 1, (0, 5): 8, (1, 3): 72, (2, 4): 1}})
+        g = BipartiteGraph(par)
 
-        self.assertEqual(len(g.red_edge_weights), 0)
-        self.assertEqual(len(g.blue_edge_weights), 0)
-        self.assertEqual(len(g.left_nodes), n)
-        self.assertEqual(len(g.right_nodes), 0)
+        self.assertTrue(isinstance(g, BipartiteGraph))
 
-        # Add right nodes
-        while len(g.right_nodes) < n:
-            while nodect in g.left_nodes or nodect in g.right_nodes:
-                nodect += 1
-            numright = len(g.right_nodes)
-            rejected = g.add_right_node(nodect)
-            self.assertFalse(rejected)
-            newnumright = len(g.right_nodes)
-            self.assertTrue(newnumright - numright == 1)
+        self.assertEqual(g.data, 'han-tyumi')
 
-        self.assertEqual(len(g.red_edge_weights), 0)
-        self.assertEqual(len(g.blue_edge_weights), 0)
-        self.assertEqual(len(g.left_nodes), n)
-        self.assertEqual(len(g.right_nodes), n)
-        
-        # Set first signature (right node with id n) to be linked by red edges with first k keys
-        # (left nodes with ids 0, ..., k-1).
-        rejected = None
-        for i in range(k):
-            g.add_red_edge((i, n), 0.0)
-            self.assertTrue((i, n) in g.red_edge_weights)
-            self.assertEqual(g.red_edge_weights[(i,n)], 0.0)
+        self.assertEqual(g.count, 12)
 
-        self.assertEqual(len(g.red_edge_weights), k)
-        self.assertEqual(len(g.blue_edge_weights), 0)
-        self.assertEqual(len(g.left_nodes), n)
-        self.assertEqual(len(g.right_nodes), n)
-        
-        # Pick a random signature (right-node) with no adjacent edges (any with ids n+1, n+2, ..., 2n-1 are fair), pick
-        # k random keys (left-nodes), add red edges between them. For simple test, we do this uniformly.
-        leftnodekeys = list(g.left_nodes.keys())
-        rightnodekeys = list(g.right_nodes.keys())
-        r = random.choice(range(n+1, 2*n))
-        l = random.sample(leftnodekeys, k)
+        self.assertTrue(0 in g.left_nodes and g.left_nodes[0] == 0)
+        self.assertTrue(1 in g.left_nodes and g.left_nodes[1] == 1)
+        self.assertTrue(2 in g.left_nodes and g.left_nodes[2] == 2)
+        self.assertEqual(len(g.left_nodes), 3)
 
-        # Assemble identities of the edges to be added for this signature
-        self.assertTrue(len(l) == k)
-        edge_idents = [(lefty, r) for lefty in l]
-        self.assertTrue(len(edge_idents) == k)
-        
-        for i in range(k):
-            # For each ring member, create an edge, add it, and check that the edge was not rejected.
-            self.assertTrue(edge_idents[i] not in g.red_edge_weights)
-            self.assertTrue(edge_idents[i] not in g.blue_edge_weights)
-            rejected = g.add_red_edge(edge_idents[i],0.0)
-            self.assertTrue(edge_idents[i] in g.red_edge_weights)
-            self.assertFalse(rejected)
+        self.assertTrue(3 in g.right_nodes and g.right_nodes[3] == 3)
+        self.assertTrue(4 in g.right_nodes and g.right_nodes[4] == 4)
+        self.assertTrue(5 in g.right_nodes and g.right_nodes[5] == 5)
+        self.assertEqual(len(g.right_nodes), 3)
 
-        self.assertEqual(len(g.red_edge_weights), 2*k)
-        self.assertEqual(len(g.blue_edge_weights), 0)
-        self.assertEqual(len(g.left_nodes), n)
-        self.assertEqual(len(g.right_nodes), n)
+        self.assertTrue((0, 3) in g.blue_edges and g.blue_edges[(0, 3)] == 100)
+        self.assertTrue((1, 4) in g.blue_edges and g.blue_edges[(1, 4)] == 101)
+        self.assertTrue((1, 5) in g.blue_edges and g.blue_edges[(1, 5)] == 99)
+        self.assertTrue((2, 5) in g.blue_edges and g.blue_edges[(2, 5)] == 75)
+        self.assertTrue((2, 3) in g.blue_edges and g.blue_edges[(2, 3)] == 1000)
+        self.assertEqual(len(g.blue_edges), 5)
 
-        # Pick a random signature and key that are not connected with a red-edge
-        r = random.choice(rightnodekeys)
-        l = random.choice(leftnodekeys) 
-        while (l, r) in g.red_edge_weights:
-            r = random.choice(rightnodekeys)
-            l = random.choice(leftnodekeys)
-            
-        # Create a blue-edge for this pair
-        eid = (l, r)
-        # Include the blue edge in the graph, verify not rejected, verify there is only one blue-edge.
-        rejected = g.add_blue_edge(eid,0.0)
-        self.assertFalse(rejected)
+        self.assertTrue((0, 4) in g.red_edges and g.red_edges[(0, 4)] == 1)
+        self.assertTrue((0, 5) in g.red_edges and g.red_edges[(0, 5)] == 8)
+        self.assertTrue((1, 3) in g.red_edges and g.red_edges[(1, 3)] == 72)
+        self.assertTrue((2, 4) in g.red_edges and g.red_edges[(2, 4)] == 1)
+        self.assertEqual(len(g.red_edges), 4)
 
-        self.assertEqual(len(g.red_edge_weights), 2*k)
-        self.assertEqual(len(g.blue_edge_weights), 1)
-        self.assertEqual(len(g.left_nodes), n)
-        self.assertEqual(len(g.right_nodes), n)
+    def test_r_init(self):
+        g = make_r_graph()
 
-        # Find the next node identity that is not yet in the graph
-        while nodect in g.left_nodes or nodect in g.right_nodes:
-            nodect += 1
-        # Create that left node, add it to the left
-        left_ident = nodect
-        rejected = g.add_left_node(left_ident)
+        self.assertTrue(isinstance(g, BipartiteGraph))
 
-        self.assertFalse(rejected)
-        self.assertEqual(len(g.red_edge_weights), 2*k)
-        self.assertEqual(len(g.blue_edge_weights), 1)
-        self.assertEqual(len(g.left_nodes), n+1)
-        self.assertEqual(len(g.right_nodes), n)
+        self.assertEqual(g.data, 'han-tyumi')
 
-        # Pick the next node identity that doesn't yet exist.
-        while nodect in g.right_nodes or nodect in g.left_nodes:
-            nodect += 1
-        # Create that node and add it to the right.
-        right_ident = nodect
-        rejected = g.add_right_node(right_ident)
+        n = len(g.right_nodes) + len(g.left_nodes)
+        self.assertEqual(g.count-1, n)
 
-        self.assertFalse(rejected)
-        self.assertEqual(len(g.red_edge_weights), 2*k)
-        self.assertEqual(len(g.blue_edge_weights), 1)
-        self.assertEqual(len(g.left_nodes), n+1)
-        self.assertEqual(len(g.right_nodes), n+1)
+        self.assertTrue(3 <= len(g.left_nodes) <= 5)
+        for i in range(1,len(g.left_nodes)+1):
+            self.assertTrue(i in g.left_nodes)
+            self.assertEqual(g.left_nodes[i], i)
 
-        # Now create either a red-edge or an blue-edge connecting l and r with 50% probability of each
-        b = random.choice([0, 1])  # Pick a random bit
-        # Include edge as red-edge if b=0, blue-edge if b=1, and mark the edge as rejected if attempt fails
-        rejected = None
-        if b == 0:
-            rejected = g.add_red_edge((left_ident, right_ident), 0.0)
-        elif b == 1:
-            rejected = g.add_blue_edge((left_ident, right_ident), 0.0)
+        self.assertTrue(3 <= len(g.right_nodes) <= 5)
+        for i in range(len(g.left_nodes)+1, len(g.right_nodes)+1):
+            self.assertTrue(i in g.right_nodes)
+            self.assertEqual(g.right_nodes[i] == i)
 
-        self.assertTrue(rejected is not None)  # This should always be true since we've covered all possibilities.
-        self.assertFalse(rejected)  # Check that the new edge was not rejected
-        # Make sure that we have the right number of total edges and verify that the edge landed in the correct place
-        self.assertEqual(len(g.red_edge_weights), 2*k+(1-b))
-        self.assertEqual(len(g.blue_edge_weights), 1+b)
-        self.assertEqual(len(g.left_nodes), n+1)
-        self.assertEqual(len(g.right_nodes), n+1)
-        if b == 0:
-            self.assertEqual(len(g.red_edge_weights), 2*k+1)
-            self.assertEqual(len(g.blue_edge_weights), 1)
-        elif b == 1:
-            self.assertEqual(len(g.red_edge_weights), 2*k)
-            self.assertEqual(len(g.blue_edge_weights), 2)
+        self.assertEqual(len([x for x in g.right_nodes if x in g.left_nodes]), 0)
+
+        self.assertEqual(len(g.right_nodes)*len(g.left_nodes), len(g.red_edges) + len(g.blue_edges))
+        self.assertEqual(len([eid for eid in g.red_edges if eid in g.blue_edges]), 0)
+
+        for eid in g.red_edges:
+            self.assertTrue(g.red_edges[eid] <= 0.0)
+        for eid in g.blue_edges:
+            self.assertTrue(g.blue_edges[eid] <= 0.0)
+
+    def test_d_add_node(self):
+        g = BipartiteGraph()
+        b = 0
+        for i in range(100):
+            n = deepcopy(g.count - 1)
+            nn = deepcopy(len(g.red_edges) + len(g.blue_edges))
+            nnn = deepcopy(g.data)
+            j = g.add_node(b)
+            self.assertTrue(not b and j in g.left_nodes and g.left_nodes[j] == j)
+            m = deepcopy(g.count - 1)
+            mm = deepcopy(len(g.red_edges) + len(g.blue_edges))
+            mmm = deepcopy(g.data)
+            self.assertEqual(m-n, 1)
+            self.assertEqual(mm, nn)
+            self.assertEqual(mmm, nnn)
+            self.assertEqual(g.count-1, len(g.left_nodes)+len(g.right_nodes))
+        b = 1
+        for i in range(100):
+            n = deepcopy(g.count - 1)
+            nn = deepcopy(len(g.red_edges) + len(g.blue_edges))
+            nnn = deepcopy(g.data)
+            j = g.add_node(b)
+            self.assertTrue(b and j in g.right_nodes and g.right_nodes[j] == j)
+            m = deepcopy(g.count - 1)
+            mm = deepcopy(len(g.red_edges) + len(g.blue_edges))
+            mmm = deepcopy(g.data)
+            self.assertEqual(m-n, 1)
+            self.assertEqual(mm, nn)
+            self.assertEqual(mmm, nnn)
+            self.assertEqual(g.count-1, len(g.left_nodes)+len(g.right_nodes))
+
+    def test_r_add_node(self):
+        g = make_r_graph()
+        n = g.count - 1
+        num_to_add = random.randint(50, 200)
+        for i in range(num_to_add):
+            n = deepcopy(g.count - 1)
+            nn = deepcopy(len(g.red_edges) + len(g.blue_edges))
+            nnn = deepcopy(g.data)
+            b = random.getrandbits(1)
+
+            j = g.add_node(b)
+
+            self.assertTrue((b and j in g.right_nodes and g.right_nodes[j]==j) or
+                            (not b and j in g.left_nodes and g.left_nodes[j] == j))
+            m = deepcopy(g.count - 1)
+            mm = deepcopy(len(g.red_edges) + len(g.blue_edges))
+            mmm = deepcopy(g.data)
+            self.assertEqual(m-n, 1)
+            self.assertEqual(mm, nn)
+            self.assertEqual(mmm, nnn)
+            self.assertEqual(g.count-1, len(g.left_nodes)+len(g.right_nodes))
+
+    def test_d_add_edge(self):
+        g = make_d_graph()
+        j = g.add_node(1)
+        self.assertEqual(j, 11)
+        ii = g.add_node(0)
+        self.assertEqual(ii, 12)
+        i = min(list(g.left_nodes.keys()))
+        self.assertEqual(i, 1)
+        jj = min(list(g.right_nodes.keys()))
+        self.assertEqual(jj, 6)
+        # weights will start at 0.0 and be incremented by 0.0001
+        w = 0.0
+
+        n = deepcopy(len(g.blue_edges))
+        m = deepcopy(len(g.red_edges))
+        a = deepcopy(len(g.left_nodes))
+        b = deepcopy(len(g.right_nodes))
+        g.add_edge(0, (i, j), w)
+        w += 0.0001
+        nn = deepcopy(len(g.blue_edges))
+        mm = deepcopy(len(g.red_edges))
+        aa = deepcopy(len(g.left_nodes))
+        bb = deepcopy(len(g.right_nodes))
+        self.assertEqual(nn-n, 1)
+        self.assertEqual(m, mm)
+        self.assertEqual(a, aa)
+        self.assertEqual(b, bb)
+
+        n = deepcopy(len(g.blue_edges))
+        m = deepcopy(len(g.red_edges))
+        a = deepcopy(len(g.left_nodes))
+        b = deepcopy(len(g.right_nodes))
+        g.add_edge(1, (ii, jj), w)
+        w += 0.0001
+        nn = deepcopy(len(g.blue_edges))
+        mm = deepcopy(len(g.red_edges))
+        aa = deepcopy(len(g.left_nodes))
+        bb = deepcopy(len(g.right_nodes))
+        self.assertEqual(mm-m, 1)
+        self.assertEqual(n, nn)
+        self.assertEqual(a, aa)
+        self.assertEqual(b, bb)
+
+    def test_r_add_edge(self):
+        g = make_r_graph()
+        n = g.count - 1
+        j = g.add_node(1)
+        self.assertEqual(j, n+1)
+        ii = g.add_node(0)
+        self.assertEqual(ii, n+2)
+        i = min(list(g.left_nodes.keys()))
+        self.assertEqual(i, 1)
+        jj = min(list(g.right_nodes.keys()))
+        self.assertEqual(jj, len(g.left_nodes))
+
+        w = -math.log(random.random())
+
+        n = deepcopy(len(g.blue_edges))
+        m = deepcopy(len(g.red_edges))
+        a = deepcopy(len(g.left_nodes))
+        c = deepcopy(len(g.right_nodes))
+        g.add_edge(0, (i, j), w)
+        w += 0.0001
+        nn = deepcopy(len(g.blue_edges))
+        mm = deepcopy(len(g.red_edges))
+        aa = deepcopy(len(g.left_nodes))
+        cc = deepcopy(len(g.right_nodes))
+        self.assertEqual(nn - n, 1)
+        self.assertEqual(m, mm)
+        self.assertEqual(a, aa)
+        self.assertEqual(c, cc)
+
+        n = deepcopy(len(g.blue_edges))
+        m = deepcopy(len(g.red_edges))
+        a = deepcopy(len(g.left_nodes))
+        c = deepcopy(len(g.right_nodes))
+        g.add_edge(1, (ii, jj), w)
+        w += 0.0001
+        nn = deepcopy(len(g.blue_edges))
+        mm = deepcopy(len(g.red_edges))
+        aa = deepcopy(len(g.left_nodes))
+        cc = deepcopy(len(g.right_nodes))
+        self.assertEqual(mm - m, 1)
+        self.assertEqual(n, nn)
+        self.assertEqual(a, aa)
+        self.assertEqual(c, cc)
+
+    def test_d_del_edge(self):
+        g = make_d_graph()
+        p = (4*9) % 2
+        self.assertTrue((not p and (4, 9) in g.blue_edges) or (p and (4,9) in g.red_edges))
+        self.assertEqual(p, 0)
+        self.assertTrue((4, 9) in g.blue_edges)
+
+        b = None
+        a = deepcopy(len(g.left_nodes))
+        c = deepcopy(len(g.right_nodes))
+        if (4, 9) in g.blue_edges:
+            b = 0
+            n = deepcopy(len(g.blue_edges))
+            m = deepcopy(len(g.red_edges))
         else:
-            self.assertTrue(rejected)
+            b = 1
+            n = deepcopy(len(g.red_edges))
+            m = deepcopy(len(g.blue_edges))
 
-        # Pick a random red-edge
-        ek = random.choice(list(g.red_edge_weights.keys()))
-        self.assertTrue(ek in g.red_edge_weights)
-        # Attempt to delete it.
-        rejected = g.del_edge(ek)
-        # Check that deletion worked
-        self.assertFalse(rejected)
-        self.assertEqual(len(g.red_edge_weights) + len(g.blue_edge_weights), 2*k+1)
+        g.del_edge((4,9))
 
-        # Pick a random leftnode
-        mk = random.choice(list(g.left_nodes.keys()))
-        # Collect the edge identities of edges that will be delted if this node is deleted
-        edges_lost = len([eid for eid in g.red_edge_weights if mk in eid]) + len([eid for eid in g.blue_edge_weights if mk in eid])
-        # Attempt to delete the node
-        rejected = g.del_node(mk)
-        self.assertFalse(rejected)
-        self.assertTrue(len(g.left_nodes) + len(g.right_nodes) == 2*n+1)
-        self.assertEqual(len(g.red_edge_weights) + len(g.blue_edge_weights), 2*k+1 - edges_lost)
+        aa = deepcopy(len(g.left_nodes))
+        cc = deepcopy(len(g.right_nodes))
+        if b:
+            nn = deepcopy(len(g.red_edges))
+            mm = deepcopy(len(g.blue_edges))
+        elif not b:
+            nn = deepcopy(len(g.blue_edges))
+            mm = deepcopy(len(g.red_edges))
+        else:
+            self.assertTrue(False)
 
-    def test_bfs_simple(self):
-        """ test_bfs_simple is a simple test of redd_bfs. """
-        # 0 ---- 2
-        #    /  
-        # 1 /--- 3
-        # Edges (0,4), (1,4), (2,4), (2,5), (2,6), (3,7)
-        par = {'data': 1.0, 'ident': 'han-tyumi', 'left': {}, 'right': {}, 'red_edges': {}, 'blue_edges': {}}
-        g = BipartiteGraph(par)
-        n = 2 # Add n nodes to each side
-        nodect = 0
-        while len(g.left_nodes) < n:
-            while nodect in g.left_nodes or nodect in g.right_nodes:
-                nodect += 1
-            numleft = len(g.left_nodes)
-            # print("\n",nodect, g.left_nodes)
-            rejected = g.add_left_node(nodect)
-            self.assertFalse(rejected)
-            newnumleft = len(g.left_nodes)
-            self.assertTrue(newnumleft - numleft == 1)
-        while len(g.right_nodes) < n:
-            while nodect in g.left_nodes or nodect in g.right_nodes:
-                nodect += 1
-            numright = len(g.right_nodes)
-            rejected = g.add_right_node(nodect)
-            self.assertFalse(rejected)
-            newnumright = len(g.right_nodes)
-            self.assertTrue(newnumright - numright == 1)
-
-        self.assertTrue(0 in g.left_nodes)
-        self.assertTrue(1 in g.left_nodes)
-        self.assertEqual(len(g.left_nodes), 2)
-
-        self.assertTrue(2 in g.right_nodes)
-        self.assertTrue(3 in g.right_nodes)
-        self.assertEqual(len(g.right_nodes), 2)
-
-        g.add_red_edge((0,2), 0.0)
-        g.add_red_edge((1,2), 0.0)
-        g.add_red_edge((1,3), 0.0)
-
-        self.assertTrue((0,2) in g.red_edge_weights)
-        self.assertTrue((1,2) in g.red_edge_weights)
-        self.assertTrue((1,3) in g.red_edge_weights)
-        self.assertEqual(len(g.red_edge_weights), 3)
-
-        match = list()
-        match.append((1,2))
-
-        # print("\n\n======\n\n")
-        # print("Red edge weights = ", g.red_edge_weights)
-        # print("Match = ", match)
-        results = g.redd_bfs(match)
-        # print("Results = ", results)
-        self.assertEqual(results, [[(0,2),(1,2),(1,3)]])
-
-    def test_bfs_full(self):
-        """ test_bfs_full is a less-simple test of bfs_red. """
-        # 0 ---- 4
-        #    / /
-        # 1 / // 5
-        #    //
-        # 2 /--- 6
-        # 3 ---- 7
-        # Edges (0,4), (1,4), (2,4), (2,5), (2,6), (3,7)
-
-        par = {'data': 1.0, 'ident': 'han-tyumi', 'left': [], 'right': [], 'red_edges': [], 'blue_edges': []}
-        g = BipartiteGraph(par)
-
-        # 4 nodes on each side
-        n = 4
-        ct = 0
-        # Add left nodes
-        while len(g.left_nodes) < n:
-            while ct in g.left_nodes:
-                ct += 1
-            g.add_left_node(ct)
-            ct += 1
-        # Add right nodes
-        while len(g.right_nodes) < n:
-            while ct in g.right_nodes:
-                ct += 1
-            g.add_right_node(ct)
-            ct += 1
-
-        # Check left keys have 0, 1, 2, 3.
-        leftkeys = list(g.left_nodes.keys())
-        for i in range(n):
-            self.assertTrue(i in leftkeys)
-        self.assertEqual(len(leftkeys), n)
-
-        # Check that right keys have 4, 5, 6, 7.
-        rightkeys = list(g.right_nodes.keys())
-        for i in range(n, 2*n):
-            self.assertTrue(i in rightkeys)
-        self.assertEqual(len(rightkeys), n)
-
-        # Edges to be added
-        edge_idents = [(0, 4), (1, 4), (2, 4), (2, 5), (2, 6), (3, 7)]
-          
-        for ident in edge_idents:
-            g.add_red_edge(ident, 0.0)
-
-        match = [(2,4)]
-        results = g.redd_bfs(match)
-        # print("\n\n====\n\n results = ", results, type(results), "\n\n====\n\n")
-        self.assertEqual(results, [[(3,7)]])
-
-    def test_bfs_fourshortest(self):
-        """ test_bfs_full is a less-simple test of bfs_red. """
-        # 0 ---- 3
-        #    / /
-        # 1 / // 4
-        #    //
-        # 2 /--- 5
-        # Edges (0,3), (1,3), (2,3), (2,4), (2,5)
-        # Initial match: [(2,3)]
-
-        par = {'data': 1.0, 'ident': 'han-tyumi', 'left': [], 'right': [], 'red_edges': [], 'blue_edges': []}
-        g = BipartiteGraph(par)
-
-        # 4 nodes on each side
-        n = 3
-        ct = 0
-        # Add left nodes
-        while len(g.left_nodes) < n:
-            while ct in g.left_nodes:
-                ct += 1
-            g.add_left_node(ct)
-            ct += 1
-        # Add right nodes
-        while len(g.right_nodes) < n:
-            while ct in g.right_nodes:
-                ct += 1
-            g.add_right_node(ct)
-            ct += 1
-
-        # Check left keys have 0, 1, 2
-        leftkeys = list(g.left_nodes.keys())
-        for i in range(n):
-            self.assertTrue(i in leftkeys)
-        self.assertEqual(len(leftkeys), n)
-
-        # Check that right keys have 3, 4, 5.
-        rightkeys = list(g.right_nodes.keys())
-        for i in range(n, 2*n):
-            self.assertTrue(i in rightkeys)
-        self.assertEqual(len(rightkeys), n)
-
-        # Edges to be added
-        edge_idents = [(0,3), (1,3), (2,3), (2,4), (2,5)]
-          
-        for ident in edge_idents:
-            g.add_red_edge(ident, 0.0)
-        self.assertEqual(len(g.red_edge_weights),5)
-
-        match = [(2,3)]
-        results = g.redd_bfs(match)
-        # print("\n\n====\n\n results = ", results, type(results), "\n\n====\n\n")
-        self.assertTrue([(0,3), (2,3), (2,4)] in results)
-        self.assertTrue([(0,3), (2,3), (2,5)] in results)
-        self.assertTrue([(1,3), (2,3), (2,4)] in results)
-        self.assertTrue([(1,3), (2,3), (2,5)] in results)
-
-    def test_get_augmenting_path(self):
-        par = {'data': 1.0, 'ident': 'han-tyumi', 'left': [], 'right': [], 'red_edges': [], 'blue_edges': []}
-        g = BipartiteGraph(par)
-        n = 3
-        ct = 0
-        while len(g.left_nodes) < n:
-            while ct in g.left_nodes:
-                ct += 1
-            g.add_left_node(ct)
-            ct += 1
-        while len(g.right_nodes) < n:
-            while ct in g.right_nodes:
-                ct += 1
-            g.add_right_node(ct)
-            ct += 1
-
-        leftkeys = list(g.left_nodes.keys())
-        for i in range(n):
-            self.assertTrue(i in leftkeys)
-        self.assertEqual(len(leftkeys), n)
-
-        rightkeys = list(g.right_nodes.keys())
-        for i in range(n, 2*n):
-            self.assertTrue(i in rightkeys)
-        self.assertEqual(len(rightkeys), n)
-
-        edge_idents = [(0, 3), (1, 3), (2, 3), (2, 4), (2, 5)]
-        for ident in edge_idents:
-            g.add_red_edge(ident, 0.0)
-
-        match = [(2,3)]
-        results = g.get_augmenting_red_paths(match)
-        # line = [[e.ident for e in p] for p in results]
-        # print("Results from _get_augmenting_paths = " + str(line))
-        self.assertTrue(len(results) == 1) # one resulting path
-        self.assertTrue(len(results[0]) == 3) # with length 3
-        self.assertTrue(results[0][0][0] == 0 or results[0][0][0] == 1)
-        self.assertEqual(results[0][0][1], 3)
-        self.assertEqual(results[0][1][0], 2)
-        self.assertEqual(results[0][1][1], 3)
-        self.assertTrue(results[0][2][0], 2)
-        self.assertTrue(results[0][2][1] == 4 or results[0][2][1] == 5)
-
-    def test_max_matching_weightless(self):
-        # print("Beginning test_max_matching)")
-        par = {'data': 1.0, 'ident': 'han-tyumi', 'left': [], 'right': [], 'red_edges': [], 'blue_edges': []}
-        g = BipartiteGraph(par)
-        n = 3
-        ct = 0
-        while len(g.left_nodes) < n:
-            while ct in g.left_nodes:
-                ct += 1
-            g.add_left_node(ct)
-            ct += 1
-        while len(g.right_nodes) < n:
-            while ct in g.right_nodes:
-                ct += 1
-            g.add_right_node(ct)
-            ct += 1
-
-        leftkeys = list(g.left_nodes.keys())
-        for i in range(n):
-            self.assertTrue(i in leftkeys)
-        self.assertEqual(len(leftkeys), n)
-
-        rightkeys = list(g.right_nodes.keys())
-        for i in range(n, 2*n):
-            self.assertTrue(i in rightkeys)
-        self.assertEqual(len(rightkeys), n)
-
-        edge_idents = [(0, 3), (1, 3), (2, 3), (2, 4), (2, 5)]
-        for eid in edge_idents:
-            g.add_red_edge(eid, 0.0)
-
-        match = [(2,3)]
-        results = g.get_max_red_matching(match)
-        self.assertTrue((0, 3) in results or (1, 3) in results)
-        self.assertTrue((2, 4) in results or (2, 5) in results)
-        self.assertFalse((2, 3) in results)
-        self.assertEqual(len(results), 2)
-
-    def test_get_optimal_red_matching(self):
-        # print("Beginning test_max_matching)")
-        par = {'data': 1.0, 'ident': 'han-tyumi', 'left': [], 'right': [], 'red_edges': [], 'blue_edges': []}
-        g = BipartiteGraph(par)
-        n = 3
-        ct = 0
-        while len(g.left_nodes) < n:
-            while ct in g.left_nodes:
-                ct += 1
-            g.add_left_node(ct)
-            ct += 1
-        while len(g.right_nodes) < n:
-            while ct in g.right_nodes:
-                ct += 1
-            g.add_right_node(ct)
-            ct += 1
-
-        leftkeys = list(g.left_nodes.keys())
-        for i in range(n):
-            self.assertTrue(i in leftkeys)
-        self.assertEqual(len(leftkeys), n)
-
-        rightkeys = list(g.right_nodes.keys())
-        for i in range(n, 2*n):
-            self.assertTrue(i in rightkeys)
-        self.assertEqual(len(rightkeys), n)
-
-        edge_idents_and_weights = [[(0, 3), 1], [(1, 3), 2], [(2, 3), 3], [(2, 4), 4], [(2, 5), 5]]
-        for ident in edge_idents_and_weights:
-            eid = ident[0]
-            w = ident[1]
-            g.add_red_edge(eid, w)
-
-        match = [(2,3)]
-        results = g.get_optimal_red_matching(match)
-        self.assertEqual(len(results), 2)
-        self.assertTrue((1,3) in results)
-        self.assertTrue((2,5) in results)
-
-        # line = [e.ident for e in results]
-        # print("Maximal matching is " + str(line))
-
-    def test_get_alt_red_paths_with_pos_gain(self):
-        ''' test_get_alt_red_paths_with_pos_gain tests whether, given a maximal match on a weighted graph,
-        whether we correctly extract another maximal match with higher weight'''
-        par = {'data': 1.0, 'ident': 'han-tyumi', 'left': [], 'right': [], 'red_edges': [], 'blue_edges': []}
-        g = BipartiteGraph(par) # want four left nodes and two right nodes.
-        n = 4
-        k = 3
-        ct = 0
-        while len(g.left_nodes) < 2*n:
-            while ct in g.left_nodes or ct in g.right_nodes:
-                ct += 1
-            g.add_left_node(ct)
-            ct += 1
-        while len(g.right_nodes) < n:
-            while ct in g.right_nodes or ct in g.left_nodes:
-                ct += 1
-            g.add_right_node(ct)
-            ct += 1
-
-        leftkeys = list(g.left_nodes.keys())
-        for i in range(2*n):
-            self.assertTrue(i in leftkeys)
-        self.assertEqual(len(leftkeys), 2*n)
-
-        rightkeys = list(g.right_nodes.keys())
-        for i in range(2*n, 3*n):
-            self.assertTrue(i in rightkeys)
-        self.assertEqual(len(rightkeys), n)
-
-        weids = []
-        weids.append([(0, 8), 7])
-        weids.append([(1, 8), 6])
-        weids.append([(2, 8), 5])
-        weids.append([(2, 9), 6])
-        weids.append([(3, 9), 7])
-        weids.append([(4, 9), 8])
-        weids.append([(3, 10), 5])
-        weids.append([(4, 10), 6])
-        weids.append([(5, 10), 7])
-        weids.append([(5, 11), 1])
-        weids.append([(6, 11), 2])
-        weids.append([(7, 11), 3])
-
-        eids = []
-        for ident in weids:
-            rejected = g.add_red_edge(ident[0], ident[1])
-            assert not rejected
-            eids.append(ident[0])
-
-        bad_match = [(1,8), (2, 9), (3, 10), (5,11)]  # must be maximal
-        self.assertTrue(g._check_red_match(bad_match))
-        results = g.get_shortest_improving_paths_wrt_max_match(bad_match)
-        self.assertTrue(([(0,8), (1,8)], 1) in results)
-        self.assertTrue(len(results)==1)
-        self.assertTrue(isinstance(results[0], tuple))
-        self.assertTrue(isinstance(results[0][0], list))
-        for eid in results[0][0]:
-            self.assertTrue(isinstance(eid, tuple))
-            self.assertTrue(eid in g.red_edge_weights)
-            s = sum([g.red_edge_weights[eid] for eid in results[0][0] if eid not in bad_match])
-            s = s - sum([g.red_edge_weights[eid] for eid in results[0][0] if eid in bad_match])
-            self.assertEqual(s, results[0][1])
+        self.assertEqual(n-nn, 1)
+        self.assertEqual(a, aa)
+        self.assertEqual(c, cc)
+        self.assertEqual(m, mm)
 
 
-    def test_get_opt_matching(self, sample_size=10**3, verbose=False):
-        ''' test_get_opt_matching tests finding an optimal matching for a COMPLETE n=4 bipartite graph with random
-        edge weights. '''
-        for tomato in range(sample_size):
-            # print("Beginning test_max_matching)")
-            s = random.random()
-            x = str(hash(str(1.0) + str(s)))
-            par = {'data': 1.0, 'ident': x, 'left': [], 'right': [], 'red_edges': [], 'blue_edges': []}
-            g = BipartiteGraph(par)
-            n = 4
-            ct = 0
-            while len(g.left_nodes) < n:
-                while ct in g.left_nodes:
-                    ct += 1
-                g.add_left_node(ct)
-                ct += 1
-            while len(g.right_nodes) < n:
-                while ct in g.right_nodes:
-                    ct += 1
-                g.add_right_node(ct)
-                ct += 1
+    def test_r_del_edge(self):
+        g = make_r_graph()
 
-            leftkeys = list(g.left_nodes.keys())
-            for i in range(n):
-                self.assertTrue(i in leftkeys)
-            self.assertEqual(len(leftkeys), n)
+        a = deepcopy(len(g.left_nodes))
+        c = deepcopy(len(g.right_nodes))
 
-            rightkeys = list(g.right_nodes.keys())
-            for i in range(n, 2*n):
-                self.assertTrue(i in rightkeys)
-            self.assertEqual(len(rightkeys), n)
+        b = random.getrandbits(1)
+        if b:
+            eid = random.choice(list(g.red_edges.keys()))
+            n = deepcopy(len(g.red_edges))
+            m = deepcopy(len(g.blue_edges))
+        else:
+            eid = random.choice(list(g.blue_edges.keys()))
+            n = deepcopy(len(g.blue_edges))
+            m = deepcopy(len(g.red_edges))
 
-            # print(g.left_nodes)
-            # print(g.right_nodes)
-            for i in range(n):
-                for j in range(n,2*n):
-                    g.add_red_edge((i,j), random.random())
-            # print(g.in_edges)
+        g.del_edge(eid)
 
-            results = g.get_optimal_red_matching()
-            readable_results = []
-            for eid in results:
-                assert eid in g.in_edges or eid in g.out_edges and not (eid in g.in_edges and eid in g.out_edges)
-                if eid in g.in_edges:
-                    readable_results.append((g.in_edges[eid].weight, eid))
-                elif eid in g.out_edges:
-                    readable_results.append((g.out_edges[eid].weight, eid))
-            net_weight = sum(x[0] for x in readable_results)
-            if verbose:
-                print("optmatch results = " + str(readable_results))
+        aa = deepcopy(len(g.left_nodes))
+        cc = deepcopy(len(g.right_nodes))
+        if b:
+            nn = deepcopy(len(g.red_edges))
+            mm = deepcopy(len(g.blue_edges))
+        elif not b:
+            nn = deepcopy(len(g.blue_edges))
+            mm = deepcopy(len(g.red_edges))
+        else:
+            self.assertTrue(False)
 
-            # There are 24 possible matchings, we are going to compute the cumulative weight of each.
-            all_m = list()
-            all_m.append([(0, 4), (1, 5), (2, 6), (3, 7)])
-            all_m.append([(0, 4), (1, 5), (2, 7), (3, 6)])
-            all_m.append([(0, 4), (1, 6), (2, 5), (3, 7)])
-            all_m.append([(0, 4), (1, 6), (2, 7), (3, 5)])
-            all_m.append([(0, 4), (1, 7), (2, 5), (3, 6)])
-            all_m.append([(0, 4), (1, 7), (2, 6), (3, 5)])
-            all_m.append([(0, 5), (1, 4), (2, 6), (3, 7)])
-            all_m.append([(0, 5), (1, 4), (2, 7), (3, 6)])
-            all_m.append([(0, 5), (1, 6), (2, 4), (3, 7)])
-            all_m.append([(0, 5), (1, 6), (2, 7), (3, 4)])
-            all_m.append([(0, 5), (1, 7), (2, 4), (3, 6)])
-            all_m.append([(0, 5), (1, 7), (2, 6), (3, 4)])
-            all_m.append([(0, 6), (1, 4), (2, 5), (3, 7)])
-            all_m.append([(0, 6), (1, 4), (2, 7), (3, 5)])
-            all_m.append([(0, 6), (1, 5), (2, 4), (3, 7)])
-            all_m.append([(0, 6), (1, 5), (2, 7), (3, 4)])
-            all_m.append([(0, 6), (1, 7), (2, 4), (3, 5)])
-            all_m.append([(0, 6), (1, 7), (2, 5), (3, 4)])
-            all_m.append([(0, 7), (1, 4), (2, 5), (3, 6)])
-            all_m.append([(0, 7), (1, 4), (2, 6), (3, 5)])
-            all_m.append([(0, 7), (1, 5), (2, 4), (3, 6)])
-            all_m.append([(0, 7), (1, 5), (2, 6), (3, 4)])
-            all_m.append([(0, 7), (1, 6), (2, 4), (3, 5)])
-            all_m.append([(0, 7), (1, 6), (2, 5), (3, 4)])
-
-            weighted_matches = []
-            for m in all_m:
-                this_weight = 0.0
-                for eid in m:
-                    this_weight += g.in_edges[eid].weight
-                weighted_matches.append((this_weight, m))
-            if verbose:
-                print("==Weight==\t\t\t==Match==")
-                for wm in weighted_matches:
-                    print(str(wm[0]) + "\t" + str(wm[1]))
-                    self.assertTrue(wm[0] <= net_weight)
+        self.assertTrue((n-nn == 1 and m == mm) or (n == nn and m - mm == 1))
+        self.assertEqual(a, aa)
+        self.assertEqual(c, cc)
 
 
-tests = [TestSymDif, TestBipartiteGraph]
+    def test_d_del_node(self):
+        g = make_d_graph()
+
+        a = deepcopy(len(g.left_nodes))
+        c = deepcopy(len(g.right_nodes))
+        n = deepcopy(len(g.red_edges))
+        m = deepcopy(len(g.blue_edges))
+
+        x = 3  # this is a left node with 5 incident edges
+        g.del_node(x)
+        # when x = 3 is deleted from the left, the edges (3, 6), (3, 7), (3, 8), (3, 9), and (3, 10) are deleted.
+        # (3*6) % 2 = 0, (3*7) % 2 = 1, (3*8) % 2 = 0, (3*9) % 2 = 1, and (3*10) % 2 = 0
+        # so blues: (3, 6), (3, 8), (3, 10)
+        # and reds: (3, 7), (3, 9)
+
+        aa = deepcopy(len(g.left_nodes))
+        cc = deepcopy(len(g.right_nodes))
+        nn = deepcopy(len(g.red_edges))
+        mm = deepcopy(len(g.blue_edges))
+
+        self.assertEqual(a-aa, 1)
+        self.assertEqual(c, cc)
+        self.assertEqual(n-nn, 2)
+        self.assertEqual(m-mm, 3)
+
+    def test_r_del_node(self):
+        g = make_r_graph()
+
+        a = deepcopy(len(g.left_nodes))
+        c = deepcopy(len(g.right_nodes))
+        n = deepcopy(len(g.red_edges))
+        m = deepcopy(len(g.blue_edges))
+
+        # pick a random node:
+        b = random.getrandbits(1)
+        if b:
+            x = random.choice(list(g.right_nodes.keys()))
+        else:
+            x = random.choice(list(g.left_nodes.keys()))
+        red_eids_incident_with_x = [eid for eid in g.red_edges if x in eid]
+        blue_eids_incident_with_x = [eid for eid in g.blue_edges if x in eid]
+        g.del_node(x)
+
+        aa = deepcopy(len(g.left_nodes))
+        cc = deepcopy(len(g.right_nodes))
+        nn = deepcopy(len(g.red_edges))
+        mm = deepcopy(len(g.blue_edges))
+
+        if b:
+            self.assertEqual(a, aa)
+            self.assertEqual(c-cc, 1)
+        else:
+            self.assertEqual(a-aa, 1)
+            self.assertEqual(c, cc)
+        self.assertEqual(n-nn, len(red_eids_incident_with_x))
+        self.assertEqual(m-mm, len(blue_eids_incident_with_x))
+
+    def test_d_check_colored_match(self):
+        g = make_d_graph()
+
+        # a maximal red matching. there are 9 of these in total.
+        b = 1
+        match = [(3, 7), (5, 9)]
+        self.assertTrue(g.check_colored_match(b, match))
+        self.assertFalse(g.check_colored_match(1-b, match))
+
+        # a maximal blue matching. there are 25 of these in total.
+        b = 0
+        match = [(2, 8), (4, 6)]
+        self.assertTrue(g.check_colored_match(b, match))
+        self.assertFalse(g.check_colored_match(1-b, match))
+
+        # a non-maximal red matching. there are 9 of these in total.
+        b = 1
+        match = [(1, 7)]
+        self.assertTrue(g.check_colored_match(b, match))
+        self.assertFalse(g.check_colored_match(1 - b, match))
+
+        # a non-maximal blue matching. there are 25 of these in total.
+        b = 0
+        match = [(4, 10)]
+        self.assertTrue(g.check_colored_match(b, match))
+        self.assertFalse(g.check_colored_match(1 - b, match))
+
+        # a trivial matching.
+        b = 1
+        match = []
+        self.assertTrue(g.check_colored_match(b, match))
+        self.assertTrue(g.check_colored_match(1-b, match))
+
+        # a non-vertex-disjoint set of red edges cannot be a match.
+        b = 1
+        match = [(1, 7), (3, 7)]
+        self.assertFalse(g.check_colored_match(b, match))
+        self.assertFalse(g.check_colored_match(1 - b, match))
+
+        # a non-vertex-disjoint set of blue edges cannot be a match.
+        b = 0
+        match = [(4, 10), (4, 8)]
+        self.assertFalse(g.check_colored_match(b, match))
+        self.assertFalse(g.check_colored_match(1 - b, match))
+
+        # a multi-colored set of edges cannot be a match for either color.
+        b = 0
+        match = [(4, 10), (5, 7)]
+        self.assertFalse(g.check_colored_match(b, match))
+        self.assertFalse(g.check_colored_match(1 - b, match))
+
+    def test_r_check_colored_match(self):
+        g = make_r_graph()
+
+        match = []
+
+        b = random.getrandbits(1)
+        if b:
+            eid = random.choice(list(g.red_edges.keys()))
+        else:
+            eid = random.choice(list(g.blue_edges.keys()))
+        match += [eid]
+        old = eid
+
+        self.assertTrue(g.check_colored_match(b, match))
+
+        bb = random.getrandbits(1)
+        if bb:
+            eid = random.choice(list(g.red_edges.keys()))
+        else:
+            eid = random.choice(list(g.blue_edges.keys()))
+        match += [eid]
+
+        if old[0] == eid[0] or old[1] == eid[1] or b != bb:
+            self.assertFalse(g.check_colored_match(b, match))
+            self.assertFalse(g.check_colored_match(1-b, match))
+        else:
+            self.assertTrue(g.check_colored_match(b, match))
+            self.assertFalse(g.check_colored_match(1-b, match))
+
+    def test_d_check_colored_maximal_match(self):
+        g = make_d_graph()
+
+        b = 1
+        match = [(3,7), (5, 9)]
+        self.assertTrue(g.check_colored_maximal_match(b, match))
+        self.assertFalse(g.check_colored_maximal_match(1-b, match))
+
+        b = 0
+        match = [(2, 8), (4, 6), (1, 10)]
+        self.assertTrue(g.check_colored_maximal_match(b, match))
+        self.assertFalse(g.check_colored_maximal_match(1 - b, match))
+
+        b = 0
+        match = [(2, 8), (4, 6)]
+        self.assertFalse(g.check_colored_maximal_match(b, match))
+        self.assertFalse(g.check_colored_maximal_match(1 - b, match))
+
+        b = 1
+        match = [(3, 7), (2, 8)]  # multicolored sets can't be matchings of a single color
+        self.assertFalse(g.check_colored_maximal_match(b, match))
+        self.assertFalse(g.check_colored_maximal_match(1 - b, match))
+
+    def test_r_check_colored_maximal_match(self):
+        # TODO: We should verify this with an independent implementation.
+        g = make_rr_graph()
+        match = []
+
+        reds_incident_with_one = [eid for eid in g.red_edges if 1 in eid]
+        reds_incident_with_two = [eid for eid in g.red_edges if 2 in eid]
+        reds_incident_with_three = [eid for eid in g.red_edges if 3 in eid]
+
+        reds_incident_with_four = [eid for eid in g.red_edges if 4 in eid]
+        reds_incident_with_five = [eid for eid in g.red_edges if 5 in eid]
+        reds_incident_with_six = [eid for eid in g.red_edges if 6 in eid]
+
+        blues_incident_with_one = [eid for eid in g.blue_edges if 1 in eid]
+        blues_incident_with_two = [eid for eid in g.blue_edges if 2 in eid]
+        blues_incident_with_three = [eid for eid in g.blue_edges if 3 in eid]
+
+        blues_incident_with_four = [eid for eid in g.blue_edges if 4 in eid]
+        blues_incident_with_five = [eid for eid in g.blue_edges if 5 in eid]
+        blues_incident_with_six = [eid for eid in g.blue_edges if 6 in eid]
+
+        match.append(random.choice(reds_incident_with_one + reds_incident_with_two + reds_incident_with_three))
+        match.append(random.choice(blues_incident_with_one + blues_incident_with_two + blues_incident_with_three))
+        self.assertFalse(g.check_colored_maximal_match(0, match))  # multicolored lists can't be matches
+        self.assertFalse(g.check_colored_maximal_match(1, match))  # multicolored lists can't be matches
+
+        sample_size = 1 # Tested up to 1000000 without failure... so far.
+        for i in range(sample_size):
+            g = make_rr_graph()
+            match = []
+
+            reds_incident_with_one = [eid for eid in g.red_edges if 1 in eid]
+            reds_incident_with_two = [eid for eid in g.red_edges if 2 in eid]
+            reds_incident_with_three = [eid for eid in g.red_edges if 3 in eid]
+
+            reds_incident_with_four = [eid for eid in g.red_edges if 4 in eid]
+            reds_incident_with_five = [eid for eid in g.red_edges if 5 in eid]
+            reds_incident_with_six = [eid for eid in g.red_edges if 6 in eid]
+
+            blues_incident_with_one = [eid for eid in g.blue_edges if 1 in eid]
+            blues_incident_with_two = [eid for eid in g.blue_edges if 2 in eid]
+            blues_incident_with_three = [eid for eid in g.blue_edges if 3 in eid]
+
+            blues_incident_with_four = [eid for eid in g.blue_edges if 4 in eid]
+            blues_incident_with_five = [eid for eid in g.blue_edges if 5 in eid]
+            blues_incident_with_six = [eid for eid in g.blue_edges if 6 in eid]
+
+            b = random.getrandbits(1)
+            if b:
+                if len(reds_incident_with_one) > 0:
+                    match.append(random.choice(reds_incident_with_one))
+                if len(reds_incident_with_two) > 0:
+                    match.append(random.choice(reds_incident_with_two))
+                if len(reds_incident_with_three) > 0:
+                    match.append(random.choice(reds_incident_with_three))
+            else:
+                if len(blues_incident_with_one) > 0:
+                    match.append(random.choice(blues_incident_with_one))
+                if len(blues_incident_with_two) > 0:
+                    match.append(random.choice(blues_incident_with_two))
+                if len(blues_incident_with_three) > 0:
+                    match.append(random.choice(blues_incident_with_three))
+
+            touched_lefts = [eid[0] for eid in match]
+            touched_rights = [eid[1] for eid in match]
+            if len(touched_lefts) == len(set(touched_lefts)) and len(touched_rights) == len(set(touched_rights)) and len(match) > 0:
+                self.assertTrue(g.check_colored_maximal_match(b, match))
+            else:
+                self.assertFalse(g.check_colored_maximal_match(b, match))
+
+    def test_d_parse(self):
+        g = make_d_graph()
+
+        b = 1
+        input_match = [(5, 9)]
+
+        out = g._parse(b, input_match)
+        (matched_lefts, matched_rights, unmatched_lefts, unmatched_rights, apparent_color, non_match_edges) = out
+
+        self.assertTrue(5 in matched_lefts)
+        self.assertEqual(len(matched_lefts), 1)
+        self.assertTrue(9 in matched_rights)
+        self.assertEqual(len(matched_rights), 1)
+        self.assertTrue(1 in unmatched_lefts)
+        self.assertTrue(2 in unmatched_lefts)
+        self.assertTrue(3 in unmatched_lefts)
+        self.assertTrue(4 in unmatched_lefts)
+        self.assertEqual(len(unmatched_lefts), 4)
+        self.assertTrue(6 in unmatched_rights)
+        self.assertTrue(7 in unmatched_rights)
+        self.assertTrue(8 in unmatched_rights)
+        self.assertTrue(10 in unmatched_rights)
+        self.assertEqual(len(unmatched_rights), 4)
+        self.assertEqual(apparent_color, b)
+        self.assertTrue((1, 7) in non_match_edges)
+        self.assertTrue((1, 9) in non_match_edges)
+        self.assertTrue((3, 7) in non_match_edges)
+        self.assertTrue((3, 9) in non_match_edges)
+        self.assertTrue((5, 7) in non_match_edges)
+        self.assertEqual(len(non_match_edges), 5)
+
+    def test_d_cleanup(self):
+        """ test_d_cleanup deterministically tests the cleanup function.
+        """
+        # Let's run some tests on cleanup using red matches to start.
+        b = 1  # color
+
+        # Test one: deterministic graph with all edges (i, j) with i = 1, 2, .., 5, and j = 6, 7, .., 10
+        # where (i, j) has color (i*j) % 2 and weight 20*(i-1) + 4*(j-6)
+        g = make_d_graph()
+
+        # Using the following:
+        input_match = [(3,7)]
+        non_match_edges = [(1,7), (1,9), (3,9), (5,7), (5, 9)]
+        shortest_paths = [[(1,9)], [(5, 9)]]
+        result = g._cleanup(b, shortest_paths, non_match_edges, input_match)
+        print(result)
+        self.assertTrue((5, 9) in result)
+        self.assertTrue((3, 7) in result)
+        self.assertTrue(len(result) == 2)
+
+        # reset
+        g = None
+        input_match = None
+        non_match_edges = None
+        shortest_paths = None
+        result = None
+
+        # Test two: Let's go again with a different first match
+        g = make_d_graph()
+        input_match = [(5, 9)]
+        non_match_edges = [(1, 7), (1, 9), (3, 7), (3, 9), (5, 7)]
+        shortest_paths = [[(1, 7)], [(3, 7)]]
+        result = g._cleanup(b, shortest_paths, non_match_edges, input_match)
+        self.assertTrue((3, 7) in result)
+        self.assertTrue((5, 9) in result)
+        self.assertTrue(len(result) == 2)
+
+        # reset
+        g = None
+        input_match = None
+        non_match_edges = None
+        shortest_paths = None
+        result = None
+
+        # Test three: Let's go again with a different first match
+        g = make_d_graph()
+        input_match = [(1, 7)]
+        non_match_edges = [(1, 9), (3, 7), (3, 9), (5, 7), (5, 9)]
+        shortest_paths = [[(3, 9)], [(5, 9)]] # (3, 9) has wt 52, (5, 9) has weight 92 so we will end up with (5, 9)
+        result = g._cleanup(b, shortest_paths, non_match_edges, input_match)
+        self.assertTrue((1, 7) in result)
+        self.assertTrue((5, 9) in result)
+        self.assertTrue(len(result) == 2)
+
+        # Test four: Let's go again with a different first match
+        g = make_d_graph()
+        input_match = [(1, 7)]
+        non_match_edges = [(1, 9), (3, 7), (3, 9), (5, 7), (5, 9)]
+        shortest_paths = [[(3, 9)], [(5, 9)]] # (3, 9) has wt 52, (5, 9) has weight 92 so we will end up with (5, 9)
+        result = g._cleanup(b, shortest_paths, non_match_edges, input_match)
+        self.assertTrue((1, 7) in result)
+        self.assertTrue((5, 9) in result)
+        self.assertTrue(len(result) == 2)
+
+        # Test four: Let's go again with a different first match
+        g = make_d_graph()
+        input_match = [(1, 7), (5, 9)] # note this is already a maximal match!
+        non_match_edges = [(1, 9), (3, 7), (3, 9), (5, 7)]
+        shortest_paths = [[(3, 7), (1, 7), (1, 9), (5, 9)], [(3, 9), (5, 9), (5, 7), (1, 7)]]
+        # gain of first shortest path is
+        #     20*(3-1) + 4*(7-6) - 20*(1-1) - 4*(7-6) + 20*(1-1) + 4*(9-6) - 20*(5-1) - 4*(9-6) = -40
+        # gain of second shortest path is
+        #     20*(3-1) + 4*(9-6) - 20*(5-1) - 4*(9-6) + 20*(5-1) + 4*(7-6) - 20*(1-1) + 4*(7-6) = +40
+        result = g._cleanup(b, shortest_paths, non_match_edges, input_match)
+        # the result should be the symmetric difference between the input match and the heaviest shortest path
+        # so result = [(3, 9), (5, 7)] which is also maximal but heavier!
+        self.assertTrue((3, 9) in result)
+        self.assertTrue((5, 7) in result)
+        self.assertTrue(len(result) == 2)
+
+        # Let's run some tests on cleanup using red matches to start.
+        b = 0  # color
+
+        g = make_d_graph()
+        input_match = [(2, 8)]
+        non_match_edges = [(1,6), (1, 8), (1, 10), (2, 6), (2, 7), (2, 9), (2, 10), (3, 6), (3, 8), (3, 10),
+                           (4, 6), (4, 7), (4, 8), (4, 9), (4, 10), (5, 6), (5, 8), (5, 10)]
+        shortest_paths = [[(1, 6)], [(1, 10)], [(3, 6)], [(3, 10)], [(4, 6)], [(4, 7)], [(4, 9)], [(4, 10)], [(5, 6)],
+                          [(5, 10)]]
+        # gains of these paths:
+        #  (1,  6): 20*(1-1) + 4*(6-6)  = 0.0
+        #  (1, 10): 20*(1-1) + 4*(10-6) = 16.0
+        #  (3,  6): 20*(3-1) + 4*(6-6)  = 40.0
+        #  (3, 10): 20*(3-1) + 4*(10-6) = 56.0
+        #  (4,  6): 20*(4-1) + 4*(6-6)  = 60.0
+        #  (4,  7): 20*(4-1) + 4*(7-6)  = 64.0
+        #  (4,  9): 20*(4-1) + 4*(9-6)  = 72.0
+        #  (4, 10): 20*(4-1) + 4*(10-6) = 76.0
+        #  (5,  6): 20*(5-1) + 4*(6-6)  = 80.0
+        #  (5, 10): 20*(5-1) + 4*(10-6) = 96.0
+
+        result = g._cleanup(b, shortest_paths, non_match_edges, input_match)
+        # greedy selection of vertex-disjoint sets: first we pick (5, 10), then (4, 9), then (3, 6).
+        # the symmetric difference between this set of edges and the input_match (2,8) is the union.
+        self.assertTrue((2, 8) in result)
+        self.assertTrue((5, 10) in result)
+        self.assertTrue((4, 9) in result)
+        self.assertTrue((3, 6) in result)
+        self.assertTrue(len(result) == 4)
+        # This is now a maximal blue matching.
+        self.assertTrue(g.check_colored_maximal_match(b, result))
+
+        # Now let's use the previous result as a new input match and see what happens!
+        input_match = result
+        # The shortest paths
+
+        # reset
+        g = None
+        input_match = None
+        non_match_edges = None
+        shortest_paths = None
+        result = None
+
+        # Test two: Let's go again with a different first match
+        g = make_d_graph()
+        input_match = [(2, 6)]
+        non_match_edges = [(1, 6), (1, 8), (1, 10), (2, 6), (2, 7), (2, 8), (2, 9), (2, 10), (3, 6), (3, 8), (3, 10)]
+        non_match_edges += [(4, 6), (4, 7), (4, 8), (4, 9), (4, 10), (5, 6), (5, 8), (5, 10)]
+        for eid in non_match_edges:
+            self.assertTrue(eid in g.blue_edges)
+        shortest_paths = [[(1, 8)], [(1, 10)], [(3, 8)], [(3, 10)], [(4, 7)], [(4, 8)], [(4, 9)], [(4, 10)], [(5, 8)],
+                          [(5, 10)]]
+        # Weights:
+        # [(1,  8)]:  20*(1-1) + 4*(8-6) =  8.0
+        # [(1, 10)]: 20*(1-1) + 4*(10-6) = 16.0
+        # [(3,  8)]: 20*(3-1) + 4*(8-6)  = 48.0
+        # [(3, 10)]: 20*(3-1) + 4*(10-6) = 56.0
+        # [(4,  7)]: 20*(4-1) + 4*(7-6)  = 64.0
+        # [(4,  8)]: 20*(4-1) + 4*(8-6)  = 68.0
+        # [(4,  9)]: 20*(4-1) + 4*(9-6)  = 72.0
+        # [(4, 10)]: 20*(4-1) + 4*(10-6) = 76.0
+        # [(5,  8)]: 20*(5-1) + 4*(8-6)  = 88.0
+        # [(5, 10)]: 20*(5-1) + 4*(10-6) = 96.0
+        # Vertex disjoint result should be: (5, 10), (4, 9), (3, 8)
+        # symdif with input_match of (2, 6) is the union
+        result = g._cleanup(b, shortest_paths, non_match_edges, input_match)
+        self.assertTrue((5, 10) in result)
+        self.assertTrue((4, 9) in result)
+        self.assertTrue((3, 8) in result)
+        self.assertTrue((2, 6) in result)
+        self.assertTrue(len(result) == 4)
+
+    def test_d_extend_match(self):
+        pass
+
+    def test_r_extend_match(self):
+        g = make_r_graph()
+
+    def test_d_boost_match(self):
+        pass
+
+    def test_r_boost_match(self):
+        g = make_r_graph()
+
+
+tests = [TestBipartiteGraph]
 for test in tests:
     unittest.TextTestRunner(verbosity=2, failfast=True).run(unittest.TestLoader().loadTestsFromTestCase(test))
