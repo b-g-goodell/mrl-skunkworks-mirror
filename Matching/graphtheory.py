@@ -7,30 +7,6 @@ if sys.version_info[0] != 3:
     sys.exit(1)
 
 
-def disjoint(set_one, set_two):
-    """ Return boolean indicating whether set_one and set_two are vertex-disjoint lists.
-
-    Keyword arguments:
-        set_one -- first set
-        set_two -- second set
-    """
-    return len(set_one) + len(set_two) == len(symdif(set_one, set_two))
-
-
-def symdif(x=None, y=None):
-    """ Compute symmetric difference of two lists, return a list.
-
-    Keyword arguments:
-        x -- first list (default [])
-        y -- second list (default [])
-    """
-    if x is None:
-        x = []
-    if y is None:
-        y = []
-    return [e for e in x if e not in y] + [e for e in y if e not in x]
-
-
 class BipartiteGraph(object):
     """ Graph object representing a graph
 
