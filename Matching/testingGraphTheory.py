@@ -734,9 +734,16 @@ class TestBipartiteGraph(unittest.TestCase):
         g = make_d_graph()
 
         # Using the following:
-        input_match = [(3,7)]
-        non_match_edges = [(1,7), (1,9), (3,9), (5,7), (5, 9)]
-        shortest_paths = [[(1,9)], [(5, 9)]]
+        input_match = [(3, 7)]
+        non_match_edges = [(1, 7), (1, 9), (3, 9), (5, 7), (5, 9)]
+        sp = [[(1, 9)], [(5, 9)]]
+        shortest_paths = []
+        for next_path in sp:
+            sd = [eid for eid in next_path if eid not in input_match]
+            sd += [eid for eid in input_match if eid not in sd]
+            gain = sum(g.red_edges[eid] for eid in sd) - sum(g.red_edges[eid] for eid in input_match)
+            shortest_paths += [(next_path, gain)]
+
         result = g._cleanup(b, shortest_paths, non_match_edges, input_match)
         # print(result)
         self.assertTrue((5, 9) in result)
@@ -754,7 +761,13 @@ class TestBipartiteGraph(unittest.TestCase):
         g = make_d_graph()
         input_match = [(5, 9)]
         non_match_edges = [(1, 7), (1, 9), (3, 7), (3, 9), (5, 7)]
-        shortest_paths = [[(1, 7)], [(3, 7)]]
+        sp = [[(1, 7)], [(3, 7)]]
+        shortest_paths = []
+        for next_path in sp:
+            sd = [eid for eid in next_path if eid not in input_match]
+            sd += [eid for eid in input_match if eid not in sd]
+            gain = sum(g.red_edges[eid] for eid in sd) - sum(g.red_edges[eid] for eid in input_match)
+            shortest_paths += [(next_path, gain)]
         result = g._cleanup(b, shortest_paths, non_match_edges, input_match)
         self.assertTrue((3, 7) in result)
         self.assertTrue((5, 9) in result)
@@ -771,7 +784,13 @@ class TestBipartiteGraph(unittest.TestCase):
         g = make_d_graph()
         input_match = [(1, 7)]
         non_match_edges = [(1, 9), (3, 7), (3, 9), (5, 7), (5, 9)]
-        shortest_paths = [[(3, 9)], [(5, 9)]] # (3, 9) has wt 52, (5, 9) has weight 92 so we will end up with (5, 9)
+        sp = [[(3, 9)], [(5, 9)]] # (3, 9) has wt 52, (5, 9) has weight 92 so we will end up with (5, 9)
+        shortest_paths = []
+        for next_path in sp:
+            sd = [eid for eid in next_path if eid not in input_match]
+            sd += [eid for eid in input_match if eid not in sd]
+            gain = sum(g.red_edges[eid] for eid in sd) - sum(g.red_edges[eid] for eid in input_match)
+            shortest_paths += [(next_path, gain)]
         result = g._cleanup(b, shortest_paths, non_match_edges, input_match)
         self.assertTrue((1, 7) in result)
         self.assertTrue((5, 9) in result)
@@ -781,7 +800,13 @@ class TestBipartiteGraph(unittest.TestCase):
         g = make_d_graph()
         input_match = [(1, 7)]
         non_match_edges = [(1, 9), (3, 7), (3, 9), (5, 7), (5, 9)]
-        shortest_paths = [[(3, 9)], [(5, 9)]] # (3, 9) has wt 52, (5, 9) has weight 92 so we will end up with (5, 9)
+        sp = [[(3, 9)], [(5, 9)]] # (3, 9) has wt 52, (5, 9) has weight 92 so we will end up with (5, 9)
+        shortest_paths = []
+        for next_path in sp:
+            sd = [eid for eid in next_path if eid not in input_match]
+            sd += [eid for eid in input_match if eid not in sd]
+            gain = sum(g.red_edges[eid] for eid in sd) - sum(g.red_edges[eid] for eid in input_match)
+            shortest_paths += [(next_path, gain)]
         result = g._cleanup(b, shortest_paths, non_match_edges, input_match)
         self.assertTrue((1, 7) in result)
         self.assertTrue((5, 9) in result)
@@ -791,7 +816,13 @@ class TestBipartiteGraph(unittest.TestCase):
         g = make_d_graph()
         input_match = [(1, 7), (5, 9)] # note this is already a maximal match!
         non_match_edges = [(1, 9), (3, 7), (3, 9), (5, 7)]
-        shortest_paths = [[(3, 7), (1, 7), (1, 9), (5, 9)], [(3, 9), (5, 9), (5, 7), (1, 7)]]
+        sp = [[(3, 7), (1, 7), (1, 9), (5, 9)], [(3, 9), (5, 9), (5, 7), (1, 7)]]
+        shortest_paths = []
+        for next_path in sp:
+            sd = [eid for eid in next_path if eid not in input_match]
+            sd += [eid for eid in input_match if eid not in sd]
+            gain = sum(g.red_edges[eid] for eid in sd) - sum(g.red_edges[eid] for eid in input_match)
+            shortest_paths += [(next_path, gain)]
         # gain of first shortest path is
         #     20*(3-1) + 4*(7-6) - 20*(1-1) - 4*(7-6) + 20*(1-1) + 4*(9-6) - 20*(5-1) - 4*(9-6) = -40
         # gain of second shortest path is
@@ -810,8 +841,15 @@ class TestBipartiteGraph(unittest.TestCase):
         input_match = [(2, 8)]
         non_match_edges = [(1,6), (1, 8), (1, 10), (2, 6), (2, 7), (2, 9), (2, 10), (3, 6), (3, 8), (3, 10),
                            (4, 6), (4, 7), (4, 8), (4, 9), (4, 10), (5, 6), (5, 8), (5, 10)]
-        shortest_paths = [[(1, 6)], [(1, 10)], [(3, 6)], [(3, 10)], [(4, 6)], [(4, 7)], [(4, 9)], [(4, 10)], [(5, 6)],
+        sp = [[(1, 6)], [(1, 10)], [(3, 6)], [(3, 10)], [(4, 6)], [(4, 7)], [(4, 9)], [(4, 10)], [(5, 6)],
                           [(5, 10)]]
+        shortest_paths = []
+        for next_path in sp:
+            sd = [eid for eid in next_path if eid not in input_match]
+            sd += [eid for eid in input_match if eid not in sd]
+            # color b = 0
+            gain = sum(g.blue_edges[eid] for eid in sd) - sum(g.blue_edges[eid] for eid in input_match)
+            shortest_paths += [(next_path, gain)]
         # gains of these paths:
         #  (1,  6): 20*(1-1) + 4*(6-6)  = 0.0
         #  (1, 10): 20*(1-1) + 4*(10-6) = 16.0
@@ -853,8 +891,14 @@ class TestBipartiteGraph(unittest.TestCase):
         non_match_edges += [(4, 6), (4, 7), (4, 8), (4, 9), (4, 10), (5, 6), (5, 8), (5, 10)]
         for eid in non_match_edges:
             self.assertTrue(eid in g.blue_edges)
-        shortest_paths = [[(1, 8)], [(1, 10)], [(3, 8)], [(3, 10)], [(4, 7)], [(4, 8)], [(4, 9)], [(4, 10)], [(5, 8)],
+        sp = [[(1, 8)], [(1, 10)], [(3, 8)], [(3, 10)], [(4, 7)], [(4, 8)], [(4, 9)], [(4, 10)], [(5, 8)],
                           [(5, 10)]]
+        shortest_paths = []
+        for next_path in sp:
+            sd = [eid for eid in next_path if eid not in input_match]
+            sd += [eid for eid in input_match if eid not in sd]
+            gain = sum(g.blue_edges[eid] for eid in sd) - sum(g.blue_edges[eid] for eid in input_match)
+            shortest_paths += [(next_path, gain)]
         # Weights:
         # [(1,  8)]:  20*(1-1) + 4*(8-6) =  8.0
         # [(1, 10)]: 20*(1-1) + 4*(10-6) = 16.0
@@ -885,10 +929,12 @@ class TestBipartiteGraph(unittest.TestCase):
         ##########################################################
         # let's start with a trivial match
 
-        input_match = []  # This is a sub-optimal maximal matching. Extend match should return it.
+        input_match = []
         result = g.extend_match(b, input_match)
-        self.assertTrue((5, 9) in result)
-        self.assertTrue((3, 7) in result)
+        # Since this match is empty, all shortest paths are treated like having gain 1, so they are added to the
+        # list greedily in terms of lexicographic ordering!
+        self.assertTrue((1, 7) in result)
+        self.assertTrue((3, 9) in result)
         self.assertEqual(len(result), 2)
 
         ##########################################################
@@ -924,7 +970,16 @@ class TestBipartiteGraph(unittest.TestCase):
 
         # this should call _cleanup with the following:
         b_test = 1
-        shortest_paths_test = [[(3,9)], [(5, 9)]]
+        weight_dict = g.red_edges
+        # b_test = 0
+        # weight_dict = g.blue_edges
+        sp = [[(3,9)], [(5, 9)]]
+        shortest_paths_test = []
+        for next_path in sp:
+            sd = [weight_dict[eid] for eid in next_path if eid not in input_match]
+            sd += [weight_dict[eid] for eid in input_match if eid not in next_path]
+            gain = sum(sd) - sum([weight_dict[eid] for eid in input_match])
+            shortest_paths_test += [(next_path, gain)]
         non_match_edges_test = [(1, 9), (3, 7), (3, 9), (5,7), (5, 9)]
         result_test = g._cleanup(b_test, shortest_paths_test, non_match_edges_test, input_match)
 
@@ -942,7 +997,16 @@ class TestBipartiteGraph(unittest.TestCase):
 
         # this should call _cleanup with the following:
         b_test = 1
-        shortest_paths_test = [[(3, 7)], [(5, 7)]]
+        weight_dict = g.red_edges
+        # b_test = 0
+        # weight_dict = g.blue_edges
+        sp = [[(3, 7)], [(5, 7)]]
+        shortest_paths_test = []
+        for next_path in sp:
+            sd = [weight_dict[eid] for eid in next_path if eid not in input_match]
+            sd += [weight_dict[eid] for eid in input_match if eid not in next_path]
+            gain = sum(sd) - sum([weight_dict[eid] for eid in input_match])
+            shortest_paths_test += [(next_path, gain)]
         non_match_edges_test = [(1, 7), (3, 7), (3, 9), (5,7), (5, 9)]
         result_test = g._cleanup(b_test, shortest_paths_test, non_match_edges_test, input_match)
 
@@ -951,17 +1015,17 @@ class TestBipartiteGraph(unittest.TestCase):
         self.assertEqual(result, result_test)
         self.assertEqual(result, result_ground_truth)
         self.assertEqual(result_test, result_ground_truth)
-    #
-    # def test_r_extend_match(self):
-    #     g = make_r_graph()
-    #     b = 1
-    #     input_match = []
-    #
-    #     self.assertTrue(g.check_colored_match(b, input_match))
-    #
-    #     result = g.extend_match(b, input_match)
-    #     self.assertTrue(g.check_colored_match(b, result))
-    #     self.assertTrue(len(g.red_edges) == 0 or len(result) > len(input_match))
+
+    def test_r_extend_match(self):
+        g = make_r_graph()
+        b = 1
+        input_match = []
+
+        self.assertTrue(g.check_colored_match(b, input_match))
+
+        result = g.extend_match(b, input_match)
+        self.assertTrue(g.check_colored_match(b, result))
+        self.assertTrue(len(g.red_edges) == 0 or len(result) > len(input_match))
 
     # def test_dd_boost_match(self):
     #     g = make_dd_graph()
