@@ -292,7 +292,6 @@ class BipartiteGraph(object):
         while executing both extend_match and boost_match, and these are the only functions that call cleanup.
 
         """
-
         ordered_shortest_paths = []
         if b:
             edge_set = self.red_edges
@@ -303,8 +302,9 @@ class BipartiteGraph(object):
         for next_path in shortest_paths:
             for eid in next_path:
                 assert eid in edge_set
-            gain = sum([edge_set[eid] for eid in next_path if eid in non_match_edges])
-            gain = gain - sum([edge_set[eid] for eid in next_path if eid in input_match])
+            sd = [eid for eid in next_path if eid not in input_match]
+            sd += [eid for eid in input_match if eid not in next_path]
+            gain = sum([edge_set[eid] for eid in sd]) - sum([edge_set[eid] for eid in input_match])
             # Discard negative gains
             if gain > 0.0:
                 ordered_shortest_paths.append((next_path, gain))
@@ -327,7 +327,7 @@ class BipartiteGraph(object):
         for next_pair in ordered_shortest_paths:
             (next_path, gain) = next_pair
             if len(v_d_list) == 0:
-                v_d_list += [next_path]
+                v_d_list = [next_path]
                 touched_nodes += [eid[0] for eid in next_path] + [eid[1] for eid in next_path]
             else:
                 good_path = True
@@ -349,9 +349,9 @@ class BipartiteGraph(object):
         return result
 
     def extend_match(self, b, input_match):
-        """ Take input_match as input (a list of edge_idents). Fail (output False) if
-        check_colored_maximal_match(input_match) is True, output input_match. Otherwise:
-          Use a breadth-first-search to find all shortest paths* that :
+        """ Take color bit b and input_match as input (a list of edge_idents). Return the input_match if
+        check_colored_maximal_match(input_match) is True. Otherwise use a breadth-first-search to find all
+        shortest paths* that :
             (i)   consist of edges with the same color as the edges in input_match and
             (ii)  alternate with respect to input_match and
             (iii) begin and end with unmatched nodes
@@ -359,13 +359,13 @@ class BipartiteGraph(object):
         """
         result = None
         if self.check_colored_match(b, input_match):
+            shortest_paths = []
+            found_shortest_path = False
+            path_length = None
             if self.check_colored_maximal_match(b, input_match):
+                shortest_paths = []
                 result = input_match
             else:
-                shortest_paths = []
-                found_shortest_path = False
-                path_length = None
-
                 (matched_lefts, matched_rights, unmatched_lefts, unmatched_rights, bb, non_match_edges) = \
                     self._parse(b, input_match)
 
@@ -377,12 +377,20 @@ class BipartiteGraph(object):
                     # Check that if we have found a shortest path, then the path_length has been set.
                     assert not found_shortest_path or path_length is not None
                     # Discard paths longer than the (thus far) minimal path length
-                    if path_length is None or (path_length is not None and len(next_path) < path_length):
+                    if path_length is None or (path_length is not None and len(next_path) <= path_length):
                         touched_nodes = [eid[0] for eid in next_path] + [eid[1] for eid in next_path]
                         last_edge = next_path[-1]
-                        p = len(next_path) % 2  # parity of the path. No offset since the path is augmenting/symmetric
+                        p = len(next_path) % 2  # parity of the path.
                         last_node = last_edge[p]
-                        if p:
+                        if last_node in unmatched_rights:
+                            edge_set_to_search = []
+                            if path_length is None or (path_length is not None and len(next_path) < path_length):
+                                found_shortest_path = True
+                                path_length = len(next_path)
+                                shortest_paths = [next_path]
+                            elif (path_length is not None and len(next_path) == path_length):
+                                shortest_paths += [next_path]
+                        elif p:
                             edge_set_to_search = input_match
                         elif not p:
                             edge_set_to_search = non_match_edges
@@ -392,20 +400,10 @@ class BipartiteGraph(object):
                         for eid in edge_set_to_search:
                             if eid[p] == last_node and eid[1-p] not in touched_nodes:
                                 path_to_add = next_path + [eid]
-                                if eid[1-p] in unmatched_rights and path_length is None or len(path_to_add) < path_length:
-                                    shortest_paths = [path_to_add]
-                                    path_length = len(path_to_add)
-                                    found_shortest_path = True
-                                elif eid[1-p] in unmatched_rights and \
-                                        path_length is not None and \
-                                        len(path_to_add) == path_length:
-                                    shortest_paths += [path_to_add]
-                                elif path_length is None or (path_length is not None and len(path_to_add) < path_length):
+                                if path_length is None or (path_length is not None and len(path_to_add) <= path_length):
                                     q.append(path_to_add)
-                                else:
-                                    assert False
 
-            result = self._cleanup(b, shortest_paths, non_match_edges, input_match)
+                result = self._cleanup(b, shortest_paths, non_match_edges, input_match)
         return result
 
     def boost_match(self, b, input_match):
@@ -442,32 +440,43 @@ class BipartiteGraph(object):
                 # Pop this path for processing
                 next_path = q.popleft()
                 # Don't bother with paths longer than the (thus far) minimal path length
-                if path_length is None or (path_length is not None and len(next_path) < path_length):
-
-                    touched_nodes = [eid[0] for eid in next_path] + [eid[1] for eid in next_path]
+                if path_length is None or (path_length is not None and len(next_path) <= path_length):
+                    first_edge = next_path[0]
+                    first_node = first_edge[0]
                     last_edge = next_path[-1]
-                    p = len(next_path) % 2  # parity of the path. No offset since the path is augmenting/symmetric
+                    p = len(next_path) % 2
                     last_node = last_edge[p]
-                    if p:
-                        edge_set_to_search = input_match
-                    elif not p:
-                        edge_set_to_search = non_match_edges
+                    if last_node == first_node:
+                        found_shortest_path = True
+                        if path_length is None or (path_length is not None and len(next_path) < path_length):
+                            path_length = len(next_path)
+                            shortest_paths = [next_path]
+                        elif path_length is not None and len(next_path) == path_length:
+                            shortest_paths += [next_path]
                     else:
-                        assert False
+                        if p:
+                            edge_set_to_search = input_match
+                        elif not p:
+                            edge_set_to_search = non_match_edges
+                        else:
+                            assert False
 
-                    extensible = len(edge_set_to_search) > 0
-                    if extensible:
-                        for eid in edge_set_to_search:
-                            if eid[p] == last_node and eid[1 - p] not in touched_nodes:
-                                path_to_add = next_path + [eid]
-                                q.append(path_to_add)
-                    else:
-                        if path_length is None or len(path_to_add) < path_length:
-                            shortest_paths = [path_to_add]
-                            path_length = len(path_to_add)
+                        this_edge_set_to_search = [eid for eid in edge_set_to_search if
+                                                   (eid not in next_path and eid[p] == last_node)]
+                        extensible = len(this_edge_set_to_search) > 0
+                        if extensible:
+                            for eid in this_edge_set_to_search:
+                                if path_length is None or len(next_path) + 1 <= path_length:
+                                    path_to_add = next_path + [eid]
+                                    q.append(path_to_add) # TODO: SET PATH_TO_ADD TO NONE WHEN DONE
+                        elif path_length is None or len(path_to_add) < path_length:
                             found_shortest_path = True
-                        elif len(path_to_add) == path_length:
-                            shortest_paths += [path_to_add]
-                            found_shortest_path = True
+                            path_length = len(next_path)
+                            shortest_paths = [next_path]
+                        elif path_length is not None and len(next_path) == path_length:
+                            shortest_paths += [next_path]
+                        else:
+                            # in this case, the path is too long and should merely be discarded.
+                            pass
             result = self._cleanup(b, shortest_paths, non_match_edges, input_match)
         return result

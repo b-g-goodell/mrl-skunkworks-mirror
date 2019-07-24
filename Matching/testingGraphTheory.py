@@ -94,6 +94,64 @@ def make_d_graph():
     return g
 
 
+def make_dd_graph():
+    g = BipartiteGraph(None)
+
+    # Generate a small random graph for use in random tests below.
+    num_left_nodes = 5
+    for i in range(num_left_nodes):
+        g.add_node(0)
+    num_right_nodes = 5
+    for i in range(num_left_nodes):
+        g.add_node(1)
+
+    # First, we set the color of (x, y) is (x*y) % 2.
+    # Next will set the graph to be complete.
+    # Next weight edges by starting with weight 0.0, iterating through all 25 edges up in increments of 4...
+    # Formulaically, edge (i, j) with i in [1, 2, 3, 4, 5] and j in [6, 7, 8, 9, 10] has weight:
+    #    wt(i, j) = 20*(i-1) + 4*(j-6)
+    # Providing the following weights:
+    #  (1,  6):   0.0, blue
+    #  (1,  7):   3.0, red  : -
+    #  (1,  8):   8.0, blue
+    #  (1,  9):  13.0, red  : +
+    #  (1, 10):  16.0, blue
+    #  (2,  6):  20.0, blue
+    #  (2,  7):  24.0, blue
+    #  (2,  8):  28.0, blue
+    #  (2,  9):  32.0, blue
+    #  (2, 10):  36.0, blue
+    #  (3,  6):  40.0, blue
+    #  (3,  7):  45.0, red  : +
+    #  (3,  8):  48.0, blue
+    #  (3,  9):  51.0, red : -
+    #  (3, 10):  56.0, blue
+    #  (4,  6):  60.0, blue
+    #  (4,  7):  64.0, blue
+    #  (4,  8):  68.0, blue
+    #  (4,  9):  72.0, blue
+    #  (4, 10):  76.0, blue
+    #  (5,  6):  80.0, blue
+    #  (5,  7):  84.0, red
+    #  (5,  8):  88.0, blue
+    #  (5,  9):  92.0, red
+    #  (5, 10):  96.0, blue
+    # Formulaically: (i, j) has weight 20.0*(i-1) + 4.0*((j
+
+    wt = 0.0
+    for xid in g.left_nodes:
+        for yid in g.right_nodes:
+            g.add_edge((xid*yid) % 2, (xid, yid), wt)
+            wt += 4.0
+
+    g.red_edges[(1, 7)] -= 1.0
+    g.red_edges[(3, 9)] -= 1.0
+    g.red_edges[(1, 9)] += 1.0
+    g.red_edges[(3, 7)] += 1.0
+
+    return g
+
+
 class TestBipartiteGraph(unittest.TestCase):
     """ TestBipartiteGraph tests BipartiteGraph objects """
     def test_d_init(self):
@@ -564,7 +622,8 @@ class TestBipartiteGraph(unittest.TestCase):
         self.assertFalse(g.check_colored_maximal_match(1 - b, match))
 
     def test_r_check_colored_maximal_match(self):
-        # TODO: We should verify this with an independent implementation.
+        # TODO: We should verify this with an independent implementation...
+        # Doing this "at random" only has a probability of being correct, so we can run this with a sample size.
         g = make_rr_graph()
         match = []
 
@@ -589,7 +648,7 @@ class TestBipartiteGraph(unittest.TestCase):
         self.assertFalse(g.check_colored_maximal_match(0, match))  # multicolored lists can't be matches
         self.assertFalse(g.check_colored_maximal_match(1, match))  # multicolored lists can't be matches
 
-        sample_size = 1 # Tested up to 1000000 without failure... so far.
+        sample_size = 100 # Tested up to 1000000 without failure... so far.
         for i in range(sample_size):
             g = make_rr_graph()
             match = []
@@ -679,7 +738,7 @@ class TestBipartiteGraph(unittest.TestCase):
         non_match_edges = [(1,7), (1,9), (3,9), (5,7), (5, 9)]
         shortest_paths = [[(1,9)], [(5, 9)]]
         result = g._cleanup(b, shortest_paths, non_match_edges, input_match)
-        print(result)
+        # print(result)
         self.assertTrue((5, 9) in result)
         self.assertTrue((3, 7) in result)
         self.assertTrue(len(result) == 2)
@@ -817,16 +876,126 @@ class TestBipartiteGraph(unittest.TestCase):
         self.assertTrue(len(result) == 4)
 
     def test_d_extend_match(self):
-        pass
+        # Recall we say a matching is MAXIMAL if no edge can be added to the matching without breaking the matching
+        # property... but we say a maximal matching is OPTIMAL if it has the heaviest weight.
+        g = make_d_graph()
 
-    def test_r_extend_match(self):
-        g = make_r_graph()
+        b = 1 # Color red is easier to check correctness for this particular deterministic graph
 
-    def test_d_boost_match(self):
-        pass
+        ##########################################################
+        # let's start with a trivial match
 
-    def test_r_boost_match(self):
-        g = make_r_graph()
+        input_match = []  # This is a sub-optimal maximal matching. Extend match should return it.
+        result = g.extend_match(b, input_match)
+        self.assertTrue((5, 9) in result)
+        self.assertTrue((3, 7) in result)
+        self.assertEqual(len(result), 2)
+
+        ##########################################################
+        # let's use a maximal match
+
+        input_match = [(1, 7), (3, 9)]  # This is a sub-optimal maximal matching. Extend match should return it.
+        result = g.extend_match(b, input_match)
+        self.assertEqual(input_match, result)
+
+        ##########################################################
+        # let's check we get None if we send a non-match in.
+
+        # We'll start with a pair of multi-colored edges, which can't be a match.
+        input_match = [(1, 7), (2, 6)]
+        result = g.extend_match(b, input_match)
+        self.assertTrue(result is None)
+
+        # We'll also check a pair of adjacent edges.
+        input_match = [(1, 7), (3, 7)]
+        result = g.extend_match(b, input_match)
+        self.assertTrue(result is None)
+
+        # Mixed case
+        input_match = [(1, 7), (1, 6)]
+        result = g.extend_match(b, input_match)
+        self.assertTrue(result is None)
+
+        ##########################################################
+        # let's check that starting with a single edge works.
+
+        input_match = [(1, 7)]
+        result = g.extend_match(b, input_match)
+
+        # this should call _cleanup with the following:
+        b_test = 1
+        shortest_paths_test = [[(3,9)], [(5, 9)]]
+        non_match_edges_test = [(1, 9), (3, 7), (3, 9), (5,7), (5, 9)]
+        result_test = g._cleanup(b_test, shortest_paths_test, non_match_edges_test, input_match)
+
+        # both should result in this:
+        result_ground_truth = [(1,7), (5, 9)]
+        self.assertEqual(result, result_test)
+        self.assertEqual(result, result_ground_truth)
+        self.assertEqual(result_test, result_ground_truth)
+
+        ##########################################################
+        # Let's go again with a different match.
+
+        input_match = [(1, 9)]
+        result = g.extend_match(b, input_match)
+
+        # this should call _cleanup with the following:
+        b_test = 1
+        shortest_paths_test = [[(3, 7)], [(5, 7)]]
+        non_match_edges_test = [(1, 7), (3, 7), (3, 9), (5,7), (5, 9)]
+        result_test = g._cleanup(b_test, shortest_paths_test, non_match_edges_test, input_match)
+
+        # both should result in this:
+        result_ground_truth = [(1, 9), (5, 7)]
+        self.assertEqual(result, result_test)
+        self.assertEqual(result, result_ground_truth)
+        self.assertEqual(result_test, result_ground_truth)
+    #
+    # def test_r_extend_match(self):
+    #     g = make_r_graph()
+    #     b = 1
+    #     input_match = []
+    #
+    #     self.assertTrue(g.check_colored_match(b, input_match))
+    #
+    #     result = g.extend_match(b, input_match)
+    #     self.assertTrue(g.check_colored_match(b, result))
+    #     self.assertTrue(len(g.red_edges) == 0 or len(result) > len(input_match))
+
+    # def test_dd_boost_match(self):
+    #     g = make_dd_graph()
+    #     b = 1
+    #     input_match = [(1, 7), (3, 9)]
+    #
+    #     self.assertTrue(g.check_colored_maximal_match(b, input_match))
+    #
+    #     result = g.boost_match(b, input_match)
+    #     self.assertEqual(len(result), 2)
+    #     self.assertTrue((5, 9) in result)
+    #     self.assertTrue((3, 7) in result)
+
+    #
+    # def test_r_boost_match(self):
+    #     g = make_r_graph()
+    #     b = 1
+    #
+    #     input_match = []
+    #     result = g.extend_match(b, input_match)
+    #     while result != input_match:
+    #         input_match = deepcopy(result)
+    #         result = g.extend_match(b, input_match)
+    #         self.assertTrue(len(result) >= len(input_match))
+    #
+    #     next_result = g.boost_match(b, input_match)
+    #     while next_result != input_match:
+    #         input_match = deepcopy(next_result)
+    #         next_result = g.boost_match(b, input_match)
+    #         self.assertEqual(len(next_result), len(input_match))
+    #         temp = sum([g.red_edges[eid] for eid in next_result])
+    #         gain = temp - sum([g.red_edges[eid] for eid in input_match])
+    #         self.assertTrue(gain >= 0.0)
+    #
 
 
 tests = [TestBipartiteGraph]
