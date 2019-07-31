@@ -90,6 +90,7 @@ class BipartiteGraph(object):
           eid        in red_edges
         Otherwise create a new edge with color b and output True.
         """
+        assert b in [0, 1]
         (x, y) = eid
         result = x in self.left_nodes
         result = result and y in self.right_nodes
