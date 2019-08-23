@@ -67,6 +67,7 @@ class BipartiteGraph(object):
         and return None if it isn't. Otherwise, create a new node on side b, outputting the node_ident.
         """
         assert b in [0, 1]
+        result = None
         if b or not b:
             result = self.count
             self.count += 1
@@ -225,7 +226,8 @@ class BipartiteGraph(object):
         result = (matched_lefts, matched_rights, unmatched_lefts, unmatched_rights, b, non_match_edges)
         return result
 
-    def _clean(self, b, shortest_paths_with_gains, input_match):
+    @staticmethod
+    def _clean(b, shortest_paths_with_gains, input_match):
         """ Returns the input_match (when input shortest_paths is empty) or the iterative symdif of input_match """
         assert b in [0, 1]
         result = input_match
@@ -239,34 +241,37 @@ class BipartiteGraph(object):
                 (next_path, gain) = path_and_gain
                 if gain > 0.0:
                     # Collect some info for convenience
-                    first_edge = next_path[0]
-                    first_node = first_edge[0]
-                    last_edge = next_path[-1]
+                    # first_edge = next_path[0]
+                    # first_node = first_edge[0]
+                    # last_edge = next_path[-1]
+                    assert len(next_path) >= 1
                     p = len(next_path) % 2  # path parity
                     assert p in [0, 1]
-                    last_node = last_edge[p]
-                    num_distinct_edges = len(list(set(next_path)))  # count distinct edges
+                    # last_node = last_edge[p]
+                    # num_distinct_edges = len(list(set(next_path)))  # count distinct edges
                     # collect sequence of nodes
                     temp = []
-                    for i in range(len(next_path)):
-                        eid = next_path[i]
-                        idx_p = i % 2  # index parity
-                        temp += [eid[idx_p]]
-                    temp += [eid[1 - idx_p]]
+                    if len(next_path) >= 1:
+                        idx_p = None
+                        for i in range(len(next_path)):
+                            eid = next_path[i]
+                            idx_p = i % 2  # index parity
+                            temp += [eid[idx_p]]
+                        temp += [next_path[-1][1 - idx_p]]
                     distinct_nodes = list(set(temp))
-                    num_distinct_nodes = len(distinct_nodes)  # count distinct vertices
+                    # num_distinct_nodes = len(distinct_nodes)  # count distinct vertices
 
                     path_is_disj = (len([nid for nid in distinct_nodes if nid in touched_nodes]) == 0)
                     if path_is_disj:
                         vd += [next_path]
                         touched_nodes += distinct_nodes
 
-            # Iteratively take symmetric differences
+            # Iteratively take symmetric differences with input_match = result
             if len(vd) > 0:
+                temp = input_match
                 for next_path in vd:
-                    temp = [eid for eid in result if eid not in next_path]
-                    temp += [eid for eid in next_path if eid not in result]
-                    result = temp
+                    temp = [eid for eid in temp if eid not in next_path] + [eid for eid in next_path if eid not in temp]
+                result = temp
         return result
 
     def extend(self, b, input_match):
@@ -284,11 +289,11 @@ class BipartiteGraph(object):
         else:
             weight_dict = self.blue_edges
         if self.chk_colored_match(b, input_match):
-            shortest_paths = [] # solution box
+            shortest_paths = []  # solution box
             found = False
             length = None
             if self.check_colored_maximal_match(b, input_match):
-                shortest_paths = []
+                # shortest_paths = []
                 result = input_match
             else:
                 (matched_lefts, matched_rights, unmatched_lefts, unmatched_rights, bb, non_match_edges) = \
@@ -304,8 +309,8 @@ class BipartiteGraph(object):
                         # vertices are allowed to match.
 
                         # Collect some info for convenience
-                        first_edge = next_path[0]
-                        first_node = first_edge[0]
+                        # first_edge = next_path[0]
+                        # first_node = first_edge[0]
                         last_edge = next_path[-1]
 
                         p = len(next_path) % 2  # path parity
@@ -315,11 +320,13 @@ class BipartiteGraph(object):
 
                         # collect sequence of nodes
                         temp = []
-                        for i in range(len(next_path)):
-                            eid = next_path[i]
-                            idx_p = i % 2  # index parity
-                            temp += [eid[idx_p]]
-                        temp += [eid[1 - idx_p]]
+                        if len(next_path) >= 1:
+                            idx_p = None
+                            for i in range(len(next_path)):
+                                eid = next_path[i]
+                                idx_p = i % 2  # index parity
+                                temp += [eid[idx_p]]
+                            temp += [next_path[-1][1 - idx_p]]
 
                         distinct_nodes = list(set(temp))
                         num_distinct_nodes = len(distinct_nodes)  # count distinct vertices
@@ -333,13 +340,14 @@ class BipartiteGraph(object):
                             else:
                                 edge_set_to_search = non_match_edges
 
-                            these_edges = [eid for eid in edge_set_to_search if (eid not in next_path and eid[p] == last_node and eid[1-p] not in distinct_nodes)]
+                            these_edges = [eid for eid in edge_set_to_search if
+                                           eid not in next_path and eid[p] == last_node and eid[
+                                               1 - p] not in distinct_nodes]
                             if len(these_edges) > 0:
                                 for eid in these_edges:
                                     path_to_add = None
                                     path_to_add = next_path + [eid]
                                     q.append(path_to_add)
-                                    path_to_add = None
                             else:
                                 sd = [weight_dict[eid] for eid in next_path if eid not in input_match]
                                 sd += [weight_dict[eid] for eid in input_match if eid not in next_path]
@@ -377,7 +385,7 @@ class BipartiteGraph(object):
         else:
             weight_dict = self.blue_edges
         if self.check_colored_maximal_match(b, input_match):
-            shortest_cycles_with_pos_gain = [] # solution box
+            shortest_cycles_with_pos_gain = []  # solution box
             found = False
             length = None
 
@@ -409,12 +417,13 @@ class BipartiteGraph(object):
 
                     # collect sequence of nodes
                     temp = []
-                    for i in range(len(next_path)):
-                        eid = next_path[i]
-                        idx_p = i % 2  # index parity
-                        temp += [eid[idx_p]]
-                    temp += [eid[1-idx_p]]
-
+                    if len(next_path) >= 1:
+                        idx_p = None
+                        for i in range(len(next_path)):
+                            eid = next_path[i]
+                            idx_p = i % 2  # index parity
+                            temp += [eid[idx_p]]
+                        temp += [next_path[-1][1-idx_p]]
 
                     num_distinct_nodes = len(list(set(temp)))  # count distinct vertices
 
@@ -460,7 +469,6 @@ class BipartiteGraph(object):
                                         path_to_add = None
                                         path_to_add = next_path + [eid]
                                         q.append(path_to_add)
-                                        path_to_add = None
                 else:
                     # in this case, length is not None and len(next_path) > length, so we discard next_path
                     pass
@@ -469,7 +477,6 @@ class BipartiteGraph(object):
         return result
 
     def optimize(self, b):
-        result = None
         assert b in [0, 1]
         input_match = []
         next_match = self.extend(b, input_match)
