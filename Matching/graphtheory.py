@@ -166,47 +166,6 @@ class BipartiteGraph(object):
             result = vtx_disj and correct_color
         return result
 
-    # def check_colored_match(self, b, input_match):
-    #     """ Take input_match as input (a list of edge_idents).
-    #       Fail (output False) if:
-    #         any edge in input_match appear in both colored lists or
-    #         any pair of edges in input_match have two different colors or
-    #         any endpoint of any edge in input_match appears on both sides of the graph or
-    #         any endpoint of any edge in input_match is also incident with any other edge in input_match
-    #       Otherwise output True.
-    #     """
-    #     # TODO: Can this be made more pythonic? Should be a way to state result using set comprehension or something?
-    #     result = None
-    #     if len(input_match) == 0:
-    #         # If the input input_match is empty, then it's a trivial match, return True.
-    #         result = True
-    #     elif len(input_match) > 0:
-    #         for eid in input_match:
-    #             # If any edge appears in both colored lists, or any endpoint occurs in both sides, return False.
-    #             # If any endpoint appears in the wrong side or is not present on the correct side, return False.
-    #             if eid[0] not in self.left_nodes or eid[0] in self.right_nodes or \
-    #                     eid[1] not in self.right_nodes or eid[1] in self.left_nodes:
-    #                 result = False
-    #                 break
-    #         if result is not False:
-    #             # Check all edges have the same color as the bit passed in.
-    #             # We already checked each edge only has one color, so we only need to check the presence in the
-    #             # correct dictionary.
-    #             for eid in input_match:
-    #                 if (not b and eid not in self.blue_edges) or (b and eid not in self.red_edges):
-    #                     result = False
-    #             if result is not False:
-    #                 # Check each endpoint is adjacent to only one edge from input_match
-    #                 for i in range(len(input_match)-1):
-    #                     for j in range(i+1, len(input_match)):
-    #                         eid = input_match[i]
-    #                         fid = input_match[j]
-    #                         if eid[0] == fid[0] or eid[1] == fid[1]:
-    #                             result = False
-    #                 if result is not False:
-    #                     result = True
-    #     return result
-
     def check_colored_maximal_match(self, b, input_match):
         """  Take input_match as input (a list of edge_idents). Fail (output False) if:
             chk_colored_match(input_match) is False or
@@ -425,83 +384,6 @@ class BipartiteGraph(object):
                     result = input_match
         return result
 
-    def extend_match(self, b, input_match):
-        """ Take color bit b and input_match as input (a list of edge_idents). Return the input_match if
-        check_colored_maximal_match(input_match) is True. Otherwise use a breadth-first-search to find all
-        shortest paths that :
-            (i)   consist of edges with the same color as the edges in input_match and
-            (ii)  alternate with respect to input_match and
-            (iii) begin with an unmatched node and
-            (iv)  cannot be extended, in the sense that they terminate in a node without any remaining available alter-
-                  nating edges without closing a loop and becoming a cycle.
-          Call this list of all shortest paths shortest_paths. Then calls cleanup and returns the result.
-        """
-        result = None
-        assert b == 0 or b == 1
-        if b:
-            weight_dict = self.red_edges
-        else:
-            weight_dict = self.blue_edges
-        if self.chk_colored_match(b, input_match):
-            shortest_paths = []
-            found_shortest_path = False
-            path_length = None
-            if self.check_colored_maximal_match(b, input_match):
-                shortest_paths = []
-                result = input_match
-            else:
-                (matched_lefts, matched_rights, unmatched_lefts, unmatched_rights, bb, non_match_edges) = \
-                    self._parse(b, input_match)
-
-                q = deque([[eid] for eid in non_match_edges if eid[0] in unmatched_lefts])
-                assert len(q) > 0  # must be true since the match is maximal
-
-                while len(q) > 0:
-                    next_path = q.popleft()
-                    # Check that if we have found a shortest path, then the path_length has been set.
-                    assert not found_shortest_path or path_length is not None
-                    # Discard paths longer than the (thus far) minimal path length
-                    if path_length is None or (path_length is not None and len(next_path) <= path_length):
-                        touched_nodes = [eid[0] for eid in next_path] + [eid[1] for eid in next_path]
-                        last_edge = next_path[-1]
-                        p = len(next_path) % 2  # parity of the path.
-                        last_node = last_edge[p]
-                        if len(input_match) > 0:
-                            sd = [weight_dict[eid] for eid in next_path if eid not in input_match]
-                            sd += [weight_dict[eid] for eid in input_match if eid not in next_path]
-                            gain = sum(sd) - sum([weight_dict[eid] for eid in input_match])
-                        else:
-                            gain = 1.0
-                        if last_node in unmatched_rights:
-                            edge_set_to_search = []
-                            if path_length is None or (path_length is not None and len(next_path) < path_length):
-                                found_shortest_path = True
-                                path_length = len(next_path)
-                                shortest_paths = [(next_path, gain)]
-                            elif path_length is not None and len(next_path) == path_length:
-                                shortest_paths += [(next_path, gain)]
-                        else:
-                            if p:
-                                edge_set_to_search = input_match
-                            elif not p:
-                                edge_set_to_search = non_match_edges
-                            else:
-                                assert False
-
-                            for eid in edge_set_to_search:
-                                if eid[p] == last_node and eid[1-p] not in touched_nodes:
-                                    path_to_add = next_path + [eid]
-                                    if path_length is None or (path_length is not None and len(path_to_add) <= path_length):
-                                        q.append(path_to_add)
-                # Check that found_shortest_path = True if and only if at least one shortest path is in shortest_paths
-                assert not found_shortest_path or len(shortest_paths) > 0
-                assert len(shortest_paths) == 0 or found_shortest_path
-                if len(shortest_paths) > 0:
-                    result = self._cleanup(b, shortest_paths, non_match_edges, input_match)
-                else:
-                    result = input_match
-        return result
-
     def boost(self, b, input_match):
         """ Should be called after
 
@@ -576,9 +458,9 @@ class BipartiteGraph(object):
                                         if length is None or len(next_path) < length:
                                             length = len(next_path)
                                             shortest_cycles_with_pos_gain = []
-                                            shortest_cycles_with_pos_gain += [next_path]
+                                            shortest_cycles_with_pos_gain += [(next_path, gain)]
                                         elif len(next_path) == length:
-                                            shortest_cycles_with_pos_gain += [next_path]
+                                            shortest_cycles_with_pos_gain += [(next_path, gain)]
                                         else:
                                             # In this case, from the first if statement, length is not None (so a
                                             # shortest cycle has been found) and len(next_path) >= length, but, from the
@@ -609,78 +491,27 @@ class BipartiteGraph(object):
             result = self._cleanup(b, shortest_cycles_with_pos_gain, non_match_edges, input_match)
         return result
 
-    # def boost_match(self, b, input_match):
-    #     """ Note : maximality of input_match implies no *augmenting* paths exist, i.e. alternating and beginning and
-    #     ending with unmatched nodes (this is a theorem, that augmenting paths exist IFF the match is maximal).
-    #
-    #     However, there may exist half-augmenting paths that alternate with respect to the match. However, these do not
-    #     have positive gain or else they would have been added (greedily) in previous phases. So we look for augmenting
-    #     cycles of the shortest length and with positive gain.
-    #     """
-    #     result = None
-    #     assert b == 0 or b == 1
-    #     # print("Checking maximality of input match")
-    #     if self.check_colored_maximal_match(b, input_match):
-    #         shortest_cycles = []
-    #         found_shortest_cycle = False
-    #         cycle_length = None
-    #
-    #         (matched_lefts, matched_rights, unmatched_lefts, unmatched_rights, bb, non_match_edges) = \
-    #             self._parse(b, input_match)
-    #
-    #         q = deque([[eid] for eid in non_match_edges])
-    #         while len(q) > 0:
-    #             # Check that if we have found a shortest cycle with positive gain, then the cycle_length has been set.
-    #             assert not found_shortest_cycle or cycle_length is not None
-    #             # Pop this path for processing
-    #             next_path = q.popleft()
-    #             # Don't bother with paths longer than the (thus far) minimal cycle length
-    #             if cycle_length is None or (cycle_length is not None and len(next_path) <= cycle_length):
-    #                 first_edge = next_path[0]
-    #                 first_node = first_edge[0]
-    #                 last_edge = next_path[-1]
-    #                 p = len(next_path) % 2
-    #                 last_node = last_edge[p]
-    #
-    #                 # Compute gain of next_path...
-    #                 # Compute cumulative weight of symmetric difference between next path and input_match (i.e. the next
-    #                 # proposed match) and set the gain as the difference between this weight and the weight of the old
-    #                 # match.
-    #                 if b:
-    #                     weight_dict = self.red_edges
-    #                 else:
-    #                     weight_dict = self.blue_edges
-    #                 sd = [weight_dict[eid] for eid in next_path if eid not in input_match]
-    #                 sd += [weight_dict[eid] for eid in input_match if eid not in next_path]
-    #                 gain = sum(sd) - sum([weight_dict[eid] for eid in input_match])
-    #
-    #                 # If it's a cycle with positive gain then put it into our solution box
-    #                 if last_node == first_node and gain > 0.0:
-    #                     found_shortest_cycle = True
-    #                     if cycle_length is None or (cycle_length is not None and len(next_path) < cycle_length):
-    #                         cycle_length = len(next_path)
-    #                         shortest_cycles = [(next_path, gain)]
-    #                     elif cycle_length is not None and len(next_path) == cycle_length:
-    #                         shortest_cycles += [(next_path, gain)]
-    #                 else:
-    #                     # Otherwise, for each available extending edge, append it to the current path and place
-    #                     # the (one edge longer) new path into the queue.
-    #                     if p:
-    #                         edge_set_to_search = input_match
-    #                     elif not p:
-    #                         edge_set_to_search = non_match_edges
-    #                     else:
-    #                         assert False
-    #
-    #                     this_edge_set_to_search = [eid for eid in edge_set_to_search if
-    #                                                (eid not in next_path and eid[p] == last_node)]
-    #                     path_to_add = None
-    #                     if len(this_edge_set_to_search) > 0:
-    #                         if cycle_length is None or len(next_path) + 1 <= cycle_length:
-    #                             for eid in this_edge_set_to_search:
-    #                                 path_to_add = next_path + [eid]
-    #                                 q.append(path_to_add)
-    #                                 path_to_add = None
-    #
-    #         result = self._cleanup(b, shortest_cycles, non_match_edges, input_match)
-    #     return result
+    def optimize(self, b):
+        result = None
+        assert b in [0, 1]
+        input_match = []
+        next_match = self.extend(b, input_match)
+        while next_match != input_match:
+            input_match = next_match
+            next_match = self.extend(b, input_match)
+        if b:
+            weight_dict = self.red_edges
+        else:
+            weight_dict = self.blue_edges
+
+        input_match = next_match
+        w = sum([weight_dict[eid] for eid in input_match])
+        next_match = self.boost(b, input_match)
+        v = sum([weight_dict[eid] for eid in next_match])
+        while v - w > 0.0:
+            w = v
+            input_match = next_match
+            next_match = self.boost(b, input_match)
+            v = sum([weight_dict[eid] for eid in next_match])
+
+        return next_match
