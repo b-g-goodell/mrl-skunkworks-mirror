@@ -1,6 +1,6 @@
 import unittest
 import random
-from GraphTheory import *
+from graphtheory import *
 from copy import deepcopy
 
 
