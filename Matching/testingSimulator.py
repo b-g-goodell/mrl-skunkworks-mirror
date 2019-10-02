@@ -11,7 +11,7 @@ MINSPENDTIME = 10
 # Expected spend-times are 20.0 blocks, 100.0 blocks, and 50.0 blocks, respectively.
 SPENDTIMES = [lambda x:0.05*((1.0-0.05)**(x-MINSPENDTIME)), lambda x: 0.01*((1.0-0.01)**(x-MINSPENDTIME)), lambda x: 0.025*((1.0-0.025)**(x-MINSPENDTIME))]
 RINGSIZE = 11
-RUNTIME = 40
+RUNTIME = 50
 
 def make_sally():
     par = dict()
@@ -22,7 +22,8 @@ def make_sally():
     par['min spendtime'] = MINSPENDTIME
     par['spendtimes'] = SPENDTIMES
     par['ring size'] = RINGSIZE
-    return Simulator(par)
+    sally = Simulator(par)
+    return sally
 
 class TestSimulatorDeeply(unittest.TestCase):
     """ TestSimulator tests our simulator """
@@ -48,6 +49,8 @@ class TestSimulatorDeeply(unittest.TestCase):
     def test_run(self):
         sally = make_sally()
         sally.run()
+        self.assertTrue(len(sally.g.left_nodes) >= sally.runtime)
+        self.assertTrue(len(sally.g.right_nodes) > 0)
 
     def test_make_coinbase(self):
         sally = make_sally()
