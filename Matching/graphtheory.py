@@ -66,23 +66,23 @@ class BipartiteGraph(object):
         """ Take a bit b indicating side as input (b = 0 are left nodes, b = 1 are right nodes). Check that b is a bit
         and return None if it isn't. Otherwise, create a new node on side b, outputting the node_ident.
         """
-        assert b in [0, 1]
         result = None
-        if b or not b:
-            result = self.count
-            self.count += 1
-            if b:
-                # right nodes are side one
-                self.right_nodes.update({result: result})
-                for left_node in self.left_nodes:
-                    self.add_edge(0, (left_node, result), 0.0)
-                    self.add_edge(1, (left_node, result), 0.0)
-            elif not b:
-                # left nodes are side zero
-                self.left_nodes.update({result: result})
-                for right_node in self.right_nodes:
-                    self.add_edge(0, (result, right_node), 0.0)
-                    self.add_edge(1, (result, right_node), 0.0)
+        assert b in [0, 1]
+        result = self.count
+        assert result not in self.right_nodes and result not in self.left_nodes
+        self.count += 1
+        if b==1:
+            # right nodes are side one
+            self.right_nodes.update({result: result})
+            for left_node in self.left_nodes:
+                self.add_edge(0, (left_node, result), 0.0)
+                self.add_edge(1, (left_node, result), 0.0)
+        elif b==0:
+            # left nodes are side zero
+            self.left_nodes.update({result: result})
+            for right_node in self.right_nodes:
+                self.add_edge(0, (result, right_node), 0.0)
+                self.add_edge(1, (result, right_node), 0.0)
         return result
 
     def add_edge(self, b, eid, w):
@@ -102,12 +102,12 @@ class BipartiteGraph(object):
         if result:
             new_dict = {eid: w}
             zero_dict = {eid: 0.0}
-            if b:
-                self.red_edges.update(new_dict)
-                self.blue_edges.update(zero_dict)
-            elif not b:
-                self.red_edges.update(zero_dict)
-                self.blue_edges.update(new_dict)
+            if b==1:
+                self.red_edges[eid]=w
+                self.blue_edges[eid]=0.0
+            else:
+                self.red_edges[eid]=0.0
+                self.blue_edges[eid]=w
         return result
 
     def del_edge(self, eid):
