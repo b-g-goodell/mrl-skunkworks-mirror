@@ -108,9 +108,6 @@ class Simulator(object):
             for x in temp:
                 sig_nodes += [self.g.add_node(1)] # add a right_node and assign ownership
                 y = sig_nodes[-1]
-                for z in self.g.left_nodes:
-                    eid = (z,y)
-                    assert eid in self.g.red_edges and eid in self.g.blue_edges
                 self.ownership[y] = k[0]
                 for idx in self.get_ring(x[2]): 
                     eid = (idx, y)
