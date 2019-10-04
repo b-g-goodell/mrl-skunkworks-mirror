@@ -1,6 +1,6 @@
 import unittest
 import random
-from graptheory import *
+from graphtheory import *
 from copy import deepcopy
 
 
@@ -82,10 +82,10 @@ def make_d_graph():
     #  (3,  9):  52.0, red
     #  (5,  7):  84.0, red
     #  (5,  9):  92.0, red
-
-    wt = 0.0
-    for xid in g.left_nodes:
-        for yid in g.right_nodes:
+    
+    wt = 4.0
+    for xid in sorted(list(g.left_nodes.keys())):
+        for yid in sorted(list(g.right_nodes.keys())):
             g.add_edge((xid*yid) % 2, (xid, yid), wt)
             wt += 4.0
 
@@ -139,7 +139,7 @@ def make_dd_graph():
     #  (1,  9):  13.0, red
     #  (3,  7):  49.0, red
     #  (3,  9):  51.0, red
-    wt = 0.0
+    wt = 4.0
     for xid in g.left_nodes:
         for yid in g.right_nodes:
             g.add_edge((xid*yid) % 2, (xid, yid), wt)
@@ -161,14 +161,16 @@ class TestBipartiteGraph(unittest.TestCase):
         self.assertTrue(isinstance(g, BipartiteGraph))
         self.assertEqual(len(g.left_nodes), 5)
         self.assertEqual(len(g.right_nodes), 5)
-        self.assertEqual(len(g.red_edges)+len(g.blue_edges), 50)
-        wt = 0.0
-        for xid in g.left_nodes:
-            for yid in g.right_nodes:
-                # Check that if the product of the identities mod 2 is 1 then the edges is red with weight 1.0
-                self.assertTrue((xid*yid) % 2 == 0 or ((xid, yid) in g.red_edges and g.red_edges[(xid, yid)] == wt))
-                # Check that if the product of the identities mod 2 is 0 then the edge is blue with weight 1.0
-                self.assertTrue((xid*yid) % 2 == 1 or ((xid, yid) in g.blue_edges and g.blue_edges[(xid, yid)] == wt))
+        self.assertEqual(len(g.red_edges), 6)
+        self.assertEqual(len(g.blue_edges), 19)
+        wt = 4.0
+        for xid in sorted(list(g.left_nodes.keys())):
+            for yid in sorted(list(g.right_nodes.keys())):
+                self.assertTrue((xid, yid) in g.red_edges or (xid, yid) in g.blue_edges)
+                if xid*yid % 2:
+                    self.assertTrue((xid, yid) in g.red_edges and g.red_edges[(xid, yid)] == wt)
+                else:
+                    self.assertTrue((xid, yid) in g.blue_edges and g.blue_edges[(xid, yid)] == wt)
                 wt += 4.0
 
     def test_d_init_by_hand(self):
@@ -242,8 +244,9 @@ class TestBipartiteGraph(unittest.TestCase):
 
         self.assertEqual(len([x for x in g.right_nodes if x in g.left_nodes]), 0)
 
-        self.assertEqual(2*len(g.right_nodes)*len(g.left_nodes), len(g.red_edges) + len(g.blue_edges))
-        self.assertEqual(len([eid for eid in g.red_edges if g.red_edges[eid] > 0.0 and g.blue_edges[eid] > 0.0]), 0)
+        self.assertEqual(len(g.right_nodes)*len(g.left_nodes), len(g.red_edges) + len(g.blue_edges))
+        self.assertEqual(len([eid for eid in g.red_edges if eid in g.blue_edges]), 0)
+        self.assertEqual(len([eid for eid in g.blue_edges if eid in g.red_edges]), 0)
 
         for eid in g.red_edges:
             self.assertTrue(g.red_edges[eid] >= 0.0)
@@ -252,7 +255,7 @@ class TestBipartiteGraph(unittest.TestCase):
 
         for x in g.left_nodes:
             for y in g.right_nodes:
-                self.assertTrue((x, y) in g.red_edges and (x, y) in g.blue_edges)
+                self.assertTrue((x, y) in g.red_edges or (x, y) in g.blue_edges and not ((x,y) in g.red_edges and (x,y) in g.blue_edges))
 
     def test_d_add_node(self):
         g = BipartiteGraph()
@@ -268,6 +271,7 @@ class TestBipartiteGraph(unittest.TestCase):
             mmm = deepcopy(g.data)
             self.assertEqual(m-n, 1)  # we only added one node
             self.assertEqual(mm, nn)  # the node we added was on the left, so no new edges were added
+            self.assertEqual(mm, 0) # still haven't added any edges
             self.assertEqual(mmm, nnn)  # arbitrary data preserved
             self.assertEqual(g.count-1, len(g.left_nodes)+len(g.right_nodes))
         b = 1
@@ -281,7 +285,8 @@ class TestBipartiteGraph(unittest.TestCase):
             mm = deepcopy(len(g.red_edges) + len(g.blue_edges))
             mmm = deepcopy(g.data)
             self.assertEqual(m-n, 1)  # we only added one node
-            self.assertEqual(mm, nn + 2*len(g.left_nodes))  # however, we added 2*len(g.left_nodes) new edges
+            self.assertEqual(mm, nn)  # however, we added 2*len(g.left_nodes) new edges
+            self.assertEqual(mm, 0)
             self.assertEqual(mmm, nnn)  # arbitrary data preserved
             self.assertEqual(g.count-1, len(g.left_nodes)+len(g.right_nodes))
 
@@ -303,70 +308,64 @@ class TestBipartiteGraph(unittest.TestCase):
             mm = deepcopy(len(g.red_edges) + len(g.blue_edges))
             mmm = deepcopy(g.data)
             self.assertEqual(m-n, 1)
-            if b:
-                self.assertEqual(mm, nn+2*len(g.left_nodes))
-            else:
-                self.assertEqual(mm, nn+2*len(g.right_nodes))
+            self.assertEqual(mm, nn)
             self.assertEqual(mmm, nnn)
             self.assertEqual(g.count-1, len(g.left_nodes)+len(g.right_nodes))
 
     def test_d_add_edge(self):
         g = make_d_graph()  # This is a (5,5) complete bipartite graph; see make_d_graph for details.
+        self.assertTrue(len(g.left_nodes), 5)
+        self.assertTrue(len(g.right_nodes), 5)
+        self.assertTrue(len(g.blue_edges), 18)
+        self.assertTrue(len(g.red_edges), 6)
 
-        j = g.add_node(1)  # add a new right node
+        j = g.add_node(1)  # add a new right node with no new edges
+        self.assertTrue(len(g.left_nodes), 5)
+        self.assertTrue(len(g.right_nodes), 6)
         self.assertEqual(j, 11)
+        self.assertTrue(len(g.blue_edges), 18)
+        self.assertTrue(len(g.red_edges), 6)
 
-        ii = g.add_node(0)
+        ii = g.add_node(0) # add a new left node with no new edges
+        self.assertTrue(len(g.left_nodes), 6)
+        self.assertTrue(len(g.right_nodes), 6)
         self.assertEqual(ii, 12)
+        self.assertTrue(len(g.blue_edges), 18)
+        self.assertTrue(len(g.red_edges), 6)
 
-        i = min(list(g.left_nodes.keys()))
-        self.assertEqual(i, 1)
-
-        jj = min(list(g.right_nodes.keys()))
-        self.assertEqual(jj, 6)
-
-        a = deepcopy(len(g.left_nodes))
-        b = deepcopy(len(g.right_nodes))
-        n = deepcopy(len(g.blue_edges))
-        self.assertEqual(n, a*b)
-        m = deepcopy(len(g.red_edges))
-        self.assertEqual(m, a*b)
+        imin = min(list(g.left_nodes.keys()))
+        imax = max(list(g.left_nodes.keys()))
+        self.assertEqual(imin, 1)
+        self.assertEqual(imax, 12)
+        jmin = min(list(g.right_nodes.keys()))
+        jmax = max(list(g.right_nodes.keys()))
+        self.assertEqual(jmin, 6)
+        self.assertEqual(jmax, 11)
 
         # weights will start at 0.1 and be incremented by 0.1
         w = 0.1
         # Reset weight of the blue edge (1, 11) to 0.1
-        g.add_edge(0, (i, j), w)
+        g.add_edge(0, (imin, jmax), w)
         w += 0.1
 
-        aa = deepcopy(len(g.left_nodes))
-        bb = deepcopy(len(g.right_nodes))
-        nn = deepcopy(len(g.blue_edges))
-        self.assertEqual(nn, aa * bb)
-        mm = deepcopy(len(g.red_edges))
-        self.assertEqual(mm, aa * bb)
-        self.assertEqual(aa, a)
-        self.assertEqual(bb, b)
-        self.assertEqual(nn, n)
-        self.assertEqual(mm, m)
+        self.assertTrue(len(g.left_nodes), 6)
+        self.assertTrue(len(g.right_nodes), 6)
+        self.assertTrue(len(g.blue_edges), 19)
+        self.assertTrue(len(g.red_edges), 6)
 
-        g.add_edge(1, (ii, jj), w)  # edge (12, 6)
+        g.add_edge(1, (imax, jmin), w)  # edge (12, 6)
         w += 0.1
 
-        aaa = deepcopy(len(g.left_nodes))
-        bbb = deepcopy(len(g.right_nodes))
-        nnn = deepcopy(len(g.blue_edges))
-        self.assertEqual(nnn, aaa * bbb)
-        mmm = deepcopy(len(g.red_edges))
-        self.assertEqual(mmm, aaa * bbb)
-        self.assertEqual(aaa, aa)
-        self.assertEqual(bbb, bb)
-        self.assertEqual(nnn, nn)
-        self.assertEqual(mmm, mm)
+        self.assertTrue(len(g.left_nodes), 6)
+        self.assertTrue(len(g.right_nodes), 6)
+        self.assertTrue(len(g.blue_edges), 19)
+        self.assertTrue(len(g.red_edges), 7)
 
     def test_r_add_edge(self):
         # make a random graph with 3-5 nodes (uniformly selected on each side) with equal likelihood of being blue or
         # red and with random weights on the interval 0.0 to 1.0
         g = make_r_graph()
+        self.assertEqual(len(g.red_edges) + len(g.blue_edges), len(g.left_nodes)*len(g.right_nodes))
         n = g.count - 1  # get the count
         j = g.add_node(1)  # add a node to the right
         self.assertEqual(j, n+1)  # check the node identity was correct
@@ -375,7 +374,7 @@ class TestBipartiteGraph(unittest.TestCase):
         i = min(list(g.left_nodes.keys()))  # get smallest left node key
         self.assertEqual(i, 1)  # check it's 1
         jj = min(list(g.right_nodes.keys()))  # get the smallest right node key
-        self.assertEqual(jj, len(g.left_nodes))  # check it's the last node
+        self.assertEqual(jj, len(g.left_nodes))  # check this index is where make_r_graph switched to add nodes to the right
 
         w = random.random()
 
@@ -383,25 +382,25 @@ class TestBipartiteGraph(unittest.TestCase):
         m = deepcopy(len(g.red_edges))
         a = deepcopy(len(g.left_nodes))
         c = deepcopy(len(g.right_nodes))
-        g.add_edge(0, (i, j), w)
+        g.add_edge(0, (ii, jj), w) # add a blue edge between the newest left node and oldest right node
         w += 0.1
         nn = deepcopy(len(g.blue_edges))
         mm = deepcopy(len(g.red_edges))
         aa = deepcopy(len(g.left_nodes))
         cc = deepcopy(len(g.right_nodes))
-        self.assertEqual(nn, n)
+        self.assertEqual(nn, n+1)
         self.assertEqual(m, mm)
         self.assertEqual(a, aa)
         self.assertEqual(c, cc)
 
-        g.add_edge(1, (ii, jj), w)
+        g.add_edge(1, (ii, j), w) # add a red edge between the newest left node and the newest right node
         w += 0.1
         n = deepcopy(len(g.blue_edges))
         m = deepcopy(len(g.red_edges))
         a = deepcopy(len(g.left_nodes))
         c = deepcopy(len(g.right_nodes))
         self.assertEqual(nn, n)
-        self.assertEqual(m, mm)
+        self.assertEqual(m, mm+1)
         self.assertEqual(a, aa)
         self.assertEqual(c, cc)
 
@@ -410,14 +409,18 @@ class TestBipartiteGraph(unittest.TestCase):
         g = make_d_graph()
 
         # p = (4*9) % 2
+        self.assertTrue((4,9) in g.blue_edges)
         self.assertTrue(g.blue_edges[(4, 9)] > 0.0)
 
         a = deepcopy(len(g.left_nodes))
         c = deepcopy(len(g.right_nodes))
-        n = deepcopy(len(g.blue_edges))
-        m = deepcopy(len(g.red_edges))
+        n = deepcopy(len(g.red_edges))
+        m = deepcopy(len(g.blue_edges))
 
         g.del_edge((4, 9))
+        self.assertTrue(4 in g.left_nodes)
+        self.assertTrue(9 in g.right_nodes)
+        self.assertFalse((4, 9) in g.red_edges or (4,9) in g.blue_edges)
 
         aa = deepcopy(len(g.left_nodes))
         cc = deepcopy(len(g.right_nodes))
@@ -425,13 +428,14 @@ class TestBipartiteGraph(unittest.TestCase):
         mm = deepcopy(len(g.blue_edges))
 
         self.assertEqual(n, nn)
-        self.assertEqual(m, mm)
+        self.assertEqual(m, mm+1)
         self.assertEqual(a, aa)
         self.assertEqual(c, cc)
-        self.assertTrue(g.blue_edges[(4, 9)] == 0.0)
 
     def test_r_del_edge(self):
         g = make_r_graph()
+        while len(g.red_edges) == 0 or len(g.blue_edges) == 0:
+            g = make_r_graph()
 
         a = deepcopy(len(g.left_nodes))
         c = deepcopy(len(g.right_nodes))
@@ -444,23 +448,22 @@ class TestBipartiteGraph(unittest.TestCase):
             m = deepcopy(len(g.blue_edges))
         else:
             eid = random.choice(list(g.blue_edges.keys()))
-            n = deepcopy(len(g.blue_edges))
-            m = deepcopy(len(g.red_edges))
+            n = deepcopy(len(g.red_edges))
+            m = deepcopy(len(g.blue_edges))
 
         g.del_edge(eid)
-        self.assertTrue(g.red_edges[eid] == 0.0 and g.blue_edges[eid] == 0.0)
-        self.assertTrue(b in [0, 1])
+        self.assertTrue(eid not in g.red_edges and eid not in g.blue_edges)
         aa = deepcopy(len(g.left_nodes))
         cc = deepcopy(len(g.right_nodes))
         if b:
             nn = deepcopy(len(g.red_edges))
             mm = deepcopy(len(g.blue_edges))
         else:
-            nn = deepcopy(len(g.blue_edges))
-            mm = deepcopy(len(g.red_edges))
+            nn = deepcopy(len(g.red_edges))
+            mm = deepcopy(len(g.blue_edges))
 
-        self.assertEqual(n, nn)
-        self.assertEqual(m, mm)
+        self.assertEqual(n, nn+b)
+        self.assertEqual(m, mm+(1-b))
         self.assertEqual(a, aa)
         self.assertEqual(c, cc)
 
@@ -478,8 +481,7 @@ class TestBipartiteGraph(unittest.TestCase):
         # (3*6) % 2 = 0, (3*7) % 2 = 1, (3*8) % 2 = 0, (3*9) % 2 = 1, and (3*10) % 2 = 0
         # so blues: (3, 6), (3, 8), (3, 10)
         # and reds: (3, 7), (3, 9)
-        # Deleting a left node from a complete graph means losing len(g.right_nodes) edges in both dicts.
-
+        
         aa = deepcopy(len(g.left_nodes))
         cc = deepcopy(len(g.right_nodes))
         nn = deepcopy(len(g.red_edges))
@@ -487,8 +489,8 @@ class TestBipartiteGraph(unittest.TestCase):
 
         self.assertEqual(a-aa, 1)
         self.assertEqual(c-cc, 0)
-        self.assertEqual(n-nn, len(g.right_nodes))
-        self.assertEqual(m-mm, len(g.right_nodes))
+        self.assertEqual(n-nn, 2)
+        self.assertEqual(m-mm, 3)
 
     def test_r_del_node(self):
         g = make_r_graph()
@@ -911,8 +913,10 @@ class TestBipartiteGraph(unittest.TestCase):
 
         result = g._clean(b, shortest_paths, input_match)
         # greedy selection of vertex-disjoint sets: first we pick (5, 10), then (4, 9), then (3, 6).
-        # the symmetric difference between this set of edges and the input_match (2,8) is the union.
+        # Since 6 and 10 are already matched we do not match 1.
+        # The symmetric difference between this set of edges and the input_match (2,8) is the union.
         self.assertTrue((2, 8) in result)
+        # print(result)
         self.assertTrue((5, 10) in result)
         self.assertTrue((4, 9) in result)
         self.assertTrue((3, 6) in result)

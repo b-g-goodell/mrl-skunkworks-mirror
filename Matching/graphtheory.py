@@ -1,4 +1,5 @@
 from collections import deque
+import itertools
 import sys
 
 # Check version number
@@ -74,15 +75,15 @@ class BipartiteGraph(object):
         if b==1:
             # right nodes are side one
             self.right_nodes.update({result: result})
-            for left_node in self.left_nodes:
-                self.add_edge(0, (left_node, result), 0.0)
-                self.add_edge(1, (left_node, result), 0.0)
+            #for left_node in self.left_nodes:
+            #    self.add_edge(0, (left_node, result), 0.0)
+            #    self.add_edge(1, (left_node, result), 0.0)
         elif b==0:
             # left nodes are side zero
             self.left_nodes.update({result: result})
-            for right_node in self.right_nodes:
-                self.add_edge(0, (result, right_node), 0.0)
-                self.add_edge(1, (result, right_node), 0.0)
+            #for right_node in self.right_nodes:
+            #    self.add_edge(0, (result, right_node), 0.0)
+            #    self.add_edge(1, (result, right_node), 0.0)
         return result
 
     def add_edge(self, b, eid, w):
@@ -94,20 +95,22 @@ class BipartiteGraph(object):
         edge weight of color b with weight w and over-writes the weight of color 1-b with weight 0.0.
 
         """
-        assert b in [0, 1]
-        assert w >= 0.0
         (x, y) = eid  # parse eid to get left node and right node ids
         result = x in self.left_nodes
-        result = result and y in self.right_nodes
+        result = result and y in self.right_nodes    
+        assert b in [0, 1]
+        assert w >= 0.0
+
         if result:
-            new_dict = {eid: w}
-            zero_dict = {eid: 0.0}
-            if b==1:
-                self.red_edges[eid]=w
-                self.blue_edges[eid]=0.0
-            else:
-                self.red_edges[eid]=0.0
-                self.blue_edges[eid]=w
+            if w == 0.0:
+                self.del_edge(eid)
+            elif w > 0.0:
+                if result:
+                    new_dict = {eid: w}
+                    if b==1:
+                        self.red_edges.update(new_dict)
+                    else:
+                        self.blue_edges.update(new_dict)
         return result
 
     def del_edge(self, eid):
@@ -115,15 +118,10 @@ class BipartiteGraph(object):
         weights in both edge dictionaries to 0.0. If either node does not exist or is on the wrong side, then the edge
         entry is deleted from the dictionary. This always succeeds so we return True.
         """
-        if eid[0] not in self.left_nodes or eid[1] not in self.right_nodes:
-            if eid in self.blue_edges:
-                del self.blue_edges[eid]
-            if eid in self.red_edges:
-                del self.red_edges[eid]
-        else:
-            self.blue_edges.update({eid: 0.0})
-            self.red_edges.update({eid: 0.0})
-        return True
+        if eid in self.red_edges:
+            del self.red_edges[eid]
+        if eid in self.blue_edges:
+            del self.blue_edges[eid]
 
     def del_node(self, x):
         """  Take x as input (a node ident).
@@ -167,8 +165,8 @@ class BipartiteGraph(object):
             # Now we check that the match is all of one color, and that color is b.
             correct_color = False
             if vtx_disj:
-                blue_wt = sum([self.blue_edges[eid] for eid in input_match])
-                red_wt = sum([self.red_edges[eid] for eid in input_match])
+                blue_wt = sum([self.blue_edges[eid] for eid in input_match if eid in self.blue_edges])
+                red_wt = sum([self.red_edges[eid] for eid in input_match if eid in self.red_edges])
                 all_one_color = ((blue_wt > 0.0 and red_wt == 0.0) or (blue_wt == 0.0 and red_wt > 0.0))
                 correct_color = all_one_color and ((not b and blue_wt > 0.0) or (b and red_wt > 0.0))
             result = vtx_disj and correct_color
@@ -192,7 +190,7 @@ class BipartiteGraph(object):
             unmatched_rights = [nid for nid in self.right_nodes if nid not in matched_rights]
             for x in unmatched_lefts:
                 for y in unmatched_rights:
-                    if (b and self.red_edges[(x, y)] > 0.0) or (not b and self.blue_edges[(x, y)] > 0.0):
+                    if (b and (x,y) in self.red_edges and self.red_edges[(x, y)] > 0.0) or (not b and (x,y) in self.blue_edges and self.blue_edges[(x, y)] > 0.0):
                         # we found an edge that could increase match size!
                         result = False
         return result
@@ -218,11 +216,8 @@ class BipartiteGraph(object):
         unmatched_rights = [nid for nid in self.right_nodes if nid not in matched_rights]
 
         # non-match edges
-        if b:
-            non_match_edges = [eid for eid in self.red_edges if eid not in input_match]
-        else:
-            non_match_edges = [eid for eid in self.blue_edges if eid not in input_match]
-
+        non_match_edges = [(x, y) for x in self.left_nodes for y in self.right_nodes if (x,y) not in input_match]
+        
         result = (matched_lefts, matched_rights, unmatched_lefts, unmatched_rights, b, non_match_edges)
         return result
 
@@ -234,6 +229,7 @@ class BipartiteGraph(object):
         if len(shortest_paths_with_gains) > 0:
             # Order the list
             ordered_shortest_paths = sorted(shortest_paths_with_gains, key=lambda z: z[1], reverse=True)
+            # print(ordered_shortest_paths)
             # Construct vertex-disjoint list greedily
             vd = []
             touched_nodes = []
@@ -349,8 +345,13 @@ class BipartiteGraph(object):
                                     path_to_add = next_path + [eid]
                                     q.append(path_to_add)
                             else:
-                                sd = [weight_dict[eid] for eid in next_path if eid not in input_match]
-                                sd += [weight_dict[eid] for eid in input_match if eid not in next_path]
+                                # alt:
+                                # node_key_pairs = itertools.product(list(self.left_nodes.keys()), list(self.right_nodes.keys()))
+                                # sd = [weight_dict[z] for z in node_key_pairs if z in next_path and z not in input_match and z in weight_dict]
+                                # sd += [weight_dict[z] for z in node_key_pairs if z in input_match and z not in next_path and z in weight_dict]
+
+                                sd = [weight_dict[z] for z in weight_dict if (z in input_match and z not in next_path)]
+                                sd += [weight_dict[z] for z in weight_dict if (z not in input_match and z in next_path)]
                                 gain = sum(sd) - sum([weight_dict[eid] for eid in input_match])
                                 if gain > 0.0:
                                     if length is None or len(next_path) < length:
