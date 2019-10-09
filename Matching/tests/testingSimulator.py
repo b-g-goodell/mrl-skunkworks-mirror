@@ -4,7 +4,7 @@ from graphtheory import *
 from simulator import *
 from copy import deepcopy
 
-FILENAME = "output.txt"
+FILENAME = "../data/output.txt"
 STOCHMAT = [[0.0, 0.9, 0.1], [0.125, 0.75, 0.125], [0.75, 0.25, 0.0]]
 HASHRATE = [0.8075, 0.125, 0.0625]
 MINSPENDTIME = 10
