@@ -94,43 +94,95 @@ class Simulator(object):
         #       txn_bundles[i][4] = pair of a left node ident and an amount corresponding to the payment amount
         txn_bundles = [] 
         to_spend = sorted(self.buffer[self.t], key=lambda x: (x[0], x[1]))
+        orig_num_red_edges = len(self.g.red_edges)
+        ct = 0
         for k, grp in groupby(to_spend, key=lambda x: (x[0], x[1])):
+            assert orig_num_red_edges == len(self.g.red_edges) - ct
             temp = deepcopy(grp)
-            temp = deepcopy(grp)
+            assert orig_num_red_edges == len(self.g.red_edges) - ct
             keys_to_spend = [x[2] for x in temp]
+            assert orig_num_red_edges == len(self.g.red_edges) - ct
+            # assert len(keys_to_spend) > 0
+            # assert sum([self.amounts[x] for x in keys_to_spend]) > len(keys_to_spend)*MIN_MINING_REWARD
             txn_bundles += [[keys_to_spend]]
-            temp = deepcopy(grp)
-            assert len(keys_to_spend) > 0
-            assert sum([self.amounts[x] for x in keys_to_spend]) > len(keys_to_spend)*MIN_MINING_REWARD
+            assert orig_num_red_edges == len(self.g.red_edges) - ct
             tot_amt = sum([self.amounts[x] for x in keys_to_spend])
+            assert orig_num_red_edges == len(self.g.red_edges) - ct
             txn_bundles[-1] += [tot_amt]
+            assert orig_num_red_edges == len(self.g.red_edges) - ct
+
             sig_nodes = []
+            assert orig_num_red_edges == len(self.g.red_edges) - ct
+            rings = dict()
+            assert orig_num_red_edges == len(self.g.red_edges) - ct
+            temp = deepcopy(grp)
+            assert orig_num_red_edges == len(self.g.red_edges) - ct
             for x in temp:
-                sig_nodes += [self.g.add_node(1)] # add a right_node and assign ownership
+                # For each left_node being spent in this transaction, we add a new right_node and assign ownership, and we set ring members.
+                assert orig_num_red_edges == len(self.g.red_edges) - ct
+                num_red_edges = len(self.g.red_edges)
+                assert orig_num_red_edges == len(self.g.red_edges) - ct
+                sig_nodes += [self.g.add_node(1)]  
+                assert orig_num_red_edges == len(self.g.red_edges) - ct
                 y = sig_nodes[-1]
-                self.ownership[y] = k[0]
-                for idx in self.get_ring(x[2]): 
-                    eid = (idx, y)
-                    self.g.add_edge(1, eid, 1.0)  # adds red edge
+                assert orig_num_red_edges == len(self.g.red_edges) - ct
+                self.ownership[y] = k[0] 
+                assert orig_num_red_edges == len(self.g.red_edges) - ct
+                rings[y] = self.get_ring(x[2]) 
+                assert orig_num_red_edges == len(self.g.red_edges) - ct
+                
             txn_bundles[-1] += [sig_nodes]
+            assert orig_num_red_edges == len(self.g.red_edges) - ct
 
             change_node = self.g.add_node(0)  # add a left_node and assign ownership
+            assert orig_num_red_edges == len(self.g.red_edges) - ct
             self.ownership[change_node] = k[0]
+            assert orig_num_red_edges == len(self.g.red_edges) - ct
             recipient_node = self.g.add_node(0)  # add a left_node and assign ownership
+            assert orig_num_red_edges == len(self.g.red_edges) - ct
             self.ownership[recipient_node] = k[1]
-
+            assert orig_num_red_edges == len(self.g.red_edges) - ct
+            assert len(sig_nodes) == len(set(sig_nodes))
             for snode in sig_nodes:
+                num_red_edges = len(self.g.red_edges)
+                assert orig_num_red_edges == len(self.g.red_edges) - ct
                 eid = (recipient_node, snode)
+                assert orig_num_red_edges == len(self.g.red_edges) - ct
+                assert eid not in self.g.blue_edges
+                assert orig_num_red_edges == len(self.g.red_edges) - ct
                 self.g.add_edge(0, eid, 1.0)  # adds blue edge
+                assert orig_num_red_edges == len(self.g.red_edges) - ct
                 eidd = (change_node, snode)
+                assert orig_num_red_edges == len(self.g.red_edges) - ct
+                assert eidd not in self.g.blue_edges
+                assert orig_num_red_edges == len(self.g.red_edges) - ct
                 self.g.add_edge(0, eidd, 1.0)  # adds blue edge
-            
+                assert orig_num_red_edges == len(self.g.red_edges) - ct
+                assert len(rings[snode]) == len(set(rings[snode]))
+                for ring_member in rings[snode]:
+                    eiddd = (ring_member, snode)
+                    assert orig_num_red_edges == len(self.g.red_edges) - ct
+                    assert eiddd not in self.g.red_edges
+                    assert orig_num_red_edges == len(self.g.red_edges) - ct
+                    self.g.add_edge(1, eiddd, 1.0) # adds red edge
+                    ct += 1
+                    assert orig_num_red_edges == len(self.g.red_edges) - ct
+                assert num_red_edges + len(rings[snode]) == len(self.g.red_edges)
+                assert orig_num_red_edges == len(self.g.red_edges) - ct
+
             change = random()*tot_amt
+            assert orig_num_red_edges == len(self.g.red_edges) - ct
             self.amounts[change_node] = change
+            assert orig_num_red_edges == len(self.g.red_edges) - ct
             txn_bundles[-1] += [(change_node, change)]
+            assert orig_num_red_edges == len(self.g.red_edges) - ct
             txn_amt =  tot_amt - change
+            assert orig_num_red_edges == len(self.g.red_edges) - ct
             self.amounts[recipient_node] = txn_amt
+            assert orig_num_red_edges == len(self.g.red_edges) - ct
             txn_bundles[-1] += [(recipient_node, txn_amt)]
+            assert orig_num_red_edges == len(self.g.red_edges) - ct
+
         return txn_bundles
 
     def report(self):
@@ -149,7 +201,7 @@ class Simulator(object):
             ct += 1
             if len(self.g.right_nodes) > ct:
                 line += ","
-        with open(self.fn, "a") as wf:
+        with open(self.fn, "w+") as wf:
             wf.write(line + "\n\n\n")
 
     def pick_coinbase_owner(self):
@@ -202,16 +254,12 @@ class Simulator(object):
         assert found
         return i
 
+
     def get_ring(self, spender):
-        k = list(self.g.left_nodes.keys())
+        ring = []
+        available_keys = [x for x in list(self.g.left_nodes.keys()) if x != spender]
         if self.mode == "uniform":
-            ss = min(max(0,len(self.g.left_nodes)-1), self.ringsize-1)
-            ring = sample(k, ss)
-            while spender in ring:
-                idx_of_spender = ring.index(spender)
-                while ring[idx_of_spender] == spender:
-                    ring[idx_of_spender] = choice(k)
-            ring += [spender]
+            ring = sample(available_keys, min(len(self.g.left_nodes), self.ringsize) - 1) + [spender]
         return ring
 
 

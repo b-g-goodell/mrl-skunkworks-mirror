@@ -72,18 +72,12 @@ class BipartiteGraph(object):
         result = self.count
         assert result not in self.right_nodes and result not in self.left_nodes
         self.count += 1
-        if b==1:
+        if b:
             # right nodes are side one
             self.right_nodes.update({result: result})
-            #for left_node in self.left_nodes:
-            #    self.add_edge(0, (left_node, result), 0.0)
-            #    self.add_edge(1, (left_node, result), 0.0)
-        elif b==0:
+        else:
             # left nodes are side zero
             self.left_nodes.update({result: result})
-            #for right_node in self.right_nodes:
-            #    self.add_edge(0, (result, right_node), 0.0)
-            #    self.add_edge(1, (result, right_node), 0.0)
         return result
 
     def add_edge(self, b, eid, w):
