@@ -126,7 +126,7 @@ class Simulator(object):
                 assert orig_num_red_edges == len(self.g.red_edges) - ct
                 y = sig_nodes[-1]
                 assert orig_num_red_edges == len(self.g.red_edges) - ct
-                self.ownership[y] = k[0] 
+                self.ownership[y] = (k[0], x[2])  # ownership of a right_node is a pair (k, x) where k is an owner index in the stochastic matrix and x is the left_node being spent
                 assert orig_num_red_edges == len(self.g.red_edges) - ct
                 rings[y] = self.get_ring(x[2]) 
                 assert orig_num_red_edges == len(self.g.red_edges) - ct

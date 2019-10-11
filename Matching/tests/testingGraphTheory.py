@@ -1143,6 +1143,7 @@ class TestBipartiteGraph(unittest.TestCase):
         self.assertTrue((3, 7) in result)
 
     def test_d_optimize(self):
+        ''' This is an integration test that combines all the functionalities. '''
         g = make_d_graph()
         b = 1
         final_answer = g.optimize(b)
