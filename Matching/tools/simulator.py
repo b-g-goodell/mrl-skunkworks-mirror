@@ -76,12 +76,12 @@ class Simulator(object):
         amt = self.pick_coinbase_amt()
         dt = self.pick_spend_time(owner)
         recip = self.pick_next_recip(owner)
-        node_to_spend = self.g.add_node(0)
+        node_to_spend = self.g.add_node(0, self.t)
         self.ownership[node_to_spend] = owner
         if self.t + dt < len(self.buffer):
             self.buffer[self.t + dt] += [(owner, recip, node_to_spend)]  # at block self.t + dt, owner will send new_node to recip
         self.amounts[node_to_spend] = amt
-        assert node_to_spend in self.amounts and self.amounts[node_to_spend] == amt
+        assert node_to_spend in self.amounts and self.amounts[node_to_spend] == amt and dt >= 0
         return node_to_spend, dt
          
     def spend_from_buffer(self):
@@ -122,11 +122,11 @@ class Simulator(object):
                 assert orig_num_red_edges == len(self.g.red_edges) - ct
                 num_red_edges = len(self.g.red_edges)
                 assert orig_num_red_edges == len(self.g.red_edges) - ct
-                sig_nodes += [self.g.add_node(1)]  
+                sig_nodes += [self.g.add_node(1, self.t)]  
                 assert orig_num_red_edges == len(self.g.red_edges) - ct
                 y = sig_nodes[-1]
                 assert orig_num_red_edges == len(self.g.red_edges) - ct
-                self.ownership[y] = (k[0], x[2])  # ownership of a right_node is a pair (k, x) where k is an owner index in the stochastic matrix and x is the left_node being spent
+                self.ownership[y] = (k[0], x[2])  # ownership of a right_node is a pair (k, x, t) where k is an owner index in the stochastic matrix, x is the left_node being spent, t is the time step that the signature node appears
                 assert orig_num_red_edges == len(self.g.red_edges) - ct
                 rings[y] = self.get_ring(x[2]) 
                 assert orig_num_red_edges == len(self.g.red_edges) - ct
@@ -134,11 +134,11 @@ class Simulator(object):
             txn_bundles[-1] += [sig_nodes]
             assert orig_num_red_edges == len(self.g.red_edges) - ct
 
-            change_node = self.g.add_node(0)  # add a left_node and assign ownership
+            change_node = self.g.add_node(0, self.t)  # add a left_node and assign ownership
             assert orig_num_red_edges == len(self.g.red_edges) - ct
             self.ownership[change_node] = k[0]
             assert orig_num_red_edges == len(self.g.red_edges) - ct
-            recipient_node = self.g.add_node(0)  # add a left_node and assign ownership
+            recipient_node = self.g.add_node(0, self.t)  # add a left_node and assign ownership
             assert orig_num_red_edges == len(self.g.red_edges) - ct
             self.ownership[recipient_node] = k[1]
             assert orig_num_red_edges == len(self.g.red_edges) - ct
@@ -146,25 +146,25 @@ class Simulator(object):
             for snode in sig_nodes:
                 num_red_edges = len(self.g.red_edges)
                 assert orig_num_red_edges == len(self.g.red_edges) - ct
-                eid = (recipient_node, snode)
+                pair = (recipient_node, snode)
                 assert orig_num_red_edges == len(self.g.red_edges) - ct
-                assert eid not in self.g.blue_edges
+                assert pair not in self.g.blue_edges
                 assert orig_num_red_edges == len(self.g.red_edges) - ct
-                self.g.add_edge(0, eid, 1.0)  # adds blue edge
+                self.g.add_edge(0, pair, 1.0, self.t)  # adds blue edge
                 assert orig_num_red_edges == len(self.g.red_edges) - ct
-                eidd = (change_node, snode)
+                pairr = (change_node, snode)
                 assert orig_num_red_edges == len(self.g.red_edges) - ct
-                assert eidd not in self.g.blue_edges
+                assert pairr not in self.g.blue_edges
                 assert orig_num_red_edges == len(self.g.red_edges) - ct
-                self.g.add_edge(0, eidd, 1.0)  # adds blue edge
+                self.g.add_edge(0, pairr, 1.0, self.t)  # adds blue edge
                 assert orig_num_red_edges == len(self.g.red_edges) - ct
                 assert len(rings[snode]) == len(set(rings[snode]))
                 for ring_member in rings[snode]:
-                    eiddd = (ring_member, snode)
+                    pairrr = (ring_member, snode)  # when is talk like a pirate day anyway?
                     assert orig_num_red_edges == len(self.g.red_edges) - ct
-                    assert eiddd not in self.g.red_edges
+                    assert pairrr not in self.g.red_edges
                     assert orig_num_red_edges == len(self.g.red_edges) - ct
-                    self.g.add_edge(1, eiddd, 1.0) # adds red edge
+                    self.g.add_edge(1, pairrr, 1.0, self.t) # adds red edge
                     ct += 1
                     assert orig_num_red_edges == len(self.g.red_edges) - ct
                 assert num_red_edges + len(rings[snode]) == len(self.g.red_edges)
@@ -261,7 +261,4 @@ class Simulator(object):
         if self.mode == "uniform":
             ring = sample(available_keys, min(len(self.g.left_nodes), self.ringsize) - 1) + [spender]
         return ring
-
-
-        
 
