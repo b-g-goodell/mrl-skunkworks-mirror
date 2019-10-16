@@ -205,7 +205,11 @@ class BipartiteGraph(object):
             non_match_edges  :  edges with color b that are not in input_match excluding zero-weight edges
         """
         # Check input_match is a match of color b
-        assert self.chk_colored_match(b, input_match)
+        try:
+            assert self.chk_colored_match(b, input_match)
+        except AssertionError:
+            raise Exception('Input_match is not a match!')
+        
         assert b in [0, 1]
         
         if b:
@@ -227,23 +231,44 @@ class BipartiteGraph(object):
 
     @staticmethod
     def _so_fresh_so_clean(b, shortest_paths_with_gains, input_match):
-        print("Entered _so_fresh_so_clean.")
-        print("b = " + str(b))
-        print("shortest paths with gains = " + str(shortest_paths_with_gains))
-        print("input match = " + str(input_match))
+        # print("Entered _so_fresh_so_clean.")
+        # print("b = " + str(b))
+        # print("shortest paths with gains = " + str(shortest_paths_with_gains))
+        # print("input match = " + str(input_match))
         ordered_shortest_paths = sorted(shortest_paths_with_gains, key=lambda z:z[1], reverse=True)
-        result = input_match
-        tn = [eid[0] for eid in result] + [eid[1] for eid in result]
+        # print("ordered shortest paths = " + str(ordered_shortest_paths))
+        
+        tn = []
+        paths_to_add = []
+        
+        # First we greedily make shortest_paths_with_gains into a vertex-disjoint list
         for next_path_and_gain in ordered_shortest_paths:
             next_path, gain = next_path_and_gain
+             #print("Processing " + str((next_path, gain)))
             touched = False
             for eid in next_path:
                 if eid[0] in tn or eid[1] in tn:
                     touched = True
                     break
             if not touched and gain > 0.0:
-                temp = [eid for eid in result if eid not in next_path] + [eid for eid in next_path if eid not in result]
-                result = temp
+                # print("Not touched and with positive gain!")
+                paths_to_add += [next_path]
+                # print("Collected paths = " + str(paths_to_add))
+                tn += [eid[0] for eid in next_path]
+                tn += [eid[1] for eid in next_path] 
+                # print("Touched nodes = " + str(tn))
+                
+        
+        # Next we iteratively XOR these with the input_match.
+        # print("Working with paths to add: " + str(paths_to_add))
+        result = input_match
+        temp = result
+        # print("Starting match = " + str(input_match))
+        for next_path in paths_to_add:
+            # print("XORING with " + str(next_path))
+            temp = [eid for eid in result if eid not in next_path] + [eid for eid in next_path if eid not in result]
+            result = temp
+            # print("Result = " + str(result))
         return result
         
 
@@ -529,7 +554,7 @@ class BipartiteGraph(object):
                 # Check that found_shortest_path = True if and only if at least one shortest path is in shortest_paths
                 assert not found or len(shortest_paths) > 0
                 assert len(shortest_paths) == 0 or found
-                print("FOUND SHORTEST PATHS = " + str(shortest_paths))
+                # print("FOUND SHORTEST PATHS = " + str(shortest_paths))
                 if len(shortest_paths) > 0:
                     # #  print(shortest_paths)
                     result = self._so_fresh_so_clean(b, shortest_paths, input_match)
@@ -615,6 +640,7 @@ class BipartiteGraph(object):
                                 length = len(next_path)
                                 shortest_cycles_with_pos_gain = []
                                 shortest_cycles_with_pos_gain += [(next_path, gain)]
+                                # print("LIST OF SHORTEST CYCLES FOUND SO FAR" + str(shortest_cycles_with_pos_gain))
                                 for eid in next_path:
                                     nodes_on_shortest_cycles_so_far += [eid[0], eid[1]]
                             elif len(next_path) == length:
@@ -646,6 +672,7 @@ class BipartiteGraph(object):
             else:
                 # in this case, length is not None and len(next_path) > length, so we discard next_path
                 pass
+        # print("CALLING SO FRESH SO CLEAN WITH SHORTEST CYCLES: " + str(shortest_cycles_with_pos_gain))
 
         result = self._so_fresh_so_clean(b, shortest_cycles_with_pos_gain, input_match)
         return result
@@ -666,7 +693,7 @@ class BipartiteGraph(object):
 
         temp = next_match
         w = sum([weight_dict[eid] for eid in temp])
-        print("Calling boost with color b = " + str(b) + " and match = " + str(temp))
+        # print("Calling boost with color b = " + str(b) + " and match = " + str(temp))
         next_match = self.boost(b, temp)
         assert next_match is not None
         v = sum([weight_dict[eid] for eid in next_match])

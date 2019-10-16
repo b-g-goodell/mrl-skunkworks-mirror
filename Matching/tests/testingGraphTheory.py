@@ -221,13 +221,13 @@ class TestBipartiteGraph(unittest.TestCase):
 
         self.assertTrue(3 <= len(g.left_nodes) <= 5)
         for i in range(1, len(g.left_nodes)+1):
-            self.assertTrue(i in g.left_nodes)
-            self.assertEqual(g.left_nodes[i], i)
+            self.assertTrue((i, None) in g.left_nodes)
+            self.assertEqual(g.left_nodes[(i, None)], (i, None))
 
         self.assertTrue(3 <= len(g.right_nodes) <= 5)
         for i in range(len(g.left_nodes)+1, len(g.right_nodes)+1):
-            self.assertTrue(i in g.right_nodes)
-            self.assertEqual(g.right_nodes[i], i)
+            self.assertTrue((i, None) in g.right_nodes)
+            self.assertEqual(g.right_nodes[(i, None)], (i, None))
 
         self.assertEqual(len([x for x in g.right_nodes if x in g.left_nodes]), 0)
 
@@ -242,7 +242,7 @@ class TestBipartiteGraph(unittest.TestCase):
 
         for x in g.left_nodes:
             for y in g.right_nodes:
-                self.assertTrue((x, y) in g.red_edges or (x, y) in g.blue_edges and not ((x,y) in g.red_edges and (x,y) in g.blue_edges))
+                self.assertTrue((x, y, None) in g.red_edges or (x, y, None) in g.blue_edges and not ((x,y, None) in g.red_edges and (x,y, None) in g.blue_edges))
 
 
     #  #  @unittest.skip("Skipping test_d_add_node")
@@ -363,13 +363,13 @@ class TestBipartiteGraph(unittest.TestCase):
         self.assertEqual(len(g.red_edges) + len(g.blue_edges), len(g.left_nodes)*len(g.right_nodes))
         n = g.count - 1  # get the count
         j = g.add_node(1)  # add a node to the right
-        self.assertEqual(j, n+1)  # check the node identity was correct
+        self.assertEqual(j, (n+1, None))  # check the node identity was correct
         ii = g.add_node(0)  # add a node to the left
-        self.assertEqual(ii, n+2)  # check the node identity was correct
+        self.assertEqual(ii, (n+2, None))  # check the node identity was correct
         i = min(list(g.left_nodes.keys()))  # get smallest left node key
-        self.assertEqual(i, 1)  # check it's 1
+        self.assertEqual(i, (1, None))  # check it's 1
         jj = min(list(g.right_nodes.keys()))  # get the smallest right node key
-        self.assertEqual(jj, len(g.left_nodes))  # check this index is where make_r_graph switched to add nodes to the right
+        self.assertEqual(jj, (len(g.left_nodes), None))  # check this index is where make_r_graph switched to add nodes to the right
 
         w = random.random()
 
@@ -714,8 +714,10 @@ class TestBipartiteGraph(unittest.TestCase):
         blues_incident_with_two = [eid for eid in g.blue_edges if 2 in eid and g.blue_edges[eid] > 0.0]
         blues_incident_with_three = [eid for eid in g.blue_edges if 3 in eid and g.blue_edges[eid] > 0.0]
 
-        match.append(random.choice(reds_incident_with_one + reds_incident_with_two + reds_incident_with_three))
-        match.append(random.choice(blues_incident_with_one + blues_incident_with_two + blues_incident_with_three))
+        if len(reds_incident_with_one + reds_incident_with_two + reds_incident_with_three) > 0:
+            match.append(random.choice(reds_incident_with_one + reds_incident_with_two + reds_incident_with_three))
+        if len(blues_incident_with_one + blues_incident_with_two + blues_incident_with_three) > 0:
+            match.append(random.choice(blues_incident_with_one + blues_incident_with_two + blues_incident_with_three))
         self.assertFalse(g.check_colored_maximal_match(0, match))  # multicolored lists can't be matches
         self.assertFalse(g.check_colored_maximal_match(1, match))  # multicolored lists can't be matches
 
@@ -1116,8 +1118,8 @@ class TestBipartiteGraph(unittest.TestCase):
 
         # We'll start with a pair of multi-colored edges, which can't be a match.
         input_match = [((1, None), (7, None), None), ((2, None), (6, None), None)]
-        result = g.xxtend(b, input_match)
-        self.assertTrue(result is None)
+        with self.assertRaises(Exception):
+            result = g.xxtend(b, input_match)
 
         # We'll also check a pair of adjacent edges.
         input_match = [((1, None), (7, None), None), ((3, None), (7, None), None)]
@@ -1267,10 +1269,10 @@ class TestBipartiteGraph(unittest.TestCase):
 
         self.assertTrue(g.check_colored_maximal_match(b, input_match))
         result = g.boost(b, input_match)
-        print("RESULT FROM TEST_DD_BOOST = " + str(result))
+        # print("RESULT FROM TEST_DD_BOOST = " + str(result))
         self.assertEqual(len(result), 2)
         self.assertTrue(((1, None), (9, None), None) in result)
-        self.assertTrue(((5, None), (7, None), None) in result)
+        self.assertTrue(((3, None), (7, None), None) in result)
 
     #  @unittest.skip("Skipping test_d_optimize")
     def test_d_optimize(self):
