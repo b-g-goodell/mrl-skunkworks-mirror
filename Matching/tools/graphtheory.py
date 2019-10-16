@@ -4,7 +4,7 @@ import sys
 
 # Check version number
 if sys.version_info[0] != 3:
-    print("This script requires Python3")
+    #  print("This script requires Python3")
     sys.exit(1)
 
 
@@ -89,6 +89,7 @@ class BipartiteGraph(object):
         edge weight of color b with weight w and over-writes the weight of color 1-b with weight 0.0.
 
         """
+        # print(pair)
         (x, y) = pair  # parse eid to get left node and right node ids
         result = x in self.left_nodes
         result = result and y in self.right_nodes    
@@ -142,13 +143,13 @@ class BipartiteGraph(object):
         if len(input_match) == 0:
             result = True
         else:
-            # print("INPUT MATCH = ", input_match)
+            # #  print("INPUT MATCH = ", input_match)
             left_vertices = [eid[0] for eid in input_match]
-            for lv in left_vertices:
-                try:
-                    assert lv in self.left_nodes
-                except AssertionError:
-                    print("alleged left vertex = ", lv, " but left nodes = ", list(self.left_nodes.keys()))
+            # for lv in left_vertices:
+            #     try:
+            #         assert lv in self.left_nodes
+            #     except AssertionError:
+            #         #  print("alleged left vertex = ", lv, " but left nodes = ", list(self.left_nodes.keys()))
             dedupe_lefts = list(set(left_vertices))
             # Every right vertex incident with an edge in the purported match must be incident with exactly one edge.
             right_vertices = [eid[1] for eid in input_match]
@@ -172,7 +173,7 @@ class BipartiteGraph(object):
             there exists an edge with color b and non-zero weight not in input_match with unmatched endpoints
           Otherwise output True.
         """
-        # print("Taking input_match ", input_match)
+        # #  print("Taking input_match ", input_match)
         any_in = lambda A, B, C : any([(x[0] in A and x[1] in B) for x in C])
         if b:
             weight_dict = self.red_edges
@@ -184,11 +185,11 @@ class BipartiteGraph(object):
             matched_rights = [eid[1] for eid in input_match]
             unmatched_rights = [nid for nid in self.right_nodes if nid not in matched_rights]
             unmatched_lefts = [nid for nid in self.left_nodes if nid not in matched_lefts]
-            # print("UNMATCHED RIGHTS = ", unmatched_rights)
-            # print("UNMATCHED LEFTS = ", unmatched_lefts)
-            # print("WEIGHT DICT = ", weight_dict)
+            # #  print("UNMATCHED RIGHTS = ", unmatched_rights)
+            # #  print("UNMATCHED LEFTS = ", unmatched_lefts)
+            # #  print("WEIGHT DICT = ", weight_dict)
             is_match_maximal = not any_in(unmatched_lefts, unmatched_rights, weight_dict)
-            # print("Is this match maximal?", is_match_maximal)
+            # #  print("Is this match maximal?", is_match_maximal)
             result = is_match_maximal
             # result = result and not any([eid in weight_dictfor eid in weight_dict if eid[0] in unmatched_rights and eid[1] in unmatched_lefts])
         return result
@@ -226,6 +227,10 @@ class BipartiteGraph(object):
 
     @staticmethod
     def _so_fresh_so_clean(b, shortest_paths_with_gains, input_match):
+        print("Entered _so_fresh_so_clean.")
+        print("b = " + str(b))
+        print("shortest paths with gains = " + str(shortest_paths_with_gains))
+        print("input match = " + str(input_match))
         ordered_shortest_paths = sorted(shortest_paths_with_gains, key=lambda z:z[1], reverse=True)
         result = input_match
         tn = [eid[0] for eid in result] + [eid[1] for eid in result]
@@ -239,6 +244,7 @@ class BipartiteGraph(object):
             if not touched and gain > 0.0:
                 temp = [eid for eid in result if eid not in next_path] + [eid for eid in next_path if eid not in result]
                 result = temp
+        return result
         
 
     @staticmethod
@@ -249,7 +255,7 @@ class BipartiteGraph(object):
         if len(shortest_paths_with_gains) > 0:
             # Order the list
             ordered_shortest_paths = sorted(shortest_paths_with_gains, key=lambda z: z[1], reverse=True)
-            # print(ordered_shortest_paths)
+            # #  print(ordered_shortest_paths)
             # Construct vertex-disjoint list greedily
             vd = []
             touched_nodes = []
@@ -282,7 +288,7 @@ class BipartiteGraph(object):
                     if path_is_disj:
                         vd += [next_path]
                         touched_nodes += distinct_nodes
-            print("NEXT PATH = ", next_path)
+            #  print("NEXT PATH = ", next_path)
             # Iteratively take symmetric differences with input_match = result
             if len(vd) > 0:
                 temp = input_match
@@ -301,63 +307,63 @@ class BipartiteGraph(object):
         """
         found = False
         length = 0
-        print("Calling xxtend with " + str(b) + " and " + str(input_match) + "\n\n")
+        #  print("Calling xxtend with " + str(b) + " and " + str(input_match) + "\n\n")
         result = None
-        print("Input match is maximal:")
+        #  print("Input match is maximal:")
         maxl_match = self.check_colored_maximal_match(b, input_match)
-        print(maxl_match)
+        #  print(maxl_match)
         if maxl_match:
-            print("Setting result to input match:")
+            #  print("Setting result to input match:")
             result = input_match
-            print(result)
+            #  print(result)
         else:            
             soln_box = []
-            print("Setting weight_dict.")
+            #  print("Setting weight_dict.")
             if b:
                 weight_dict = self.red_edges
             else:
                 weight_dict = self.blue_edges
-            print("Parsing (b, input_match):")
+            #  #  print("Parsing (b, input_match):")
             temp = self._parse(b, input_match)
             (matched_lefts, matched_rights, unmatched_lefts, unmatched_rights, bb, non_match_edges) = temp
-            print(temp)
-            print("All non_match edges are in weight_dict.")
+            #  #  print(temp)
+            #  #  print("All non_match edges are in weight_dict.")
             temp = True
             for eid in non_match_edges:
                 if eid not in weight_dict:
                     temp = False
-            print(temp)
+            #  #  print(temp)
             assert temp
             temp = None
             
             q = deque([[eid] for eid in non_match_edges if eid[0] in unmatched_lefts])
 
             while len(q) > 0:
-                print("Printing state of queue of possible paths:")
-                print(q)
-                print("Popping next path:")
+                #  #  print("Printing state of queue of possible paths:")
+                #  #  print(q)
+                #  #  print("Popping next path:")
                 next_path = q.popleft()
                 if (not found and length == 0) or (found and len(next_path) <= length):
-                    print(next_path)
+                    #  #  print(next_path)
 
-                    print("Computing weight:")
+                    #  #  print("Computing weight:")
                     next_weight = sum([weight_dict[eid] for eid in next_path if eid not in input_match]) + sum([weight_dict[eid] for eid in input_match if eid not in next_path])
-                    print(next_weight)
-                    print("Computing gain:")
+                    #  #  print(next_weight)
+                    #  #  print("Computing gain:")
                     gain = next_weight - sum([weight_dict[eid] for eid in input_match])
-                    print(gain)
-                    print("Assembling touched nodes:")
+                    #  #  print(gain)
+                    #  #  print("Assembling touched nodes:")
                     tn = set([eid[0] for eid in next_path]+[eid[1] for eid in next_path])
-                    print(tn)
-                    print("Computing parity:")
+                    #  #  print(tn)
+                    #  #  print("Computing parity:")
                     p = len(next_path) % 2
-                    print(p)
-                    print("Computing last edge and node:")
+                    #  #  print(p)
+                    #  #  print("Computing last edge and node:")
                     last_edge = next_path[-1]
                     last_node = last_edge[p]
-                    print(last_edge)
-                    print(last_node)
-                    print("Adding to solution box if we are done... adding to queue otherwise.")
+                    #  #  print(last_edge)
+                    #  #  print(last_node)
+                    #  #  print("Adding to solution box if we are done... adding to queue otherwise.")
                     if gain > 0.0 and last_node in unmatched_rights:
                         if not found:
                             assert length == 0
@@ -366,18 +372,18 @@ class BipartiteGraph(object):
                         else:
                             assert 0 < len(next_path) <= length
                         soln_box += [(next_path, gain)]
-                        print("soln box:")
-                        print(soln_box)
+                        #  #  print("soln box:")
+                        #  #  print(soln_box)
                     elif last_node not in unmatched_rights:
                         for eid in weight_dict:
                             if eid[p] == last_node and eid[1-p] not in tn:
                                 q.append(next_path + [eid])
-            print("Sorting soln box")
+            #  #  print("Sorting soln box")
             soln_box = sorted(soln_box, key=lambda x:x[1], reverse=True)
-            print("After sort:")
-            print(soln_box)
+            #  #  print("After sort:")
+            #  #  print(soln_box)
             
-            print("Collecting vertex-disjoint solutions greedily by this sort")
+            #  #  print("Collecting vertex-disjoint solutions greedily by this sort")
             vd_solns = []
             tn = []
             for path_gain_pair in soln_box:
@@ -386,17 +392,18 @@ class BipartiteGraph(object):
                     vd_solns += [next_path]
                     for eid in next_path:
                         tn = list(set(tn + [eid[0], eid[1]]))
-                    print("vd_solns = " + str(vd_solns))
-                    print("tn = " + str(tn))
+                    #  #  print("vd_solns = " + str(vd_solns))
+                    #  #  print("tn = " + str(tn))
 
             result = input_match
             for soln in vd_solns:
                 temp = [eid for eid in soln if eid not in result] + [eid for eid in result if eid not in soln]
                 result = temp
+        #  #  print("RESULT FROM XXTEND = ", result)
         return result
         
     def extend(self, b, input_match=[]):
-        # print("ENTERING EXTEND, HERE IS INPUT MATCH", input_match)
+        # #  #  print("ENTERING EXTEND, HERE IS INPUT MATCH", input_match)
         assert isinstance(input_match, list)
         try:
             assert input_match is not None
@@ -416,31 +423,31 @@ class BipartiteGraph(object):
                 assert eid in weight_dict
         
         if self.chk_colored_match(b, input_match):
-            print("Found that ", input_match, " is a colored match.")
+            #  #  print("Found that ", input_match, " is a colored match.")
             shortest_paths = []  # solution box
             found = False
             length = None
             if self.check_colored_maximal_match(b, input_match):
                 # shortest_paths = []
-                print("\n\nFound that ", input_match, " cannot be extended\n\n")
+                #  #  print("\n\nFound that ", input_match, " cannot be extended\n\n")
                 result = input_match
             else:
-                print("\n\nFound that ", input_match, " is not yet maximal\n\n")
+                #  #  print("\n\nFound that ", input_match, " is not yet maximal\n\n")
                 temp = self._parse(b, input_match)
                 (matched_lefts, matched_rights, unmatched_lefts, unmatched_rights, bb, non_match_edges) = temp
-                print("Parsing...")
-                print(temp)
+                #  #  print("Parsing...")
+                #  #  print(temp)
                 assert bb == b
                 q = deque([[eid] for eid in weight_dict if (eid not in input_match and eid[0] in unmatched_lefts)])
                 assert len(q) > 0
                 while len(q) > 0:
-                    print("We have ", len(q), " possible starting edges, q = ", q)
+                    #  #  print("We have ", len(q), " possible starting edges, q = ", q)
                     assert not found or (length is not None and len(shortest_paths) > 0)
                     next_path = q.popleft()
-                    print("next path under investigation = ", next_path)
+                    #  print("next path under investigation = ", next_path)
                     
                     if length is None or length is not None and len(next_path) <= length:
-                        print("This path is not yet too long.")
+                        #  print("This path is not yet too long.")
                         # Paths have distinct edges and distinct vertices. Cycles are like paths, but the first and last
                         # vertices are allowed to match.
 
@@ -448,18 +455,18 @@ class BipartiteGraph(object):
                         # first_edge = next_path[0]
                         # first_node = first_edge[0]
                         last_edge = next_path[-1]
-                        print("last edge of this graph = ", last_edge)
+                        #  print("last edge of this graph = ", last_edge)
 
-                        print("length of next path under investigation: ", next_path, len(next_path))
+                        #  print("length of next path under investigation: ", next_path, len(next_path))
                         p = len(next_path) % 2  # path parity
                         assert p in [0, 1]
-                        print("parity of this path = ", p)
+                        #  print("parity of this path = ", p)
                         assert p in [0, 1]
                         last_node = last_edge[p]
 
-                        print("last node on this path = ", last_node)
+                        #  print("last node on this path = ", last_node)
                         num_distinct_edges = len(list(set(next_path)))  # count distinct edges
-                        print("number of distinct edges for this path = ", num_distinct_edges)
+                        #  print("number of distinct edges for this path = ", num_distinct_edges)
 
                         # collect sequence of nodes
                         temp = []
@@ -470,11 +477,11 @@ class BipartiteGraph(object):
                                 idx_p = i % 2  # index parity
                                 temp += [eid[idx_p]]
                             temp += [next_path[-1][1 - idx_p]]
-                        print("nodes on this path = ", temp)
+                        #  print("nodes on this path = ", temp)
 
                         distinct_nodes = list(set(temp))
                         num_distinct_nodes = len(distinct_nodes)  # count distinct vertices
-                        print("number of distinct nodes = ", num_distinct_nodes)
+                        #  print("number of distinct nodes = ", num_distinct_nodes)
 
                         if len(next_path) == num_distinct_edges and len(temp) == num_distinct_nodes:
                             # Extend the path with allowable alternating edges, placing the extended paths back into the
@@ -484,13 +491,13 @@ class BipartiteGraph(object):
                                 # node_key_pairs = itertools.product(list(self.left_nodes.keys()), list(self.right_nodes.keys()))
                                 # sd = [weight_dict[z] for z in node_key_pairs if z in next_path and z not in input_match and z in weight_dict]
                                 # sd += [weight_dict[z] for z in node_key_pairs if z in input_match and z not in next_path and z in weight_dict]
-                                # print("Path cannot be extended...")
+                                # #  print("Path cannot be extended...")
                                 sd = 0.0
                                 
                                 sd = [weight_dict[z] for z in weight_dict if (z in input_match and z not in next_path)]
                                 sd += [weight_dict[z] for z in weight_dict if (z not in input_match and z in next_path)]
                                 gain = sum(sd) - sum([weight_dict[eid] for eid in input_match])
-                                # print("Path has gain ", gain)
+                                # #  print("Path has gain ", gain)
                                 if gain > 0.0:
                                     if length is None or len(next_path) < length:
                                         shortest_paths = [(next_path, gain)]
@@ -505,25 +512,26 @@ class BipartiteGraph(object):
                                 else:
                                     edge_set_to_search = non_match_edges
                                 assert edge_set_to_search is not None
-                                print("edge set to search = ", edge_set_to_search)
-                                print("next_path = ", next_path)
-                                print(edge_set_to_search)
+                                #  print("edge set to search = ", edge_set_to_search)
+                                #  print("next_path = ", next_path)
+                                #  print(edge_set_to_search)
                                 these_edges = [eid for eid in edge_set_to_search if
                                                eid not in next_path and eid[p] == last_node and eid[
                                                    1 - p] not in distinct_nodes]
-                                # print("these edges = ", these_edges)
+                                # #  print("these edges = ", these_edges)
                                 assert len(these_edges) > 0 # if = 0, then the prev path was augmenting and we never would have entered this if statement
                                 if len(these_edges) > 0:
                                     for eid in these_edges:
                                         path_to_add = None
                                         path_to_add = next_path + [eid]
-                                        # print("Path to add to queue = ", path_to_add)
+                                        # #  print("Path to add to queue = ", path_to_add)
                                         q.append(path_to_add)
                 # Check that found_shortest_path = True if and only if at least one shortest path is in shortest_paths
                 assert not found or len(shortest_paths) > 0
                 assert len(shortest_paths) == 0 or found
+                print("FOUND SHORTEST PATHS = " + str(shortest_paths))
                 if len(shortest_paths) > 0:
-                    # print(shortest_paths)
+                    # #  print(shortest_paths)
                     result = self._so_fresh_so_clean(b, shortest_paths, input_match)
                 else:
                     result = input_match
@@ -532,9 +540,7 @@ class BipartiteGraph(object):
         return result
 
     def boost(self, b, input_match):
-        """ Should be called after
-
-        Note : maximality of input_match implies no *augmenting* paths exist, i.e. alternating and beginning and
+        """ Note : maximality of input_match implies no *augmenting* paths exist, i.e. alternating and beginning and
         ending with unmatched nodes (this is a theorem, that augmenting paths exist IFF the match is maximal).
 
         However, there exist alternating cycles, and the optimal match can be written as the symmetric difference bet-
@@ -542,105 +548,112 @@ class BipartiteGraph(object):
         """
         result = None
         assert b in [0, 1]
+        assert self.check_colored_maximal_match(b, input_match)
+        
         if b:
             weight_dict = self.red_edges
         else:
             weight_dict = self.blue_edges
-        if self.check_colored_maximal_match(b, input_match):
-            shortest_cycles_with_pos_gain = []  # solution box
-            found = False
-            length = None
+            
+        shortest_cycles_with_pos_gain = []  # solution box
+        nodes_on_shortest_cycles_so_far = []
+        found = False
+        length = None
 
-            (matched_lefts, matched_rights, unmatched_lefts, unmatched_rights, bb, non_match_edges) = \
-                self._parse(b, input_match)
+        (matched_lefts, matched_rights, unmatched_lefts, unmatched_rights, bb, non_match_edges) = \
+            self._parse(b, input_match)
 
-            q = deque([[eid] for eid in non_match_edges])
-            while len(q) > 0:
-                assert not found or length is not None
+        q = deque([[eid] for eid in non_match_edges])
+        while len(q) > 0:
+            assert not found or length is not None
 
-                next_path = q.popleft()  # Get next path
+            next_path = q.popleft()  # Get next path
+            
+            if length is None or (length is not None and len(next_path) <= length):
+                # Paths have distinct edges and distinct vertices. Cycles are like paths, but the first and last
+                # vertices are allowed to match.
+                # Certain paths are degenerate in that they lead into a cycle, looping back on themselves, leading
+                # to a union of a path and a cycle. These are not alternating cycles and are discarded. The em-
+                # bedded cycle will be found earlier in the algorithm anyway
 
-                if length is None or length is not None and len(next_path) <= length:
-                    # Paths have distinct edges and distinct vertices. Cycles are like paths, but the first and last
-                    # vertices are allowed to match.
-                    # Certain paths are degenerate in that they lead into a cycle, looping back on themselves, leading
-                    # to a union of a path and a cycle. These are not alternating cycles and are discarded. The em-
-                    # bedded cycle will be found earlier in the algorithm anyway
+                # Collect some info for convenience
+                first_edge = next_path[0]
+                first_node = first_edge[0]
+                last_edge = next_path[-1]
 
-                    # Collect some info for convenience
-                    first_edge = next_path[0]
-                    first_node = first_edge[0]
-                    last_edge = next_path[-1]
+                p = len(next_path) % 2  # path parity
+                assert p in [0, 1]
+                last_node = last_edge[p]
+                num_distinct_edges = len(list(set(next_path)))  # count distinct edges
 
-                    p = len(next_path) % 2  # path parity
-                    assert p in [0, 1]
-                    last_node = last_edge[p]
-                    num_distinct_edges = len(list(set(next_path)))  # count distinct edges
+                # collect sequence of nodes
+                temp = []
+                if len(next_path) >= 1:
+                    idx_p = None
+                    for i in range(len(next_path)):
+                        eid = next_path[i]
+                        idx_p = i % 2  # index parity
+                        temp += [eid[idx_p]]
+                    temp += [next_path[-1][1-idx_p]]
 
-                    # collect sequence of nodes
-                    temp = []
-                    if len(next_path) >= 1:
-                        idx_p = None
-                        for i in range(len(next_path)):
-                            eid = next_path[i]
-                            idx_p = i % 2  # index parity
-                            temp += [eid[idx_p]]
-                        temp += [next_path[-1][1-idx_p]]
-
-                    num_distinct_nodes = len(list(set(temp)))  # count distinct vertices
-
-                    if len(next_path) == num_distinct_edges:
-                        # paths have distinct edges.
-                        if len(temp) - num_distinct_nodes in [0, 1]:
-                            # paths of N distinct edges have N+1 vertices, except when the path is degenerate or a cycle
-                            # in which case they have N vertices.
-                            if len(temp) - num_distinct_nodes == 1:
-                                # such a path is either a cycle or is degenerate.
-                                if first_node == last_node:
-                                    # this path is a cycle. If it has positive gain, put it into the solution box.
-                                    sd = [weight_dict[eid] for eid in next_path if eid not in input_match]
-                                    sd += [weight_dict[eid] for eid in input_match if eid not in next_path]
-                                    gain = sum(sd) - sum([weight_dict[eid] for eid in input_match])
-                                    if gain > 0.0:
-                                        found = True
-                                        if length is None or len(next_path) < length:
-                                            length = len(next_path)
-                                            shortest_cycles_with_pos_gain = []
-                                            shortest_cycles_with_pos_gain += [(next_path, gain)]
-                                        elif len(next_path) == length:
-                                            shortest_cycles_with_pos_gain += [(next_path, gain)]
-                                        else:
-                                            # In this case, from the first if statement, length is not None (so a
-                                            # shortest cycle has been found) and len(next_path) >= length, but, from the
-                                            # second if statement, also len(next_path) != length, so
-                                            # len(next_path) > length necessarily. This cycle is too long, discard it.
-                                            pass
-                                else:
-                                    # this path is degenerate and is discarded
-                                    pass
+                num_distinct_nodes = len(list(set(temp)))  # count distinct vertices
+                
+                assert len(next_path) == num_distinct_edges and len(temp) - num_distinct_nodes in [0, 1]
+                # paths have distinct edges.
+                # paths of N distinct edges have N+1 vertices, except when the path is degenerate or a cycle
+                # in which case they have N vertices.
+                if len(temp) - num_distinct_nodes == 1:
+                    # such a path is either a cycle or is degenerate.
+                    if first_node == last_node:
+                        # this path is a cycle. If it has positive gain, put it into the solution box and update nodes_on_shortest_cycles_so_far
+                        sd = [weight_dict[eid] for eid in next_path if eid not in input_match]
+                        sd += [weight_dict[eid] for eid in input_match if eid not in next_path]
+                        gain = sum(sd) - sum([weight_dict[eid] for eid in input_match])
+                        if gain > 0.0:
+                            found = True
+                            if length is None or len(next_path) < length:
+                                length = len(next_path)
+                                shortest_cycles_with_pos_gain = []
+                                shortest_cycles_with_pos_gain += [(next_path, gain)]
+                                for eid in next_path:
+                                    nodes_on_shortest_cycles_so_far += [eid[0], eid[1]]
+                            elif len(next_path) == length:
+                                shortest_cycles_with_pos_gain += [(next_path, gain)]
+                                for eid in next_path:
+                                    nodes_on_shortest_cycles_so_far += [eid[0], eid[1]]
                             else:
-                                # this path is not a cycle and is made of all distinct vertices. Extend the path with
-                                # allowable alternating edges, placing the extended paths back into the queue.
-                                if p:
-                                    edge_set_to_search = input_match
-                                else:
-                                    edge_set_to_search = non_match_edges
-
-                                for eid in edge_set_to_search:
-                                    if eid not in next_path and eid[p] == last_node:
-                                        path_to_add = None
-                                        path_to_add = next_path + [eid]
-                                        q.append(path_to_add)
+                                # In this case, from the first if statement, length is not None (so a
+                                # shortest cycle has been found) and len(next_path) >= length, but, from the
+                                # second if statement, also len(next_path) != length, so
+                                # len(next_path) > length necessarily. This cycle is too long, discard it.
+                                pass
+                    else:
+                        # this path is degenerate and is discarded
+                        pass
                 else:
-                    # in this case, length is not None and len(next_path) > length, so we discard next_path
-                    pass
+                    # this path is not a cycle and is made of all distinct vertices. Extend the path with
+                    # allowable alternating edges, placing the extended paths back into the queue.
+                    if p:
+                        edge_set_to_search = input_match
+                    else:
+                        edge_set_to_search = non_match_edges
 
-            result = self._so_fresh_so_clean(b, shortest_cycles_with_pos_gain, input_match)
+                    for eid in edge_set_to_search:
+                        if eid not in next_path and eid[p] == last_node:
+                            path_to_add = None
+                            path_to_add = next_path + [eid]
+                            q.append(path_to_add)
+            else:
+                # in this case, length is not None and len(next_path) > length, so we discard next_path
+                pass
+
+        result = self._so_fresh_so_clean(b, shortest_cycles_with_pos_gain, input_match)
         return result
 
     def optimize(self, b):
         assert b in [0, 1]
         next_match = self.xxtend(b) # starts with empty match by default
+        assert next_match is not None
         temp = None
         while next_match != temp and next_match is not None:
             temp = next_match
@@ -653,7 +666,9 @@ class BipartiteGraph(object):
 
         temp = next_match
         w = sum([weight_dict[eid] for eid in temp])
+        print("Calling boost with color b = " + str(b) + " and match = " + str(temp))
         next_match = self.boost(b, temp)
+        assert next_match is not None
         v = sum([weight_dict[eid] for eid in next_match])
         assert len(temp) == len(next_match)
         while v - w > 0.0:

@@ -32,7 +32,8 @@ def make_rr_graph():
     for i in range(3):
         g.add_node(1)
 
-    # We will assume the graph is complete and flip a fair coin to determine which edges are red and blue.
+    # We will assume the graph is complete and flip a fair coin to determine 
+    # which edges are red and blue.
     for xid in g.left_nodes:
         for yid in g.right_nodes:
             g.add_edge(random.getrandbits(1), (xid, yid), random.random())
@@ -53,110 +54,91 @@ def make_d_graph():
         g.add_node(1)
 
     # Weight edges by starting with weight 0.0, iterating through all 25 edges up in increments of 4.0.
-    # Formulaically, we weight edge with ident (i, j) and color (i*j)%2 with i in [1, 2, 3, 4, 5] and j in
-    # [6, 7, 8, 9, 10] with:
-    #    wt(i, j) = 20*(i-1) + 4*(j-6)
-    # leaving the other weights 0.0. This provides the following non-zero blue weights:
-    #  (1,  8):   8.0, blue
-    #  (1, 10):  16.0, blue
-    #  (2,  6):  20.0, blue
-    #  (2,  7):  24.0, blue
-    #  (2,  8):  28.0, blue
-    #  (2,  9):  32.0, blue
-    #  (2, 10):  36.0, blue
-    #  (3,  6):  40.0, blue
-    #  (3,  8):  48.0, blue
-    #  (3, 10):  56.0, blue
-    #  (4,  6):  60.0, blue
-    #  (4,  7):  64.0, blue
-    #  (4,  8):  68.0, blue
-    #  (4,  9):  72.0, blue
-    #  (4, 10):  76.0, blue
-    #  (5,  6):  80.0, blue
-    #  (5,  8):  88.0, blue
-    #  (5, 10):  96.0, blue
-    # and the following non-zero red weights:
-    #  (1,  7):   4.0, red
-    #  (1,  9):  12.0, red
-    #  (3,  7):  44.0, red
-    #  (3,  9):  52.0, red
-    #  (5,  7):  84.0, red
-    #  (5,  9):  92.0, red
+    # Formulaically, we use edge ident ((i, t), (j, s), r) and color (i*j)%2 and:
+    #    wt(i, j) = 20*(i-1) + 4*(j-5)
     
-    wt = 4.0
     for xid in sorted(list(g.left_nodes.keys())):
         for yid in sorted(list(g.right_nodes.keys())):
+            wt = 20.0*(xid[0]-1) + 4.0*(yid[0]-5)
             g.add_edge((xid[0]*yid[0]) % 2, (xid, yid), wt)
-            wt += 4.0
-
+            
+    assert len(g.left_nodes)==5
+    assert len(g.right_nodes)==5
+    assert len(g.red_edges)==6
+    assert len(g.blue_edges)==19
+    
+    assert ((1, None), (6, None), None) in g.blue_edges
+    assert g.blue_edges[((1, None), (6, None), None)] == 4.0 
+    assert ((1, None), (8, None), None) in g.blue_edges
+    assert g.blue_edges[((1, None), (8, None), None)] == 12.0
+    assert ((1, None), (10, None), None) in g.blue_edges
+    assert g.blue_edges[((1, None), (10, None), None)] == 20.0
+    
+    assert ((2, None), (6, None), None) in g.blue_edges
+    assert g.blue_edges[((2, None), (6, None), None)] == 24.0
+    assert ((2, None), (7, None), None) in g.blue_edges
+    assert g.blue_edges[((2, None), (7, None), None)] == 28.0
+    assert ((2, None), (8, None), None) in g.blue_edges
+    assert g.blue_edges[((2, None), (8, None), None)] == 32.0
+    assert ((2, None), (9, None), None) in g.blue_edges
+    assert g.blue_edges[((2, None), (9, None), None)] == 36.0
+    assert ((2, None), (10, None), None) in g.blue_edges
+    assert g.blue_edges[((2, None), (10, None), None)] == 40.0
+    
+    assert ((3, None), (6, None), None) in g.blue_edges
+    assert g.blue_edges[((3, None), (6, None), None)] == 44.0
+    assert ((3, None), (8, None), None) in g.blue_edges
+    assert g.blue_edges[((3, None), (8, None), None)] == 52.0
+    assert ((3, None), (10, None), None) in g.blue_edges
+    assert g.blue_edges[((3, None), (10, None), None)] == 60.0
+    
+    assert ((4, None), (6, None), None) in g.blue_edges
+    assert g.blue_edges[((4, None), (6, None), None)] == 64.0
+    assert ((4, None), (7, None), None) in g.blue_edges
+    assert g.blue_edges[((4, None), (7, None), None)] == 68.0
+    assert ((4, None), (8, None), None) in g.blue_edges
+    assert g.blue_edges[((4, None), (8, None), None)] == 72.0
+    assert ((4, None), (9, None), None) in g.blue_edges
+    assert g.blue_edges[((4, None), (9, None), None)] == 76.0
+    assert ((4, None), (10, None), None) in g.blue_edges
+    assert g.blue_edges[((4, None), (10, None), None)] == 80.0
+    
+    assert ((5, None), (6, None), None) in g.blue_edges
+    assert g.blue_edges[((5, None), (6, None), None)] == 84.0
+    assert ((5, None), (8, None), None) in g.blue_edges
+    assert g.blue_edges[((5, None), (8, None), None)] == 92.0
+    assert ((5, None), (10, None), None) in g.blue_edges
+    assert g.blue_edges[((5, None), (10, None), None)] == 100.0
+    
+    assert ((1, None), (7, None), None) in g.red_edges
+    assert g.red_edges[((1, None), (7, None), None)] == 8.0
+    assert ((1, None), (9, None), None) in g.red_edges
+    assert g.red_edges[((1, None), (9, None), None)] == 16.0
+    assert ((3, None), (7, None), None) in g.red_edges
+    assert g.red_edges[((3, None), (7, None), None)] == 48.0
+    assert ((3, None), (9, None), None) in g.red_edges
+    assert g.red_edges[((3, None), (9, None), None)] == 56.0
+    assert ((5, None), (7, None), None) in g.red_edges
+    assert g.red_edges[((5, None), (7, None), None)] == 88.0
+    assert ((5, None), (9, None), None) in g.red_edges
+    assert g.red_edges[((5, None), (9, None), None)] == 96.0
+    
     return g
 
 
 def make_dd_graph():
-    g = BipartiteGraph(None)
-
-    # Generate a small random graph for use in random tests below.
-    num_left_nodes = 5
-    for i in range(num_left_nodes):
-        g.add_node(0)
-    num_right_nodes = 5
-    for i in range(num_right_nodes):
-        g.add_node(1)
-
-    # First, we set the color of (x, y) is (x*y) % 2.
-    # Next will set the graph to be complete.
-    # Next weight edges by starting with weight 0.0, iterating through all 25 edges up in increments of 4...
-    # Formulaically, edge (i, j) with i in [1, 2, 3, 4, 5] and j in [6, 7, 8, 9, 10] has weight:
-    #    wt(i, j) = 20*(i-1) + 4*(j-6)
-    # Providing the following blue edge weights:
-    #  (1,  8):   8.0, blue
-    #  (1, 10):  16.0, blue
-    #  (2,  6):  20.0, blue
-    #  (2,  7):  24.0, blue
-    #  (2,  8):  28.0, blue
-    #  (2,  9):  32.0, blue
-    #  (2, 10):  36.0, blue
-    #  (3,  6):  40.0, blue
-    #  (3,  8):  48.0, blue
-    #  (3, 10):  56.0, blue
-    #  (4,  6):  60.0, blue
-    #  (4,  7):  64.0, blue
-    #  (4,  8):  68.0, blue
-    #  (4,  9):  72.0, blue
-    #  (4, 10):  76.0, blue
-    #  (5,  6):  80.0, blue
-    #  (5,  8):  88.0, blue
-    #  (5, 10):  96.0, blue
-    # and the following red edge weights
-    #  (1,  7):   4.0, red  : -
-    #  (1,  9):  12.0, red  : +
-    #  (3,  7):  48.0, red  : +
-    #  (3,  9):  52.0, red  : -
-    #  (5,  7):  84.0, red
-    #  (5,  9):  92.0, red
-    # Lastly, we tweak edges (1, 7), (3, 9), (1, 9), and (3, 7) to have weights one higher or lower than usual:
-    #  (1,  7):   3.0, red
-    #  (1,  9):  13.0, red
-    #  (3,  7):  49.0, red
-    #  (3,  9):  51.0, red
-    wt = 4.0
-    for xid in g.left_nodes:
-        for yid in g.right_nodes:
-            g.add_edge((xid[0]*yid[0]) % 2, (xid, yid, None), wt)
-            wt += 4.0
-
-    g.red_edges[(1, 7)] -= 1.0
-    g.red_edges[(1, 9)] += 1.0
-    g.red_edges[(3, 7)] += 1.0
-    g.red_edges[(3, 9)] -= 1.0
-
+    g = make_d_graph()
+    g.red_edges[((1, None), (7, None), None)] -= 1.0
+    g.red_edges[((1, None), (9, None), None)] += 1.0
+    g.red_edges[((3, None), (7, None), None)] += 1.0
+    g.red_edges[((3, None), (9, None), None)] -= 1.0
     return g
 
 
 class TestBipartiteGraph(unittest.TestCase):
     """ TestBipartiteGraph tests BipartiteGraph objects """
     
-    @unittest.skip("Skipping test_d_init")
+    #  @unittest.skip("Skipping test_d_init")
     def test_d_init(self):
         g = make_d_graph()
 
@@ -168,15 +150,15 @@ class TestBipartiteGraph(unittest.TestCase):
         wt = 4.0
         for xid in sorted(list(g.left_nodes.keys())):
             for yid in sorted(list(g.right_nodes.keys())):
-                self.assertTrue((xid, yid) in g.red_edges or (xid, yid) in g.blue_edges)
-                if xid*yid % 2:
-                    self.assertTrue((xid, yid) in g.red_edges and g.red_edges[(xid, yid)] == wt)
+                self.assertTrue((xid, yid, None) in g.red_edges or (xid, yid, None) in g.blue_edges)
+                if xid[0]*yid[0] % 2:
+                    self.assertTrue((xid, yid, None) in g.red_edges and g.red_edges[(xid, yid, None)] == wt)
                 else:
-                    self.assertTrue((xid, yid) in g.blue_edges and g.blue_edges[(xid, yid)] == wt)
+                    self.assertTrue((xid, yid, None) in g.blue_edges and g.blue_edges[(xid, yid, None)] == wt)
                 wt += 4.0
 
 
-    @unittest.skip("Skipping test_d_init_by_hand")
+    #  @unittest.skip("Skipping test_d_init_by_hand")
     def test_d_init_by_hand(self):
         """ test_init tests initialization of a BipartiteGraph """
         g = BipartiteGraph()
@@ -226,7 +208,7 @@ class TestBipartiteGraph(unittest.TestCase):
         self.assertTrue((2, 4) in g.red_edges and g.red_edges[(2, 4)] == 1)
         self.assertEqual(len(g.red_edges), 4)
 
-    @unittest.skip("Skipping test_r_init")
+    #  #  @unittest.skip("Skipping test_r_init")
     def test_r_init(self):
         g = make_r_graph()
 
@@ -263,7 +245,7 @@ class TestBipartiteGraph(unittest.TestCase):
                 self.assertTrue((x, y) in g.red_edges or (x, y) in g.blue_edges and not ((x,y) in g.red_edges and (x,y) in g.blue_edges))
 
 
-    @unittest.skip("Skipping test_d_add_node")
+    #  #  @unittest.skip("Skipping test_d_add_node")
     def test_d_add_node(self):
         g = BipartiteGraph()
         b = 0
@@ -298,7 +280,7 @@ class TestBipartiteGraph(unittest.TestCase):
             self.assertEqual(g.count-1, len(g.left_nodes)+len(g.right_nodes))
 
 
-    @unittest.skip("Skipping test_r_add_node")
+    #  @unittest.skip("Skipping test_r_add_node")
     def test_r_add_node(self):
         g = make_r_graph()  # start with graph with 3-5 nodes on each side and random weights.
         # n = g.count - 1
@@ -322,7 +304,7 @@ class TestBipartiteGraph(unittest.TestCase):
             self.assertEqual(g.count-1, len(g.left_nodes)+len(g.right_nodes))
 
 
-    @unittest.skip("Skipping test_d_add_edge")
+    #  @unittest.skip("Skipping test_d_add_edge")
     def test_d_add_edge(self):
         g = make_d_graph()  # This is a (5,5) complete bipartite graph; see make_d_graph for details.
         self.assertTrue(len(g.left_nodes), 5)
@@ -373,7 +355,7 @@ class TestBipartiteGraph(unittest.TestCase):
         self.assertTrue(len(g.red_edges), 7)
 
 
-    @unittest.skip("Skipping test_r_add_edge")
+    #  @unittest.skip("Skipping test_r_add_edge")
     def test_r_add_edge(self):
         # make a random graph with 3-5 nodes (uniformly selected on each side) with equal likelihood of being blue or
         # red and with random weights on the interval 0.0 to 1.0
@@ -418,7 +400,7 @@ class TestBipartiteGraph(unittest.TestCase):
         self.assertEqual(c, cc)
 
 
-    @unittest.skip("Skipping test_d_del_edge")
+    #  @unittest.skip("Skipping test_d_del_edge")
     def test_d_del_edge(self):
         # we will delete edge (4, 9)
         g = make_d_graph()
@@ -448,7 +430,7 @@ class TestBipartiteGraph(unittest.TestCase):
         self.assertEqual(c, cc)
 
 
-    @unittest.skip("Skipping test_r_del_edge")
+    #  @unittest.skip("Skipping test_r_del_edge")
     def test_r_del_edge(self):
         g = make_r_graph()
         while len(g.red_edges) == 0 or len(g.blue_edges) == 0:
@@ -485,7 +467,7 @@ class TestBipartiteGraph(unittest.TestCase):
         self.assertEqual(c, cc)
 
 
-    @unittest.skip("Skipping test_d_del_node")
+    #  @unittest.skip("Skipping test_d_del_node")
     def test_d_del_node(self):
         g = make_d_graph()
 
@@ -518,7 +500,7 @@ class TestBipartiteGraph(unittest.TestCase):
         self.assertEqual(m-mm, 3)
 
 
-    @unittest.skip("Skipping test_r_del_node")
+    #  @unittest.skip("Skipping test_r_del_node")
     def test_r_del_node(self):
         g = make_r_graph()
 
@@ -552,7 +534,7 @@ class TestBipartiteGraph(unittest.TestCase):
         self.assertEqual(m-mm, len(blue_eids_incident_with_x))
 
 
-    @unittest.skip("Skipping test_d_chk_colored_match")
+    #  @unittest.skip("Skipping test_d_chk_colored_match")
     def test_d_chk_colored_match(self):
         g = make_d_graph()
 
@@ -604,7 +586,7 @@ class TestBipartiteGraph(unittest.TestCase):
         self.assertFalse(g.chk_colored_match(b, match))
         self.assertFalse(g.chk_colored_match(1 - b, match))
 
-    @unittest.skip("Skipping test_d_check_colored_match")
+    #  @unittest.skip("Skipping test_d_check_colored_match")
     def test_d_check_colored_match(self):
         g = make_d_graph()
 
@@ -658,7 +640,7 @@ class TestBipartiteGraph(unittest.TestCase):
         self.assertFalse(g.chk_colored_match(b, match))
         self.assertFalse(g.chk_colored_match(1 - b, match))
 
-    @unittest.skip("Skipping test_r_check_colored_match")
+    #  @unittest.skip("Skipping test_r_check_colored_match")
     def test_r_check_colored_match(self):
         g = make_r_graph()
         b = random.getrandbits(1)
@@ -693,7 +675,7 @@ class TestBipartiteGraph(unittest.TestCase):
             self.assertTrue(g.chk_colored_match(b, match))
             self.assertFalse(g.chk_colored_match(1-b, match))
 
-    @unittest.skip("Skipping test_d_check_colored_maximal_match")
+    #  @unittest.skip("Skipping test_d_check_colored_maximal_match")
     def test_d_check_colored_maximal_match(self):
         g = make_d_graph()
 
@@ -709,7 +691,7 @@ class TestBipartiteGraph(unittest.TestCase):
 
         b = 0
         match = [((2, None), (8, None), None), ((4, None), (6, None), None)]
-        self.assertTrue(g.check_colored_maximal_match(b, match))
+        self.assertFalse(g.check_colored_maximal_match(b, match)) # this match isn't maximal
         self.assertFalse(g.check_colored_maximal_match(1 - b, match))
 
         b = 1
@@ -717,7 +699,7 @@ class TestBipartiteGraph(unittest.TestCase):
         self.assertFalse(g.check_colored_maximal_match(b, match))
         self.assertFalse(g.check_colored_maximal_match(1 - b, match))
 
-    @unittest.skip("Skipping test_r_check_colored_maximal_match")
+    #  @unittest.skip("Skipping test_r_check_colored_maximal_match")
     def test_r_check_colored_maximal_match(self):
         # TODO: We should verify this with an independent implementation...
         # Doing this "at random" only has a probability of being correct, so we can run this with a sample size.
@@ -777,7 +759,7 @@ class TestBipartiteGraph(unittest.TestCase):
             else:
                 self.assertFalse(g.check_colored_maximal_match(b, match))
 
-    @unittest.skip("Skipping test_d_parse")
+    #  @unittest.skip("Skipping test_d_parse")
     def test_d_parse(self):
         g = make_d_graph()  # this graph has 5 nodes on each side with deterministic weights
 
@@ -789,27 +771,32 @@ class TestBipartiteGraph(unittest.TestCase):
 
         self.assertTrue((5, None) in matched_lefts)
         self.assertEqual(len(matched_lefts), 1)
+        
         self.assertTrue((9, None) in matched_rights)
         self.assertEqual(len(matched_rights), 1)
+        
         self.assertTrue((1, None) in unmatched_lefts)
         self.assertTrue((2, None) in unmatched_lefts)
         self.assertTrue((3, None) in unmatched_lefts)
         self.assertTrue((4, None) in unmatched_lefts)
         self.assertEqual(len(unmatched_lefts), 4)
+        
         self.assertTrue((6, None) in unmatched_rights)
         self.assertTrue((7, None) in unmatched_rights)
         self.assertTrue((8, None) in unmatched_rights)
         self.assertTrue((10, None) in unmatched_rights)
         self.assertEqual(len(unmatched_rights), 4)
+        
         self.assertEqual(apparent_color, b)
+        
         self.assertTrue(((1, None), (7, None), None) in non_match_edges)
         self.assertTrue(((1, None), (9, None), None) in non_match_edges)
         self.assertTrue(((3, None), (7, None), None) in non_match_edges)
         self.assertTrue(((3, None), (9, None), None) in non_match_edges)
         self.assertTrue(((5, None), (7, None), None) in non_match_edges)
-        self.assertEqual(len(non_match_edges), 25 - len(input_match))
+        self.assertEqual(len(non_match_edges), 6 - len(input_match))
 
-    @unittest.skip("Skipping test_d_clean")
+    #  @unittest.skip("Skipping test_d_clean")
     def test_d_clean(self):
         """ test_d_cleanup deterministically tests the cleanup function.
         """
@@ -961,25 +948,27 @@ class TestBipartiteGraph(unittest.TestCase):
         # This is now a maximal blue matching.
         self.assertTrue(g.check_colored_maximal_match(b, result))
 
-    # @unittest.skip("Skipping test_d_extend")
+    # #  @unittest.skip("Skipping test_d_extend")
     def test_d_extend(self):
         # print("BEGINNING TEST_D_EXTEND")
         # Recall we say a matching is MAXIMAL if no edge can be added to the matching without breaking the matching
         # property... but we say a maximal matching is OPTIMAL if it has the heaviest weight.
         g = make_d_graph()
         self.assertTrue(len(g.red_edges) > 0)
-        print("\n" + str(g.red_edges.keys()) + "\n" + str(g.red_edges.values()))
+        # print("\n" + str(g.red_edges.keys()) + "\n" + str(g.red_edges.values()))
         
         b = 1  # Color red is easier to check correctness for this particular deterministic graph
 
         ##########################################################
         # let's start with a trivial match
 
-        result = g.xxtend(b) # WHAT THE FUCK
+        result = g.xxtend(b)
         self.assertIsNot(result, None)
-        print("Result from calling .xxtend = result = ", result)
+        # print("Result from calling .xxtend = result = ", result)
+        
         # Since this does not include an input match is empty, all shortest paths are treated like having gain 1, so they are added to the
-        # list greedily in terms of lexicographic ordering. This means we will add 5, 9 and 3, 7
+        # list greedily. Possible edges: (1, 7), (1, 9), (3, 7), (3, 9), (5, 7), (5, 9) have weightes 4, 12, 44, 52, 84, 92. So edge (5, 9)
+        # is added first, which is vertex-disjoint with (1, 9) and (3, 9). Next heaviest edge is (3, 7) with weight 44.
         self.assertIn(((5, None), (9, None), None), result)
         self.assertIn(((3, None), (7, None), None), result)
         self.assertEqual(len(result), 2)
@@ -1017,14 +1006,23 @@ class TestBipartiteGraph(unittest.TestCase):
 
         input_match = [((1, None), (7, None), None)]
         result = g.xxtend(b, input_match)
-        print("result = ", result)
+        # Breadth-first search for augmenting paths goes like this:
+        # Unmatched lefts are 3 and 5.
+        # All augmenting paths must therefore start with (3, 7), (3, 9), (5, 7), 
+        # or (5, 9).
+        # Of these, (5, 9) and (3, 9) are augmenting paths all by themselves,
+        # and (5, 9) is heavier.
+        self.assertTrue(isinstance(result, list))
+        self.assertEqual(len(result), 2)
+        self.assertIn(((1, None), (7, None), None), result)
+        self.assertIn(((5, None), (9, None), None), result)
 
         # this should call _cleanup with the following:
         b_test = 1
         weight_dict = g.red_edges
         # b_test = 0
         # weight_dict = g.blue_edges
-        sp = [[((3, None), (7, None), None)], [((1, None), (9, None), None)]]
+        sp = [[((1, None), (7, None), None)], [((5, None), (9, None), None)]]
         shortest_paths_test = []
         for next_path in sp:
             sd = [weight_dict[eid] for eid in next_path if eid not in input_match]
@@ -1032,22 +1030,30 @@ class TestBipartiteGraph(unittest.TestCase):
             gain = sum(sd) - sum([weight_dict[eid] for eid in input_match])
             shortest_paths_test += [(next_path, gain)]
         # non_match_edges_test = [((1, None), (9, None), None), ((3, None), (7, None), None), ((3, None), (9, None), None), ((5, None), (7, None), None), ((5, None), (9, None), None)]
-        print("b_test ", b_test)
-        print("shortest_paths_test ", shortest_paths_test)
-        print("input match ", input_match)
+        # print("b_test ", b_test)
+        # print("shortest_paths_test ", shortest_paths_test)
+        # print("input match ", input_match)
     
         result_test = g._clean(b_test, shortest_paths_test, input_match)
-        print("Cleaning results = ", result_test)
+        # print("Cleaning results = ", result_test)
 
         # both should result in this:
-        result_ground_truth = [((5, None), (7, None), None), ((1, None), (9, None), None)]
-        print("Result = ", result)
-        print("result_test = ", result_test)
-        print("result_ground_truth = ", result_ground_truth)
-        self.assertEqual(result, result_test)
-        self.assertEqual(result, result_ground_truth)
-        self.assertEqual(result_test, result_ground_truth)
-
+        result_ground_truth = [((1, None), (7, None), None), ((5, None), (9, None), None)]
+        # print("Result = ", result)
+        # print("result_test = ", result_test)
+        # print("result_ground_truth = ", result_ground_truth)
+        self.assertEqual(len(set(result)), len(result))
+        self.assertEqual(len(set(result_test)), len(result_test))
+        self.assertEqual(len(set(result_ground_truth)), len(result_ground_truth))
+        for i in result:
+            self.assertIn(i, result_test)
+            self.assertIn(i, result_ground_truth)
+            
+        # Now the match is maximal, so if we go again we should get the same result back.
+        input_match = result
+        result = g.xxtend(b, input_match)
+        self.assertEqual(input_match, result)
+        
         ##########################################################
         # Let's go again with a different match.
 
@@ -1071,11 +1077,15 @@ class TestBipartiteGraph(unittest.TestCase):
 
         # both should result in this:
         result_ground_truth = [((1, None), (9, None), None), ((5, None), (7, None), None)]
-        self.assertEqual(result, result_test)
-        self.assertEqual(result, result_ground_truth)
-        self.assertEqual(result_test, result_ground_truth)
+        self.assertEqual(len(set(result)), len(result))
+        self.assertEqual(len(set(result_test)), len(result_test))
+        self.assertEqual(len(set(result_ground_truth)), len(result_ground_truth))
+        for i in result:
+            self.assertIn(i, result_test)
+            self.assertIn(i, result_ground_truth)
+            
 
-    @unittest.skip("Skipping test_dd_extend")
+    #  @unittest.skip("Skipping test_dd_extend")
     def test_dd_extend(self):
         # Recall we say a matching is MAXIMAL if no edge can be added to the matching without breaking the matching
         # property... but we say a maximal matching is OPTIMAL if it has the heaviest weight.
@@ -1173,7 +1183,7 @@ class TestBipartiteGraph(unittest.TestCase):
         self.assertEqual(result, result_ground_truth)
         self.assertEqual(result_test, result_ground_truth)
 
-    @unittest.skip("Skipping test_r_extend")
+    #  @unittest.skip("Skipping test_r_extend")
     def test_r_extend(self):
         g = make_r_graph()
         b = 1
@@ -1185,9 +1195,71 @@ class TestBipartiteGraph(unittest.TestCase):
         self.assertTrue(g.chk_colored_match(b, result))
         self.assertTrue(len(g.red_edges) == 0 or len(result) > len(input_match))
 
-    @unittest.skip("Skipping test_dd_boost")
+    #  @unittest.skip("Skipping test_dd_boost")
     def test_dd_boost(self):
         g = make_dd_graph()
+           
+        self.assertEqual(len(g.left_nodes), 5)
+        self.assertEqual(len(g.right_nodes), 5)
+        self.assertEqual(len(g.red_edges), 6)
+        self.assertEqual(len(g.blue_edges), 19)
+        
+        self.assertIn(((1, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (6, None), None)], 4.0) 
+        self.assertIn(((1, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (8, None), None)], 12.0)
+        self.assertIn(((1, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (10, None), None)], 20.0)
+        
+        self.assertIn(((2, None), (6, None), None), g.blue_edges)
+        self.assertEqual( g.blue_edges[((2, None), (6, None), None)],  24.0)
+        self.assertIn(((2, None), (7, None), None), g.blue_edges)
+        self.assertEqual( g.blue_edges[((2, None), (7, None), None)],  28.0)
+        self.assertIn(((2, None), (8, None), None), g.blue_edges)
+        self.assertEqual( g.blue_edges[((2, None), (8, None), None)],  32.0)
+        self.assertIn(((2, None), (9, None), None), g.blue_edges)
+        self.assertEqual( g.blue_edges[((2, None), (9, None), None)],  36.0)
+        self.assertIn(((2, None), (10, None), None), g.blue_edges)
+        self.assertEqual( g.blue_edges[((2, None), (10, None), None)],  40.0)
+        
+        self.assertIn( ((3, None), (6, None), None), g.blue_edges)
+        self.assertEqual( g.blue_edges[((3, None), (6, None), None)] , 44.0)
+        self.assertIn( ((3, None), (8, None), None) , g.blue_edges)
+        self.assertEqual( g.blue_edges[((3, None), (8, None), None)] , 52.0)
+        self.assertIn( ((3, None), (10, None), None), g.blue_edges)
+        self.assertEqual( g.blue_edges[((3, None), (10, None), None)] , 60.0)
+        
+        self.assertIn( ((4, None), (6, None), None) , g.blue_edges)
+        self.assertEqual( g.blue_edges[((4, None), (6, None), None)] , 64.0)
+        self.assertIn( ((4, None), (7, None), None) , g.blue_edges)
+        self.assertEqual( g.blue_edges[((4, None), (7, None), None)] , 68.0)
+        self.assertIn( ((4, None), (8, None), None) , g.blue_edges)
+        self.assertEqual( g.blue_edges[((4, None), (8, None), None)] , 72.0)
+        self.assertIn( ((4, None), (9, None), None) , g.blue_edges)
+        self.assertEqual( g.blue_edges[((4, None), (9, None), None)] , 76.0)
+        self.assertIn( ((4, None), (10, None), None) , g.blue_edges)
+        self.assertEqual( g.blue_edges[((4, None), (10, None), None)] , 80.0)
+        
+        self.assertIn( ((5, None), (6, None), None) , g.blue_edges)
+        self.assertEqual( g.blue_edges[((5, None), (6, None), None)] , 84.0)
+        self.assertIn( ((5, None), (8, None), None) , g.blue_edges)
+        self.assertEqual( g.blue_edges[((5, None), (8, None), None)] , 92.0)
+        self.assertIn( ((5, None), (10, None), None) , g.blue_edges)
+        self.assertEqual( g.blue_edges[((5, None), (10, None), None)] , 100.0)
+        
+        self.assertIn( ((1, None), (7, None), None) , g.red_edges)
+        self.assertEqual( g.red_edges[((1, None), (7, None), None)] , 7.0)
+        self.assertIn( ((1, None), (9, None), None) , g.red_edges)
+        self.assertEqual( g.red_edges[((1, None), (9, None), None)] , 17.0)
+        self.assertIn( ((3, None), (7, None), None) , g.red_edges)
+        self.assertEqual( g.red_edges[((3, None), (7, None), None)] , 49.0)
+        self.assertIn( ((3, None), (9, None), None) , g.red_edges)
+        self.assertEqual( g.red_edges[((3, None), (9, None), None)] , 55.0)
+        self.assertIn( ((5, None), (7, None), None) , g.red_edges)
+        self.assertEqual( g.red_edges[((5, None), (7, None), None)] , 88.0)
+        self.assertIn( ((5, None), (9, None), None) , g.red_edges)
+        self.assertEqual( g.red_edges[((5, None), (9, None), None)] , 96.0)
+        
         # The graph from make_d_graph has at least two matchings with equal weight. We tweaked
         # that graph for this example to ensure that the edge case isn't relevant to our test.
         b = 1
@@ -1195,11 +1267,12 @@ class TestBipartiteGraph(unittest.TestCase):
 
         self.assertTrue(g.check_colored_maximal_match(b, input_match))
         result = g.boost(b, input_match)
+        print("RESULT FROM TEST_DD_BOOST = " + str(result))
         self.assertEqual(len(result), 2)
         self.assertTrue(((1, None), (9, None), None) in result)
-        self.assertTrue(((3, None), (7, None), None) in result)
+        self.assertTrue(((5, None), (7, None), None) in result)
 
-    @unittest.skip("Skipping test_d_optimize")
+    #  @unittest.skip("Skipping test_d_optimize")
     def test_d_optimize(self):
         ''' This is an integration test that combines all the functionalities. '''
         g = make_d_graph()
