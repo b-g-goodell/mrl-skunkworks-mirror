@@ -586,13 +586,15 @@ class TestBipartiteGraph(unittest.TestCase):
         self.assertFalse(g.chk_colored_match(b, match))
         self.assertFalse(g.chk_colored_match(1 - b, match))
 
-    #  @unittest.skip("Skipping test_d_check_colored_match")
-    def test_d_check_colored_match(self):
+    #  @unittest.skip("Skipping test_d_chk_colored_match")
+    def test_d_chk_colored_match(self):
         g = make_d_graph()
 
         # a maximal red matching. there are 9 of these in total.
         b = 1
         match = [((3, None), (7, None), None), ((5, None), (9, None), None)]
+        self.assertIn(match[0], g.red_edges)
+        self.assertIn(match[1], g.red_edges)
         # print(match)
         # print(list(g.red_edges.keys()))
         self.assertTrue(g.chk_colored_match(b, match))
@@ -640,99 +642,120 @@ class TestBipartiteGraph(unittest.TestCase):
         self.assertFalse(g.chk_colored_match(b, match))
         self.assertFalse(g.chk_colored_match(1 - b, match))
 
-    #  @unittest.skip("Skipping test_r_check_colored_match")
-    def test_r_check_colored_match(self):
+    #  @unittest.skip("Skipping test_r_chk_colored_match")
+    def test_r_chk_colored_match(self):
         g = make_r_graph()
+        
+        # Pick a random color
         b = random.getrandbits(1)
+        if b:
+            wt_dict = g.red_edges
+            other_wt_dict = g.blue_edges
+        else:
+            wt_dict = g.blue_edges
+            other_wt_dict = g.red_edges
+            
+        # Empty matches are matches.
         match = []
         self.assertTrue(g.chk_colored_match(b, match))
 
-        if b:
-            eid = random.choice(list(g.red_edges.keys()))  # can pick from red or blue since they are the same
-            g.red_edges[eid] = random.random()
-            g.blue_edges[eid] = 0.0
-            match += [eid]
-            old = eid
-            eid = random.choice(list(g.red_edges.keys()))
-            g.red_edges[eid] = random.random()
-            g.blue_edges[eid] = 0.0
-            match += [eid]
-        else:
-            eid = random.choice(list(g.blue_edges.keys()))
-            g.blue_edges[eid] = random.random()
-            g.red_edges[eid] = 0.0
-            match += [eid]
-            old = eid
-            eid = random.choice(list(g.blue_edges.keys()))
-            g.blue_edges[eid] = random.random()
-            g.red_edges[eid] = 0.0
-            match += [eid]
+            
+        # Pick two random edge identities from that color edge dict, add to match
+        eid = random.choice(list(wt_dict.keys()))  # can pick from red or blue since they are the same
+        wt_dict[eid] = random.random()
+        match += [eid]
+        old = eid
 
-        if old[0] == eid[0] or old[1] == eid[1]:
+        eid = random.choice(list(wt_dict.keys()))
+        self.assertTrue(eid not in other_wt_dict or other_wt_dict[eid] == 0.0)
+        wt_dict[eid] = random.random()
+        match += [eid]
+        
+        # If these edges are not vertex-disjoint with each other or input_match,
+        # then adding these edges violates the match condition. Otherwise, not.
+
+        if any([eidd[0] == eiddd[0] or eidd[1] == eiddd[1] for eidd in match for eiddd in match]):
             self.assertFalse(g.chk_colored_match(b, match))
-            self.assertFalse(g.chk_colored_match(1-b, match))
+            self.assertFalse(g.chk_colored_match(1-b, match)) # should still be False
         else:
             self.assertTrue(g.chk_colored_match(b, match))
             self.assertFalse(g.chk_colored_match(1-b, match))
 
-    #  @unittest.skip("Skipping test_d_check_colored_maximal_match")
-    def test_d_check_colored_maximal_match(self):
+    #  @unittest.skip("Skipping test_d_chk_colored_maximal_match")
+    def test_d_chk_colored_maximal_match(self):
+        # print("\n\nEntering test_d_chk_colored_maximal_match\n")
         g = make_d_graph()
 
         b = 1
+        # A maximal match of red edges
         match = [((3, None), (7, None), None), ((5, None), (9, None), None)]
-        self.assertTrue(g.check_colored_maximal_match(b, match))
-        self.assertFalse(g.check_colored_maximal_match(1-b, match))
+        self.assertTrue(g.chk_colored_maximal_match(b, match))
+        self.assertFalse(g.chk_colored_maximal_match(1-b, match))
 
         b = 0
+        # A non-maximal match of blue edges.
+        # A counter example of a maximal match: (2, 7), (4, 9), (1, 6), (3, 8), (5, 10)
         match = [((2, None), (8, None), None), ((4, None), (6, None), None), ((1, None), (10, None), None)]
-        self.assertTrue(g.check_colored_maximal_match(b, match))
-        self.assertFalse(g.check_colored_maximal_match(1 - b, match))
+        # print("left nodes = " + str(g.left_nodes))
+        # print("right nodes = " + str(g.right_nodes))
+        # print("red edges = " + str(g.red_edges))
+        # print("bl00 edges = " + str(g.blue_edges))
+
+        self.assertFalse(g.chk_colored_maximal_match(b, match))
+        self.assertFalse(g.chk_colored_maximal_match(1 - b, match))
+        
+        # Let's use the above counter-example
+        match = [((2, None), (7, None), None), ((4, None), (9, None), None)]
+        match += [((1, None), (6, None), None), ((3, None), (8, None), None)]
+        match += [((5, None), (10, None), None)]
+        self.assertTrue(g.chk_colored_maximal_match(b, match))
+        self.assertFalse(g.chk_colored_maximal_match(1 - b, match))
+        
 
         b = 0
         match = [((2, None), (8, None), None), ((4, None), (6, None), None)]
-        self.assertFalse(g.check_colored_maximal_match(b, match)) # this match isn't maximal
-        self.assertFalse(g.check_colored_maximal_match(1 - b, match))
+        self.assertFalse(g.chk_colored_maximal_match(b, match)) # this match isn't maximal, since (1, 10) could match an additional pair (among others
+        self.assertFalse(g.chk_colored_maximal_match(1 - b, match))
 
         b = 1
         match = [((3, None), (7, None), None), ((2, None), (8, None), None)]  # multicolored sets can't be matchings of a single color
-        self.assertFalse(g.check_colored_maximal_match(b, match))
-        self.assertFalse(g.check_colored_maximal_match(1 - b, match))
+        self.assertFalse(g.chk_colored_maximal_match(b, match))
+        self.assertFalse(g.chk_colored_maximal_match(1 - b, match))
 
-    #  @unittest.skip("Skipping test_r_check_colored_maximal_match")
-    def test_r_check_colored_maximal_match(self):
+    #  @unittest.skip("Skipping test_r_chk_colored_maximal_match")
+    def test_r_chk_colored_maximal_match(self):
         # TODO: We should verify this with an independent implementation...
         # Doing this "at random" only has a probability of being correct, so we can run this with a sample size.
         g = make_rr_graph()  # 3x3 graph with random weights and randomly colored edges
         match = []
 
-        reds_incident_with_one = [eid for eid in g.red_edges if 1 in eid and g.red_edges[eid] > 0.0]
-        reds_incident_with_two = [eid for eid in g.red_edges if 2 in eid and g.red_edges[eid] > 0.0]
-        reds_incident_with_three = [eid for eid in g.red_edges if 3 in eid and g.red_edges[eid] > 0.0]
+        reds_incident_with_one = [eid for eid in g.red_edges if (1, None) in eid and g.red_edges[eid] > 0.0]
+        reds_incident_with_two = [eid for eid in g.red_edges if (2, None) in eid and g.red_edges[eid] > 0.0]
+        reds_incident_with_three = [eid for eid in g.red_edges if (3, None) in eid and g.red_edges[eid] > 0.0]
 
-        blues_incident_with_one = [eid for eid in g.blue_edges if 1 in eid and g.blue_edges[eid] > 0.0]
-        blues_incident_with_two = [eid for eid in g.blue_edges if 2 in eid and g.blue_edges[eid] > 0.0]
-        blues_incident_with_three = [eid for eid in g.blue_edges if 3 in eid and g.blue_edges[eid] > 0.0]
+        blues_incident_with_one = [eid for eid in g.blue_edges if (1, None) in eid and g.blue_edges[eid] > 0.0]
+        blues_incident_with_two = [eid for eid in g.blue_edges if (2, None) in eid and g.blue_edges[eid] > 0.0]
+        blues_incident_with_three = [eid for eid in g.blue_edges if (3, None) in eid and g.blue_edges[eid] > 0.0]
 
         if len(reds_incident_with_one + reds_incident_with_two + reds_incident_with_three) > 0:
             match.append(random.choice(reds_incident_with_one + reds_incident_with_two + reds_incident_with_three))
         if len(blues_incident_with_one + blues_incident_with_two + blues_incident_with_three) > 0:
             match.append(random.choice(blues_incident_with_one + blues_incident_with_two + blues_incident_with_three))
-        self.assertFalse(g.check_colored_maximal_match(0, match))  # multicolored lists can't be matches
-        self.assertFalse(g.check_colored_maximal_match(1, match))  # multicolored lists can't be matches
+        self.assertFalse(g.chk_colored_maximal_match(0, match))  # multicolored lists can't be matches
+        self.assertFalse(g.chk_colored_maximal_match(1, match))  # multicolored lists can't be matches
 
         sample_size = 100  # Tested up to 1000000 without failure... so far.
         for i in range(sample_size):
             g = make_rr_graph()
             match = []
 
-            reds_incident_with_one = [eid for eid in g.red_edges if 1 in eid and g.red_edges[eid] > 0.0]
-            reds_incident_with_two = [eid for eid in g.red_edges if 2 in eid and g.red_edges[eid] > 0.0]
-            reds_incident_with_three = [eid for eid in g.red_edges if 3 in eid and g.red_edges[eid] > 0.0]
+            reds_incident_with_one = [eid for eid in g.red_edges if (1, None) in eid and g.red_edges[eid] > 0.0]
+            reds_incident_with_two = [eid for eid in g.red_edges if (2, None) in eid and g.red_edges[eid] > 0.0]
+            reds_incident_with_three = [eid for eid in g.red_edges if (3, None) in eid and g.red_edges[eid] > 0.0]
 
-            blues_incident_with_one = [eid for eid in g.blue_edges if 1 in eid and g.blue_edges[eid] > 0.0]
-            blues_incident_with_two = [eid for eid in g.blue_edges if 2 in eid and g.blue_edges[eid] > 0.0]
-            blues_incident_with_three = [eid for eid in g.blue_edges if 3 in eid and g.blue_edges[eid] > 0.0]
+            blues_incident_with_one = [eid for eid in g.blue_edges if (1, None) in eid and g.blue_edges[eid] > 0.0]
+            blues_incident_with_two = [eid for eid in g.blue_edges if (2, None) in eid and g.blue_edges[eid] > 0.0]
+            blues_incident_with_three = [eid for eid in g.blue_edges if (3, None) in eid and g.blue_edges[eid] > 0.0]
 
             b = random.getrandbits(1)
             if b:
@@ -742,6 +765,9 @@ class TestBipartiteGraph(unittest.TestCase):
                     match.append(random.choice(reds_incident_with_two))
                 if len(reds_incident_with_three) > 0:
                     match.append(random.choice(reds_incident_with_three))
+
+                lefts = [nid for nid in g.left_nodes if any([eid[0]==nid for eid in g.red_edges])]
+                rights = [nid for nid in g.right_nodes if any([eid[1]==nid for eid in g.red_edges])]
             else:
                 if len(blues_incident_with_one) > 0:
                     match.append(random.choice(blues_incident_with_one))
@@ -749,17 +775,22 @@ class TestBipartiteGraph(unittest.TestCase):
                     match.append(random.choice(blues_incident_with_two))
                 if len(blues_incident_with_three) > 0:
                     match.append(random.choice(blues_incident_with_three))
-
+                lefts = [nid for nid in g.left_nodes if any([eid[0]==nid for eid in g.red_edges])]
+                rights = [nid for nid in g.right_nodes if any([eid[1]==nid for eid in g.red_edges])]
+            
             touched_lefts = [eid[0] for eid in match]
             dedupe_touched_lefts = list(set(touched_lefts))
             touched_rights = [eid[1] for eid in match]
             dedupe_touched_rights = list(set(touched_rights))
             if len(touched_lefts) == len(dedupe_touched_lefts) and \
                     len(touched_rights) == len(dedupe_touched_rights) and \
-                    len(match) > 0:
-                self.assertTrue(g.check_colored_maximal_match(b, match))
+                    len(match) == min(len(lefts), len(rights)):
+                self.assertTrue(g.chk_colored_maximal_match(b, match))
             else:
-                self.assertFalse(g.check_colored_maximal_match(b, match))
+                print("\n\nlefts = " + str(lefts))
+                print("rights = " + str(rights))
+                print("match = " + str(match))
+                self.assertFalse(g.chk_colored_maximal_match(b, match))
 
     #  @unittest.skip("Skipping test_d_parse")
     def test_d_parse(self):
@@ -926,20 +957,23 @@ class TestBipartiteGraph(unittest.TestCase):
             gain = sum(g.blue_edges[eid] for eid in sd) - sum(g.blue_edges[eid] for eid in input_match)
             shortest_paths += [(next_path, gain)]
         # gains of these paths:
-        #  (1,  6): 20*(1-1) + 4*(6-6)  = 0.0
-        #  (1, 10): 20*(1-1) + 4*(10-6) = 16.0
-        #  (3,  6): 20*(3-1) + 4*(6-6)  = 40.0
-        #  (3, 10): 20*(3-1) + 4*(10-6) = 56.0
-        #  (4,  6): 20*(4-1) + 4*(6-6)  = 60.0
-        #  (4,  7): 20*(4-1) + 4*(7-6)  = 64.0
-        #  (4,  9): 20*(4-1) + 4*(9-6)  = 72.0
-        #  (4, 10): 20*(4-1) + 4*(10-6) = 76.0
-        #  (5,  6): 20*(5-1) + 4*(6-6)  = 80.0
-        #  (5, 10): 20*(5-1) + 4*(10-6) = 96.0
+        #  (1,  6): 20*(1-1) + 4*(6-5)  = 4.0
+        #  (1, 10): 20*(1-1) + 4*(10-5) = 20.0
+        #  (3,  6): 20*(3-1) + 4*(6-5)  = 44.0
+        #  (3, 10): 20*(3-1) + 4*(10-5) = 60.0
+        #  (4,  6): 20*(4-1) + 4*(6-5)  = 64.0
+        #  (4,  7): 20*(4-1) + 4*(7-5)  = 68.0
+        #  (4,  9): 20*(4-1) + 4*(9-5)  = 76.0
+        #  (4, 10): 20*(4-1) + 4*(10-5) = 80.0
+        #  (5,  6): 20*(5-1) + 4*(6-5)  = 84.0
+        #  (5, 10): 20*(5-1) + 4*(10-5) = 100.0
+        for next_pair in shortest_paths:
+            (next_path, gain) = next_pair
+            print(next_path)
+            print(gain)
 
         result = g._clean(b, shortest_paths, input_match)
-        # greedy selection of vertex-disjoint sets: first we pick (5, 10), then (4, 9), then (3, 6).
-        # Since 6 and 10 are already matched we do not match 1.
+        # greedy selection of vertex-disjoint sets: first we pick (5, 10) for 100.0, then (4, 9) for 76.0, then (3, 6) for 44.0.
         # The symmetric difference between this set of edges and the input_match (2,8) is the union.
         self.assertTrue(((2, None), (8, None), None) in result)
         # print(result)
@@ -947,8 +981,10 @@ class TestBipartiteGraph(unittest.TestCase):
         self.assertTrue(((4, None), (9, None), None) in result)
         self.assertTrue(((3, None), (6, None), None) in result)
         self.assertTrue(len(result) == 4)
-        # This is now a maximal blue matching.
-        self.assertTrue(g.check_colored_maximal_match(b, result))
+        # This is a matching
+        self.assertTrue(g.chk_colored_match(b, result))
+        # This is not yet a maximal blue matching: nodes 1 and 7 are not matched
+        self.assertFalse(g.chk_colored_maximal_match(b, result))
 
     # #  @unittest.skip("Skipping test_d_extend")
     def test_d_extend(self):
@@ -1123,13 +1159,13 @@ class TestBipartiteGraph(unittest.TestCase):
 
         # We'll also check a pair of adjacent edges.
         input_match = [((1, None), (7, None), None), ((3, None), (7, None), None)]
-        result = g.xxtend(b, input_match)
-        self.assertTrue(result is None)
+        with self.assertRaises(Exception):
+            result = g.xxtend(b, input_match)
 
         # Mixed case
         input_match = [((1, None), (7, None), None), ((1, None), (6, None), None)]
-        result = g.xxtend(b, input_match)
-        self.assertTrue(result is None)
+        with self.assertRaises(Exception):
+            result = g.xxtend(b, input_match)
 
         ##########################################################
         # let's check that starting with a single edge works.
@@ -1154,9 +1190,9 @@ class TestBipartiteGraph(unittest.TestCase):
 
         # both should result in this:
         result_ground_truth = [((1, None), (7, None), None), ((5, None), (9, None), None)]
-        self.assertEqual(result, result_test)
-        self.assertEqual(result, result_ground_truth)
-        self.assertEqual(result_test, result_ground_truth)
+        self.assertEqual(set(result), set(result_test))
+        self.assertEqual(set(result), set(result_ground_truth))
+        self.assertEqual(set(result_test), set(result_ground_truth))
 
         ##########################################################
         # Let's go again with a different match.
@@ -1169,7 +1205,10 @@ class TestBipartiteGraph(unittest.TestCase):
         weight_dict = g.red_edges
         # b_test = 0
         # weight_dict = g.blue_edges
-        sp = [[((3, None), (7, None))], [((5, None), (7, None))]]
+        sp = [[((3, None), (7, None), None)], [((5, None), (7, None), None)]]
+        for p in sp:
+            for eid in p:
+                assert eid in weight_dict
         shortest_paths_test = []
         for next_path in sp:
             sd = [weight_dict[eid] for eid in next_path if eid not in input_match]
@@ -1267,7 +1306,7 @@ class TestBipartiteGraph(unittest.TestCase):
         b = 1
         input_match = [((1, None), (7, None), None), ((3, None), (9, None), None)]
 
-        self.assertTrue(g.check_colored_maximal_match(b, input_match))
+        self.assertTrue(g.chk_colored_maximal_match(b, input_match))
         result = g.boost(b, input_match)
         # print("RESULT FROM TEST_DD_BOOST = " + str(result))
         self.assertEqual(len(result), 2)

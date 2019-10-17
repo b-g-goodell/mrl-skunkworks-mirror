@@ -143,56 +143,98 @@ class BipartiteGraph(object):
         if len(input_match) == 0:
             result = True
         else:
-            # #  print("INPUT MATCH = ", input_match)
             left_vertices = [eid[0] for eid in input_match]
-            # for lv in left_vertices:
-            #     try:
-            #         assert lv in self.left_nodes
-            #     except AssertionError:
-            #         #  print("alleged left vertex = ", lv, " but left nodes = ", list(self.left_nodes.keys()))
             dedupe_lefts = list(set(left_vertices))
-            # Every right vertex incident with an edge in the purported match must be incident with exactly one edge.
             right_vertices = [eid[1] for eid in input_match]
-            # If a right vertex is duplicated, then two edges are incident with the same right node.
             dedupe_rights = list(set(right_vertices))
-            # Therefore this check verifies that the edge set is pairwise vertex disjoint!
             vtx_disj = (len(dedupe_lefts) == len(dedupe_rights) and len(dedupe_lefts) == len(input_match))
-            # Now we check that the match is all of one color, and that color is b.
-            correct_color = False
-            if vtx_disj:
-                blue_wt = sum([self.blue_edges[eid] for eid in input_match if eid in self.blue_edges])
-                red_wt = sum([self.red_edges[eid] for eid in input_match if eid in self.red_edges])
-                all_one_color = ((blue_wt > 0.0 and red_wt == 0.0) or (blue_wt == 0.0 and red_wt > 0.0))
-                correct_color = all_one_color and ((not b and blue_wt > 0.0) or (b and red_wt > 0.0))
-            result = vtx_disj and correct_color
+
+            # If any edge identity (eid) is absent from both dictionaries, then the any() statement returns True.
+            correct_edges = not any([eid not in self.red_edges and eid not in self.blue_edges for eid in input_match])
+            
+            # If there exists a red edge and a blue edge, the input_match is not all of one color
+            there_exists_a_red_edge = any([eid in self.red_edges for eid in input_match])
+            there_exists_a_blue_edge = any([eid in self.blue_edges for eid in input_match])
+            all_one_color = not there_exists_a_red_edge or not there_exists_a_blue_edge
+            correct_color = all_one_color and ((b and there_exists_a_red_edge) or (not b and there_exists_a_blue_edge))
+            
+            # combine
+            result = vtx_disj and correct_edges and all_one_color and correct_color
+        return result
+        
+    def chk_colored_maximal_match(self, b, input_match):
+        assert b in [0, 1]
+        result = None
+        is_match = self.chk_colored_match(b, input_match)
+
+        if not is_match:
+            result = False
+        else:
+            if b:
+                lefts = [nid for nid in self.left_nodes if any([eid[0]==nid for eid in self.red_edges])]
+                rights = [nid for nid in self.right_nodes if any([eid[1]==nid for eid in self.red_edges])]
+            else:
+                lefts = [nid for nid in self.left_nodes if any([eid[0]==nid for eid in self.blue_edges])]
+                rights = [nid for nid in self.right_nodes if any([eid[1]==nid for eid in self.blue_edges])]
+                
+            touched_lefts = [eid[0] for eid in input_match]
+            num_touched_lefts = len(touched_lefts)
+            dedupe_touched_lefts = list(set(touched_lefts))
+            num_deduped_touched_lefts = len(dedupe_touched_lefts)
+            
+            touched_rights = [eid[1] for eid in input_match]
+            num_touched_rights = len(touched_rights)
+            dedupe_touched_rights = list(set(touched_rights))
+            num_deduped_touched_rights = len(dedupe_touched_rights)
+            
+            # print("\n\nlefts = " + str(lefts))
+            # print("rights = " + str(rights))
+            # print("input_match = " + str(input_match))
+            # print("len(input_match) = " + str(len(input_match)))
+            # print("min(len(lefts), len(rights)) = " + str(min(len(lefts), len(rights))))
+            # print("touched_lefts = " + str(touched_lefts))
+            # print("touched_rights = " + str(touched_rights))
+            # print("num_touched_lefts = " + str(num_touched_lefts))
+            # print("num_touched_rights = " + str(num_touched_rights))
+            # print("dedupe_touched_lefts = " + str(dedupe_touched_lefts))
+            # print("dedupe_touched_rights = " + str(dedupe_touched_rights))
+            # print("num_deduped_touched_lefts = " + str(num_deduped_touched_lefts))
+            # print("num_deduped_touched_rights = " + str(num_deduped_touched_rights))
+            # print("red edges = " + str(self.red_edges))
+            # print("blue edges = " + str(self.blue_edges) + "\n\n")
+            
+            result = (num_touched_lefts == num_deduped_touched_lefts) # ensures vertex disjointness on left
+            result = result and (num_touched_rights == num_deduped_touched_rights) # vertex disjointness on right
+            result = result and (len(input_match) == min(len(lefts), len(rights)))
         return result
 
-    def check_colored_maximal_match(self, b, input_match):
-        """  Take input_match as input (a list of edge_idents). Fail (output False) if:
-            chk_colored_match(input_match) is False or
-            there exists an edge with color b and non-zero weight not in input_match with unmatched endpoints
-          Otherwise output True.
-        """
-        # #  print("Taking input_match ", input_match)
-        any_in = lambda A, B, C : any([(x[0] in A and x[1] in B) for x in C])
-        if b:
-            weight_dict = self.red_edges
-        else:
-            weight_dict = self.blue_edges
-        result = self.chk_colored_match(b, input_match) 
-        if result:
-            matched_lefts = [eid[0] for eid in input_match]
-            matched_rights = [eid[1] for eid in input_match]
-            unmatched_rights = [nid for nid in self.right_nodes if nid not in matched_rights]
-            unmatched_lefts = [nid for nid in self.left_nodes if nid not in matched_lefts]
-            # #  print("UNMATCHED RIGHTS = ", unmatched_rights)
-            # #  print("UNMATCHED LEFTS = ", unmatched_lefts)
-            # #  print("WEIGHT DICT = ", weight_dict)
-            is_match_maximal = not any_in(unmatched_lefts, unmatched_rights, weight_dict)
-            # #  print("Is this match maximal?", is_match_maximal)
-            result = is_match_maximal
-            # result = result and not any([eid in weight_dictfor eid in weight_dict if eid[0] in unmatched_rights and eid[1] in unmatched_lefts])
-        return result
+    # def check_colored_maximal_match(self, b, input_match):
+    #     """  Take input_match as input (a list of edge_idents). Fail (output False) if:
+    #         chk_colored_match(input_match) is False or
+    #         there exists an edge with color b and non-zero weight not in input_match with unmatched endpoints
+    #       Otherwise output True.
+    #     """
+    #     # Convenient helper function that returns True if any pair of indices
+    #     # in C have endpoints in A and B, respectively.
+    #     any_in = lambda A, B, C : any([(x[0] in A and x[1] in B) for x in C])
+    #     if b:
+    #         weight_dict = self.red_edges
+    #     else:
+    #         weight_dict = self.blue_edges
+    #    result = self.chk_colored_match(b, input_match) 
+    #    if result:
+    #        matched_lefts = [eid[0] for eid in input_match]
+    #        matched_rights = [eid[1] for eid in input_match]
+    #        unmatched_rights = [nid for nid in self.right_nodes if nid not in matched_rights]
+    #        unmatched_lefts = [nid for nid in self.left_nodes if nid not in matched_lefts]
+    #        # #  print("UNMATCHED RIGHTS = ", unmatched_rights)
+    #        # #  print("UNMATCHED LEFTS = ", unmatched_lefts)
+    #        # #  print("WEIGHT DICT = ", weight_dict)
+    #        is_match_maximal = not any_in(unmatched_lefts, unmatched_rights, weight_dict)
+    #        # #  print("Is this match maximal?", is_match_maximal)
+    #        result = is_match_maximal
+    #        # result = result and not any([eid in weight_dictfor eid in weight_dict if eid[0] in unmatched_rights and eid[1] in unmatched_lefts])
+    #    return result
 
     def _parse(self, b, input_match):
         """ parse takes a color b and input_match and either crashes because input_match isn't a match with color b
@@ -206,7 +248,7 @@ class BipartiteGraph(object):
         """
         # Check input_match is a match of color b
         try:
-            assert self.chk_colored_match(b, input_match)
+            self.chk_colored_match(b, input_match)
         except AssertionError:
             raise Exception('Input_match is not a match!')
         
@@ -330,101 +372,88 @@ class BipartiteGraph(object):
               (iv)  P cannot be extended by any correctly colored edges alternating with respect to input_match without
                     self-intersecting
         """
-        found = False
-        length = 0
-        #  print("Calling xxtend with " + str(b) + " and " + str(input_match) + "\n\n")
         result = None
-        #  print("Input match is maximal:")
-        maxl_match = self.check_colored_maximal_match(b, input_match)
-        #  print(maxl_match)
-        if maxl_match:
-            #  print("Setting result to input match:")
-            result = input_match
-            #  print(result)
-        else:            
-            soln_box = []
-            #  print("Setting weight_dict.")
-            if b:
-                weight_dict = self.red_edges
-            else:
-                weight_dict = self.blue_edges
-            #  #  print("Parsing (b, input_match):")
-            temp = self._parse(b, input_match)
-            (matched_lefts, matched_rights, unmatched_lefts, unmatched_rights, bb, non_match_edges) = temp
-            #  #  print(temp)
-            #  #  print("All non_match edges are in weight_dict.")
-            temp = True
-            for eid in non_match_edges:
-                if eid not in weight_dict:
-                    temp = False
-            #  #  print(temp)
-            assert temp
-            temp = None
-            
-            q = deque([[eid] for eid in non_match_edges if eid[0] in unmatched_lefts])
+        if not self.chk_colored_match(b, input_match):
+            raise Exception('Tried to extend an input_match that is not a unicolor match.')
+        else:
+            if self.chk_colored_maximal_match(b, input_match):
+                result = input_match
+            else:       
+                found = False
+                length = 0     
+                soln_box = []
+                #  print("Setting weight_dict.")
+                if b:
+                    weight_dict = self.red_edges
+                else:
+                    weight_dict = self.blue_edges
+                #  #  print("Parsing (b, input_match):")
+                temp = self._parse(b, input_match)
+                (matched_lefts, matched_rights, unmatched_lefts, unmatched_rights, bb, non_match_edges) = temp
 
-            while len(q) > 0:
-                #  #  print("Printing state of queue of possible paths:")
-                #  #  print(q)
-                #  #  print("Popping next path:")
-                next_path = q.popleft()
-                if (not found and length == 0) or (found and len(next_path) <= length):
-                    #  #  print(next_path)
+                q = deque([[eid] for eid in non_match_edges if eid[0] in unmatched_lefts])
+                while len(q) > 0:
+                    #  #  print("Printing state of queue of possible paths:")
+                    #  #  print(q)
+                    #  #  print("Popping next path:")
+                    next_path = q.popleft()
+                    if (not found and length == 0) or (found and len(next_path) <= length):
+                        #  #  print(next_path)
 
-                    #  #  print("Computing weight:")
-                    next_weight = sum([weight_dict[eid] for eid in next_path if eid not in input_match]) + sum([weight_dict[eid] for eid in input_match if eid not in next_path])
-                    #  #  print(next_weight)
-                    #  #  print("Computing gain:")
-                    gain = next_weight - sum([weight_dict[eid] for eid in input_match])
-                    #  #  print(gain)
-                    #  #  print("Assembling touched nodes:")
-                    tn = set([eid[0] for eid in next_path]+[eid[1] for eid in next_path])
-                    #  #  print(tn)
-                    #  #  print("Computing parity:")
-                    p = len(next_path) % 2
-                    #  #  print(p)
-                    #  #  print("Computing last edge and node:")
-                    last_edge = next_path[-1]
-                    last_node = last_edge[p]
-                    #  #  print(last_edge)
-                    #  #  print(last_node)
-                    #  #  print("Adding to solution box if we are done... adding to queue otherwise.")
-                    if gain > 0.0 and last_node in unmatched_rights:
-                        if not found:
-                            assert length == 0
-                            found = True
-                            length = len(next_path)
-                        else:
-                            assert 0 < len(next_path) <= length
-                        soln_box += [(next_path, gain)]
-                        #  #  print("soln box:")
-                        #  #  print(soln_box)
-                    elif last_node not in unmatched_rights:
-                        for eid in weight_dict:
-                            if eid[p] == last_node and eid[1-p] not in tn:
-                                q.append(next_path + [eid])
-            #  #  print("Sorting soln box")
-            soln_box = sorted(soln_box, key=lambda x:x[1], reverse=True)
-            #  #  print("After sort:")
-            #  #  print(soln_box)
-            
-            #  #  print("Collecting vertex-disjoint solutions greedily by this sort")
-            vd_solns = []
-            tn = []
-            for path_gain_pair in soln_box:
-                (next_path, gain) = path_gain_pair
-                if not any([eid[0] in tn for eid in next_path] + [eid[1] in tn for eid in next_path]):
-                    vd_solns += [next_path]
-                    for eid in next_path:
-                        tn = list(set(tn + [eid[0], eid[1]]))
-                    #  #  print("vd_solns = " + str(vd_solns))
-                    #  #  print("tn = " + str(tn))
+                        #  #  print("Computing weight:")
+                        next_weight = sum([weight_dict[eid] for eid in next_path if eid not in input_match]) + sum([weight_dict[eid] for eid in input_match if eid not in next_path])
+                        #  #  print(next_weight)
+                        #  #  print("Computing gain:")
+                        gain = next_weight - sum([weight_dict[eid] for eid in input_match])
+                        #  #  print(gain)
+                        #  #  print("Assembling touched nodes:")
+                        tn = set([eid[0] for eid in next_path]+[eid[1] for eid in next_path])
+                        #  #  print(tn)
+                        #  #  print("Computing parity:")
+                        p = len(next_path) % 2
+                        #  #  print(p)
+                        #  #  print("Computing last edge and node:")
+                        last_edge = next_path[-1]
+                        last_node = last_edge[p]
+                        #  #  print(last_edge)
+                        #  #  print(last_node)
+                        #  #  print("Adding to solution box if we are done... adding to queue otherwise.")
+                        if gain > 0.0 and last_node in unmatched_rights:
+                            if not found:
+                                assert length == 0
+                                found = True
+                                length = len(next_path)
+                            else:
+                                assert 0 < len(next_path) <= length
+                            soln_box += [(next_path, gain)]
+                            #  #  print("soln box:")
+                            #  #  print(soln_box)
+                        elif last_node not in unmatched_rights:
+                            for eid in weight_dict:
+                                if eid[p] == last_node and eid[1-p] not in tn:
+                                    q.append(next_path + [eid])
+                #  #  print("Sorting soln box")
+                soln_box = sorted(soln_box, key=lambda x:x[1], reverse=True)
+                #  #  print("After sort:")
+                #  #  print(soln_box)
+                
+                #  #  print("Collecting vertex-disjoint solutions greedily by this sort")
+                vd_solns = []
+                tn = []
+                for path_gain_pair in soln_box:
+                    (next_path, gain) = path_gain_pair
+                    if not any([eid[0] in tn for eid in next_path] + [eid[1] in tn for eid in next_path]):
+                        vd_solns += [next_path]
+                        for eid in next_path:
+                            tn = list(set(tn + [eid[0], eid[1]]))
+                        #  #  print("vd_solns = " + str(vd_solns))
+                        #  #  print("tn = " + str(tn))
 
-            result = input_match
-            for soln in vd_solns:
-                temp = [eid for eid in soln if eid not in result] + [eid for eid in result if eid not in soln]
-                result = temp
-        #  #  print("RESULT FROM XXTEND = ", result)
+                result = input_match
+                for soln in vd_solns:
+                    temp = [eid for eid in soln if eid not in result] + [eid for eid in result if eid not in soln]
+                    result = temp
+            #  #  print("RESULT FROM XXTEND = ", result)
         return result
         
     def extend(self, b, input_match=[]):
@@ -452,7 +481,7 @@ class BipartiteGraph(object):
             shortest_paths = []  # solution box
             found = False
             length = None
-            if self.check_colored_maximal_match(b, input_match):
+            if self.chk_colored_maximal_match(b, input_match):
                 # shortest_paths = []
                 #  #  print("\n\nFound that ", input_match, " cannot be extended\n\n")
                 result = input_match
@@ -573,7 +602,7 @@ class BipartiteGraph(object):
         """
         result = None
         assert b in [0, 1]
-        assert self.check_colored_maximal_match(b, input_match)
+        assert self.chk_colored_maximal_match(b, input_match)
         
         if b:
             weight_dict = self.red_edges
