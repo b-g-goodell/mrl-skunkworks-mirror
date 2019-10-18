@@ -381,14 +381,14 @@ class BipartiteGraph(object):
                         p = len(nxt_pth) % 2
                         last_edge = nxt_pth[-1]
                         lst_nd = last_edge[p]
-                        if gain > 0.0 and lst_nd in unmatched_rights:
+                        if gn > 0.0 and lst_nd in unmatched_rights:
                             if not found:
                                 assert lng == 0
                                 found = True
                                 lng = len(nxt_pth)
                             else:
                                 assert 0 < len(nxt_pth) <= lng
-                            soln_box += [(nxt_pth, gain)]
+                            soln_box += [(nxt_pth, gn)]
                             #  #  print("soln box:")
                             #  #  print(soln_box)
                         elif lst_nd not in unmatched_rights:
@@ -529,7 +529,8 @@ class BipartiteGraph(object):
                 else:
                     result = input_match
         else:
-            s = 'Ooops, check colored match didnt think input_match is a match of a single color.'
+            s = 'Ooops, check colored match didnt think input_match is'
+            s += ' a match of a single color.'
             raise Exception(s)
         return result
 
