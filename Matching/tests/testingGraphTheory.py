@@ -314,12 +314,15 @@ class TestBipartiteGraph(ut.TestCase):
             b = random.getrandbits(1)
 
             j = g.add_node(b)
-            x = j in g.right_nodes
-            y = g.right_nodes[j] == j
-            
-            xx = j in g.left_nodes
-            yy = g.left_nodes[j] == j
-            self.assertTrue((b and x and y) or (not b and xx and yy))
+
+            if b:
+                x = j in g.right_nodes
+                y = g.right_nodes[j] == j
+            else:
+                x = j in g.left_nodes
+                y = g.left_nodes[j] == j
+                
+            self.assertTrue(x and y)
             
             m = deepcopy(g.count - 1)
             mm = deepcopy(len(g.red_edges) + len(g.blue_edges))
@@ -905,22 +908,71 @@ class TestBipartiteGraph(ut.TestCase):
                 
             b = random.getrandbits(1)
             if b:
+                temp = g.red_edges
+                second = False
+                third = False
                 if len(reds_incident_with_one) > 0:
                     match += [random.choice(reds_incident_with_one)]
-                if len(reds_incident_with_two) > 0:
-                    match += [random.choice(reds_incident_with_two)]
-                if len(reds_incident_with_three) > 0:
-                    match += [random.choice(reds_incident_with_three)]
-                temp = g.red_edges
+                if len(reds_incident_with_two) > 0 and \
+                    any([eid[0] != match[-1][0] and eid[1] != match[-1][1] for \
+                    eid in reds_incident_with_two]):
+                    next_eid = random.choice(reds_incident_with_two)
+                    while next_eid[1] == match[-1][1]:
+                        next_eid = random.choice(reds_incident_with_two)                     
+                    match += [next_eid]
+                    second = True
+                if not second and len(reds_incident_with_three) > 0 and \
+                    any([eid[0] != match[-1][0] and eid[1] != match[-1][1] \
+                    for eid in reds_incident_with_three]):
+                    next_eid = random.choice(reds_incident_with_three)
+                    while next_eid[1] == match[-1][1]:
+                        next_eid = random.choice(reds_incident_with_three)                     
+                    match += [next_eid]
+                    third = True
+                elif second and len(reds_incident_with_three) > 0 and \
+                    any([eid[0] != match[-1][0] and eid[1] != match[-1][1] \
+                    and eid[0] != match[-2][0] and eid[1] != match[-2][1] for \
+                    eid in reds_incident_with_three]):
+                    next_eid = random.choice(reds_incident_with_three)
+                    while next_eid[1] == match[-1][1] or \
+                        next_eid[1] == match[-2][1]:
+                        next_eid = random.choice(reds_incident_with_three)                     
+                    match += [next_eid]
+                    third = True
             else:
+                temp = g.blue_edges
+                second = False
+                third = False
                 if len(blues_incident_with_one) > 0:
                     match += [random.choice(blues_incident_with_one)]
-                if len(blues_incident_with_two) > 0:
-                    match += [random.choice(blues_incident_with_two)]
-                if len(blues_incident_with_three) > 0:
-                    match += [random.choice(blues_incident_with_three)]
-                temp = g.blue_edges
-                
+                if len(blues_incident_with_two) > 0 and \
+                    any([eid[0] != match[-1][0] and eid[1] != match[-1][1] \
+                    for eid in blues_incident_with_two]):
+                    next_eid = random.choice(blues_incident_with_two)
+                    while next_eid[1] == match[-1][1]:
+                        next_eid = random.choice(blues_incident_with_two)                     
+                    match += [next_eid]
+                    second = True
+                if not second and len(blues_incident_with_three) > 0 and \
+                    any([eid[0] != match[-1][0] and eid[1] != match[-1][1] \
+                    for eid in blues_incident_with_three]):
+                    next_eid = random.choice(blues_incident_with_three)
+                    while next_eid[1] == match[-1][1]:
+                        next_eid = random.choice(blues_incident_with_three)                     
+                    match += [next_eid]
+                    third = True
+                elif second and len(blues_incident_with_three) > 0 and \
+                    any([eid[0] != match[-1][0] and eid[1] != match[-1][1] \
+                    and eid[0] != match[-2][0] and eid[1] != match[-2][1] for \
+                    eid in blues_incident_with_three]):
+                    next_eid = random.choice(blues_incident_with_three)
+                    while next_eid[1] == match[-1][1] or \
+                        next_eid[1] == match[-2][1]:
+                        next_eid = random.choice(blues_incident_with_three)                     
+                    match += [next_eid]
+                    third = True
+            
+            # print(match)
             self.assertTrue(g.chhk_colored_match(b, match))
                 
             lefts = [nid for nid in g.left_nodes if \
@@ -933,7 +985,8 @@ class TestBipartiteGraph(ut.TestCase):
                 not any([eid[1]==nid for eid in match])]
             
             self.assertEqual(g.chhk_colored_maximal_match(b, match), \
-                not any([eid[0] in unmatched_lefts and eid[1] in unmatched_rights for eid in temp]))
+                not any([eid[0] in unmatched_lefts and eid[1] in \
+                unmatched_rights for eid in temp]))
 
     #  @ut.skip("Skipping test_d_parse")
     def test_d_parse(self):
@@ -1089,6 +1142,9 @@ class TestBipartiteGraph(ut.TestCase):
         # the result should be the symmetric difference between the input match
         # and the heaviest shortest path so result = [(3, 9), (5, 7)] which is 
         # also maximal but heavier!
+        # print("Expected " + str([((3, None), (9, None), None), ((5, None), (7, None), None)]))
+        # print("Received " + str(result))
+        # print("Compare sets : " + str(set([((3, None), (9, None), None), ((5, None), (7, None), None)]) == set(result)))
         self.assertTrue(((3, None), (9, None), None) in result)
         self.assertTrue(((5, None), (7, None), None) in result)
         self.assertTrue(len(result) == 2)
@@ -1231,7 +1287,7 @@ class TestBipartiteGraph(ut.TestCase):
         self.assertEqual(len(set(grnd_trth)), len(grnd_trth))
         for i in result:
             self.assertIn(i, result_test)
-            self.assertIn(i, result_ground_truth)
+            self.assertIn(i, grnd_trth)
             
         # Now the match is maximal, so if we go again we should get the same 
         # result back.
@@ -1270,7 +1326,7 @@ class TestBipartiteGraph(ut.TestCase):
         self.assertEqual(len(set(grnd_trth)), len(grnd_trth))
         for i in result:
             self.assertIn(i, result_test)
-            self.assertIn(i, result_ground_truth)
+            self.assertIn(i, grnd_trth)
             
 
     #  @ut.skip("Skipping test_dd_extend")
@@ -1384,11 +1440,16 @@ class TestBipartiteGraph(ut.TestCase):
         result_test = g._clean(b_test, shortest_paths_test, input_match)
 
         # both should result in this:
-        result_ground_truth = [((1, None), (9, None), None)]
-        result_ground_truth += [((5, None), (7, None), None)]
-        self.assertEqual(result, result_test)
-        self.assertEqual(result, result_ground_truth)
-        self.assertEqual(result_test, result_ground_truth)
+        grnd_trth = [((1, None), (9, None), None)]
+        grnd_trth += [((5, None), (7, None), None)]
+        self.assertEqual(len(set(result)), len(result))
+        self.assertEqual(len(set(result_test)), len(result_test))
+        self.assertEqual(len(set(grnd_trth)), len(grnd_trth))
+        self.assertEqual(len(result), len(result_test))
+        self.assertEqual(len(result), len(grnd_trth))
+        
+        self.assertEqual(set(result), set(result_test))
+        self.assertEqual(set(result), set(grnd_trth))
 
     #  @ut.skip("Skipping test_r_extend")
     def test_r_extend(self):

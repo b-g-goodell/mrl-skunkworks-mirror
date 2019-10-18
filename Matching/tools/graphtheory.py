@@ -280,13 +280,17 @@ class BipartiteGraph(object):
             # print("Result = " + str(result))
         return result
         
-
     @staticmethod
     def _clean(b, shortest_paths_with_gains, input_match):
         """ Returns the input_match (when input shortest_paths is empty) or the
         iterative symdif of input_match """
         assert b in [0, 1]
         result = input_match
+        # s = "Starting _clean with input_match = "
+        # s += str(input_match)
+        # s += " and shortest_paths_with_gains = "
+        # s += str(shortest_paths_with_gains)
+        # print(s)
         if len(shortest_paths_with_gains) > 0:
             # Order the list
             ordered_shortest_paths = sorted(shortest_paths_with_gains, \
@@ -322,14 +326,15 @@ class BipartiteGraph(object):
                     if path_is_disj:
                         vd += [nxt_pth]
                         touched_nodes += dst_nds
-            #  print("NEXT PATH = ", nxt_pth)
+            
             # Iteratively take symmetric differences with input_match = result
             if len(vd) > 0:
-                temp = input_match
+                x = input_match
                 for nxt_pth in vd:
-                    temp = [eid for eid in temp if eid not in nxt_pth]
-                    temp += [eid for eid in nxt_pth if eid not in temp]
-                result = temp
+                    y = [eid for eid in x if eid not in nxt_pth]
+                    z = [eid for eid in nxt_pth if eid not in x]
+                    x = z + y
+                result = x
         return result
 
     def xxtend(self, b, input_match=[]):
