@@ -136,10 +136,9 @@ class Simulator(object):
                 assert orig_num_red_edges == len(self.g.red_edges) - ct
                 y = sig_nodes[-1]
                 assert orig_num_red_edges == len(self.g.red_edges) - ct
-                # ownership of a right_node is a pair (k, x, t) where k is an 
+                # ownership of a right_node is a pair (k, x) where k is an 
                 # owner index in the stochastic matrix, x is the left_node 
-                # being spent, t is the time step that the signature node 
-                # appears
+                # being spent
                 self.ownership[y] = (k[0], x[2])  
                 assert orig_num_red_edges == len(self.g.red_edges) - ct
                 rings[y] = self.get_ring(x[2]) 
@@ -166,22 +165,27 @@ class Simulator(object):
                 assert orig_num_red_edges == len(self.g.red_edges) - ct
                 assert pair not in self.g.blue_edges
                 assert orig_num_red_edges == len(self.g.red_edges) - ct
-                self.g.add_edge(0, pair, 1.0, self.t)  # adds blue edge
+                blue_eid = self.g.add_edge(0, pair, 1.0, self.t)  # adds blue edge
                 assert orig_num_red_edges == len(self.g.red_edges) - ct
                 pairr = (change_node, snode)
                 assert orig_num_red_edges == len(self.g.red_edges) - ct
                 assert pairr not in self.g.blue_edges
                 assert orig_num_red_edges == len(self.g.red_edges) - ct
-                self.g.add_edge(0, pairr, 1.0, self.t)  # adds blue edge
+                blue_eidd = self.g.add_edge(0, pairr, 1.0, self.t)  # adds blue edge
                 assert orig_num_red_edges == len(self.g.red_edges) - ct
                 assert len(rings[snode]) == len(set(rings[snode]))
+                self.ownership[blue_eid] = self.ownership[blue_eid[0]]
+                self.ownership[blue_eidd] = self.ownership[blue_eidd[0]]
+                red_eids = []
                 for ring_member in rings[snode]:
                     # when is talk like a pirate day anyway?
                     pairrr = (ring_member, snode)  
                     assert orig_num_red_edges == len(self.g.red_edges) - ct
                     assert pairrr not in self.g.red_edges
                     assert orig_num_red_edges == len(self.g.red_edges) - ct
-                    self.g.add_edge(1, pairrr, 1.0, self.t) # adds red edge
+                    new_eid = self.g.add_edge(1, pairrr, 1.0, self.t)
+                    red_eids += [new_eid] # adds red edge
+                    self.ownership[new_eid] = self.ownership[new_eid[1]]
                     ct += 1
                     assert orig_num_red_edges == len(self.g.red_edges) - ct
                 x = num_red_edges + len(rings[snode])

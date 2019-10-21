@@ -113,6 +113,7 @@ class BipartiteGraph(object):
                 self.red_edges.update(new_dict)
             else:
                 self.blue_edges.update(new_dict)
+            result = eid
         return result
 
     def del_edge(self, eid):
@@ -547,10 +548,13 @@ class BipartiteGraph(object):
         can be written as the symmetric difference between the input match and 
         a sequence of vertex-disjoint alternating cycles with positive gain.
         """
+        # TODO: MAKE MUCH FASTER BY ONLY SEARCHING NODES WITH >= 2 NEIGHBORS
+        print("\tBeginning boost.")
         result = None
         assert b in [0, 1]
         assert self.chhk_colored_maximal_match(b, input_match)
         
+        print("\tSetting weight dict")
         if b:
             wt_dct = self.red_edges
         else:
@@ -558,17 +562,33 @@ class BipartiteGraph(object):
             
         shrt_cyc_pos = []  # solution box
         nds_shrt_cyc = []
-        found = False
         lng = None
 
+        print("Parsing input_match")
         (matched_lefts, matched_rights, unmatched_lefts, unmatched_rights, \
             bb, non_match_edges) = self._parse(b, input_match)
+            
+        print("Collecting boostable left nodes")
+        boostable_left_nodes = [nid for nid in matched_lefts if any([eid[0] == nid and fid[0] == nid for eid in wt_dct for fid in wt_dct if eid[1] != fid[1]])]
+        print("Collecting boostable right nodes")
+        boostable_right_nodes = [nid for nid in matched_rights if any([eid[1] == nid and fid[1] == nid for eid in wt_dct for fid in wt_dct if eid[0] != fid[0]])]
+        print("Collecting boostable edges")
+        boostable_edges = [eid for eid in wt_dct if eid[0] in boostable_left_nodes and eid[1] in boostable_right_nodes]
 
-        q = deque([[eid] for eid in non_match_edges])
+        print("Constructing q")
+        q = deque([[eid] for eid in non_match_edges if eid in boostable_edges])
+        ct = 0
+        print("Entering q")
         while len(q) > 0:
-            assert not found or lng is not None
-
             nxt_pth = q.popleft()  # Get next path
+            ct += 1
+            if ct % 100 == 0:
+                s = "\tWorking on step " + str(ct) + " and len(q) = " 
+                s += str(len(q)) + ", longest is " 
+                s += str(max([len(x) for x in q])) + " and shortest is " 
+                s += str(min([len(x) for x in q])) + " and lng is "
+                s += str(lng)
+                print(s)
             
             if lng is None or (lng is not None and len(nxt_pth) <= lng):
                 # Paths have distinct edges and distinct vertices. Cycles are 
@@ -619,7 +639,6 @@ class BipartiteGraph(object):
                         gain -= sum(sd)
                         gain = -gain
                         if gain > 0.0:
-                            found = True
                             if lng is None or len(nxt_pth) < lng:
                                 lng = len(nxt_pth)
                                 shrt_cyc_pos = []
@@ -646,12 +665,13 @@ class BipartiteGraph(object):
                     # vertices. Extend the path with allowable alternating 
                     # edges, placing the extended paths back into the queue.
                     if p:
-                        ed_set = input_match
+                        ed_set = [eid for eid in input_match if eid in boostable_edges]
                     else:
-                        ed_set = non_match_edges
+                        ed_set = [eid for eid in non_match_edges if eid in boostable_edges]
 
                     for eid in ed_set:
                         if eid not in nxt_pth and eid[p] == lst_nd:
+                            assert eid in boostable_edges
                             path_to_add = None
                             path_to_add = nxt_pth + [eid]
                             q.append(path_to_add)
@@ -669,13 +689,17 @@ class BipartiteGraph(object):
         '''
         # TODO: Fix functions leading to this function so as to only result in 
         # *maximum* matchings.
+        print("Beginning optimization.")
         assert b in [0, 1]
+        print("Extending empty match.")
         next_match = self.xxtend(b) # starts with empty match by default
         assert next_match is not None
         temp = None
         while next_match != temp and next_match is not None:
             temp = next_match
+            print("Extending previous match.")
             next_match = self.xxtend(b, temp)
+            
         if b:
             wt_dct = self.red_edges
         else:
@@ -683,6 +707,7 @@ class BipartiteGraph(object):
         assert len(wt_dct) == 0 or \
             (next_match is not None and len(next_match) > 0)
 
+        print("Boosting previous match")
         temp = next_match
         w = sum([wt_dct[eid] for eid in temp])
         next_match = self.boost(b, temp)
@@ -691,8 +716,9 @@ class BipartiteGraph(object):
         assert len(temp) == len(next_match)
         while v - w > 0.0:
             temp = next_match
+            print("Boosting previus match")
             w = v
-            next_match = self.boost(b, input_match)
+            next_match = self.boost(b, temp)
             v = sum([wt_dct[eid] for eid in next_match])
             assert len(temp) == len(next_match)
             
