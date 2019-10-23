@@ -13,15 +13,11 @@ class Player(object):
         # Need 
         self.data = par
         
-    def respond(self, g, my_edges):
+    def respond(self, g, my_knowledge):
         print("Deleting known spurious ring members")
-        for eid in my_edges:
-            to_del = []
-            for fid in g.red_edges:
-                if fid[1] == eid[1] and fid != eid:
-                    to_del += [fid]
-            for fid in to_del:
-                del g.red_edges[fid]
+        to_del = [fid for fid in g.red_edges if any([eid[1] == fid[1] and fid != eid for eid in my_knowledge])
+        g.del_edge(to_del)
+        
         print("Weighting graph")
         ct = 0
         dct = 0
@@ -58,21 +54,30 @@ class Challenger(object):
         return sally
         
 def tracing_game(par):
+    ''' tracing_game executes the actual tracing game. '''
     print("Beginning tracing game by initializing Chuck and Eve.")
     eve = Player(par['eve'])
     chuck = Challenger(par['chuck'])
     u = len(par['chuck']['simulator']['stochastic matrix'])
     
     print("Running simulation.")
-    sally = chuck.generate() # get the simulator
+    sally = chuck.generate()
     
     print("Getting Eve's response.")
     # Ownership of an edge is the same as ownership of it's signature node.
     # Ownership of a signature node is a pair (k, x) where k is an 
     # owner index in the stochastic matrix, x is the left_node 
     # being spent
-    resp = eve.respond(sally.g, [eid for eid in sally.g.red_edges if \
-        sally.ownership[eid][0] == u-1]) # response to the simulator (ownership dict)
+    # TODO: This is not correct; Eve receives all ownership info of both 
+    # endpoints of all of her edges, not merely ownership information for 
+    # the edge itself. 
+    eve_edges = [eid for eid in sally.g.red_edges if u-1 in [sally.ownership[eid[0]], sally.ownership[eid[1]]]
+    eve_ownership = dict()
+    for eid in eve_edges:
+        eve_ownership[eid] = sally.ownership[eid]
+        eve_ownership[eid[0]] = sally.ownership[eid[0]]
+        eve_ownership[eid[1]] = sally.ownership[eid[1]]
+    resp = eve.respond(sally.g, eve_ownership) # response to the simulator (ownership dict)
             
     print("Compiling confusion matrix.")
     positives = {}
@@ -110,47 +115,80 @@ def tracing_game(par):
     FP = len(false_positives)
     FN = len(false_negatives)
     
-    TPR = TP/P
-    TNR = TN/N
-    PPV = TP/(TP+FP)
-    NPV = TN/(TN+FN)
-    FNR = FN/P
-    FPR = FP/N
-    FDR = FP/(FP + TP)
-    FOR = FN/(FN + TN)
-    TS = TP/(TP+FN+FP)
-
-    ACC = (TP+TN)/(P+N)
-    F1 = 2*TP/(2*TP + FP + FN)
-    MCC = (TP*TN - FP*FN)/sqrt((TP+FP)*(TP+FN)*(TN+FP)*(TN+FN))
-    BM = TPR + TNR - 1
-    MK = PPV + NPV - 1
-        
+    if P != 0:
+        TPR = TP/P
+        FNR = FN/P
+    else:
+        TPR = None
+        FNR = None
+    if N != 0:
+        TNR = TN/N
+        FPR = FP/N
+    else:
+        TNR = None
+        FPR = None
+    if TP + FP != 0:
+        PPV = TP/(TP + FP)
+        FDR = FP/(TP + FP)
+    else:
+        PPV = None
+        FDR = None
+    if TN + FN != 0:
+        NPV = TN/(TN + FN)
+        FOR = FN/(TN + FN)
+    else:
+        NPV = None
+        FOR = None
+    if TP + FN + FP != 0:
+        TS = TP/(TP + FN + FP)
+    else:
+        TS = None
+    if P + N != 0:
+        ACC = (TP + TN)/(P + N)
+    else:
+        ACC = None
+    if 2*TP + FP + FN != 0:
+        F1 = 2*TP/(2*TP + FP + FN)
+    else:
+        F1 = None
+    if (TP+FP)*(TP+FN)*(TN+FP)*(TN+FN) != 0:
+        MCC = (TP*TN - FP*FN)/sqrt((TP+FP)*(TP+FN)*(TN+FP)*(TN+FN))
+    else:
+        MCC = None
+    if TPR is not None and TNR is not None:
+        BM = TPR + TNR - 1
+    else:
+        BM = None
+    if PPV is not None and NPV is not None:
+        MK = PPV + NPV - 1
+    else:
+        MK = None
+    
+    to_write = str()
+    to_write += "\nRESULTS ======\n\n"
+    to_write += "Positives = " + str(P) + "\n"
+    to_write += "Negatives = " + str(N) + "\n"
+    to_write += "True Positives = " + str(TP) + "\n"
+    to_write += "True Negatives = " + str(TN) + "\n"
+    to_write += "False Positives = " + str(FP) + "\n"
+    to_write += "False Negatives = " + str(FN) + "\n"
+    to_write += "True Positive Rate = " + str(TPR) + "\n"
+    to_write += "True Negative Rate = " + str(TNR) + "\n"
+    to_write += "Positive Predictive Value = " + str(PPV) + "\n"
+    to_write += "Negative Predictive Value = " + str(NPV) + "\n"
+    to_write += "False Negative Rate = " + str(FNR) + "\n"
+    to_write += "False Positive Rate = " + str(FPR) + "\n"
+    to_write += "False Discovery Rate = " + str(FDR) + "\n"
+    to_write += "False Omission Rate = " + str(FOR) + "\n"
+    to_write += "Threat Score = " + str(TS) + "\n"
+    to_write += "Accuracy = " + str(ACC) + "\n"
+    to_write += "F1 Score = " + str(F1) + "\n"
+    to_write += "Matthews Correlation Coefficient = " + str(MCC) + "\n"
+    to_write += "Informedness = " + str(BM) + "\n"
+    to_write += "Markedness = " + str(MK) + "\n"
     with open(par['filename'], "w+") as wf:
-        to_write = str()
-        to_write += "\nRESULTS ======\n\n"
-        to_write += "Positives = " + str(P) + "\n"
-        to_write += "Negatives = " + str(N) + "\n"
-        to_write += "True Positives = " + str(TP) + "\n"
-        to_write += "True Negatives = " + str(TN) + "\n"
-        to_write += "False Positives = " + str(FP) + "\n"
-        to_write += "False Negatives = " + str(FN) + "\n"
-        to_write += "True Positive Rate = " + str(TPR) + "\n"
-        to_write += "True Negative Rate = " + str(TNR) + "\n"
-        to_write += "Positive Predictive Value = " + str(PPV) + "\n"
-        to_write += "Negative Predictive Value = " + str(NPV) + "\n"
-        to_write += "False Negative Rate = " + str(FNR) + "\n"
-        to_write += "False Positive Rate = " + str(FPR) + "\n"
-        to_write += "False Discovery Rate = " + str(FDR) + "\n"
-        to_write += "False Omission Rate = " + str(FOR) + "\n"
-        to_write += "Threat Score = " + str(TS) + "\n"
-        to_write += "Accuracy = " + str(ACC) + "\n"
-        to_write += "F1 Score = " + str(F1) + "\n"
-        to_write += "Matthews Correlation Coefficient = " + str(MCC) + "\n"
-        to_write += "Informedness = " + str(BM) + "\n"
-        to_write += "Markedness = " + str(MK) + "\n"
-        print(to_write)
         wf.write(str(to_write))
+    print(to_write)            
         
 par = {}
 

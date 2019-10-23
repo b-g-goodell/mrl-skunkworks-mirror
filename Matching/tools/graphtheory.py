@@ -26,8 +26,8 @@ class BipartiteGraph(object):
         add_edge
         del_edge
         del_node
-        chhk_colored_match
-        chhk_colored_maximal_match
+        chk_colored_match
+        chk_colored_maximal_match
         extend
         boost
 
@@ -116,17 +116,25 @@ class BipartiteGraph(object):
             result = eid
         return result
 
-    def del_edge(self, eid):
+    def del_edge(self, input_eids):
         """ Take eid = (x, y, tag) as input (an edge_ident). If both of these 
         are nodes on the proper sides, then we set edge weights in both edge 
         dictionaries to 0.0. If either node does not exist or is on the wrong 
         side, then the edge entry is deleted from the dictionary. This always 
         succeeds so we return True.
         """
-        if eid in self.red_edges:
-            del self.red_edges[eid]
-        if eid in self.blue_edges:
-            del self.blue_edges[eid]
+        if not isinstance(input_eids, list) and (input_eids in self.red_edges or input_eids in self.blue_edges):
+            x = []
+            x += [input_eids]
+            input_eids = x
+            
+        if isinstance(input_eids, list) and len(input_eids) > 0:
+            for eid in input_eids:
+                if eid in self.red_edges:
+                    del self.red_edges[eid]
+                if eid in self.blue_edges:
+                    del self.blue_edges[eid]
+            
 
     def del_node(self, nid):
         """  Take node identity nid as input (a node ident).
@@ -149,8 +157,8 @@ class BipartiteGraph(object):
         for eid in eids_to_remove:
             self.del_edge(eid)
             
-    def chhk_colored_match(self, b, input_match):
-        """ chhk_colored_match takes a color, b, and an alleged match, 
+    def chk_colored_match(self, b, input_match):
+        """ chk_colored_match takes a color, b, and an alleged match, 
         input_match. Produces as output a boolean.
         """
         result = None
@@ -181,9 +189,9 @@ class BipartiteGraph(object):
             # print("result of check for colored match = " + str(result))
         return result
 
-    def chhk_colored_maximal_match(self, b, input_match):
+    def chk_colored_maximal_match(self, b, input_match):
         assert b in [0, 1]
-        result = self.chhk_colored_match(b, input_match)
+        result = self.chk_colored_match(b, input_match)
         if result:
             matched_lefts = list(set([eid[0] for eid in input_match]))
             matched_rights = list(set([eid[1] for eid in input_match]))
@@ -215,7 +223,7 @@ class BipartiteGraph(object):
         """
         # Check input_match is a match of color b
         try:
-            self.chhk_colored_match(b, input_match)
+            self.chk_colored_match(b, input_match)
         except AssertionError:
             raise Exception('Input_match is not a match!')
         
@@ -338,7 +346,7 @@ class BipartiteGraph(object):
                 result = x
         return result
 
-    def xxtend(self, b, input_match=[]):
+    def extend(self, b, input_match=[]):
         """ Find all shortest paths P satisfying the following constraints and 
         call _cleanup with them.
               (i)   all edges in P share the same color with input_match and
@@ -349,11 +357,11 @@ class BipartiteGraph(object):
                     intersecting.
         """
         result = None
-        if not self.chhk_colored_match(b, input_match):
+        if not self.chk_colored_match(b, input_match):
             s = 'Tried to extend an input_match that is not a unicolor match.'
             raise Exception(s)
         else:
-            if self.chhk_colored_maximal_match(b, input_match):
+            if self.chk_colored_maximal_match(b, input_match):
                 result = input_match
             else:       
                 found = False
@@ -420,125 +428,6 @@ class BipartiteGraph(object):
                     temp += [eid for eid in result if eid not in soln]
                     result = temp
         return result
-        
-    def extend(self, b, input_match=[]):
-        # #  #  print("ENTERING EXTEND, HERE IS INPUT MATCH", input_match)
-        assert isinstance(input_match, list)
-        try:
-            assert input_match is not None
-        except AssertionError:
-            raise Exception('Input_match was not a list!')
-
-        result = None
-
-        assert b in [0, 1]
-        if b:
-            wt_dct = self.red_edges
-        else:
-            wt_dct = self.blue_edges
-
-        if len(input_match) > 0:
-            for eid in input_match:
-                assert eid in wt_dct
-        
-        if self.chhk_colored_match(b, input_match):
-            #  #  print("Found that ", input_match, " is a colored match.")
-            shortest_paths = []  # solution box
-            found = False
-            lng = None
-            if self.chhk_colored_maximal_match(b, input_match):
-                result = input_match
-            else:
-                temp = self._parse(b, input_match)
-                (matched_lefts, matched_rights, unmatched_lefts, \
-                    unmatched_rights, bb, non_match_edges) = temp
-                assert bb == b
-                q = deque([[eid] for eid in wt_dct if \
-                    (eid not in input_match and eid[0] in unmatched_lefts)])
-                assert len(q) > 0
-                while len(q) > 0:
-                    assert not found or \
-                        (lng is not None and len(shortest_paths) > 0)
-                    nxt_pth = q.popleft()
-                    if lng is None or \
-                        (lng is not None and len(nxt_pth) <= lng):
-                        last_edge = nxt_pth[-1]
-                        p = len(nxt_pth) % 2  # path parity
-                        assert p in [0, 1]
-                        assert p in [0, 1]
-                        lst_nd = last_edge[p]
-                        num_distinct_edges = len(list(set(nxt_pth)))  
-                        temp = []
-                        if len(nxt_pth) >= 1:
-                            idx_p = None
-                            for i in range(len(nxt_pth)):
-                                eid = nxt_pth[i]
-                                idx_p = i % 2  # index parity
-                                temp += [eid[idx_p]]
-                            temp += [nxt_pth[-1][1 - idx_p]]
-
-                        dst_nds = list(set(temp))
-                        num_dst_nds = len(dst_nds)
-
-                        if len(nxt_pth) == num_distinct_edges and \
-                            len(temp) == num_dst_nds:
-                            # Extend the path with allowable alternating edges,
-                            # placing the extended paths back into the queue. 
-                            # If the path cannot be extended, compute the gain 
-                            # and if positive place in solution box.
-                            if lst_nd in unmatched_rights or \
-                                lst_nd in unmatched_lefts:
-                                sd = 0.0                                
-                                sd = [wt_dct[z] for z in wt_dct if \
-                                    (z in input_match and z not in nxt_pth)]
-                                sd += [wt_dct[z] for z in wt_dct if \
-                                    (z not in input_match and z in nxt_pth)]
-
-                                # I like fitting my code in 80 lines :D
-                                gain = sum([wt_dct[x] for x in input_match])
-                                gain -= sum(sd)
-                                gain = -gain
-                                # print("Path has gain ", gain)
-                                if gain > 0.0:
-                                    if lng is None or len(nxt_pth) < lng:
-                                        shortest_paths = [(nxt_pth, gain)]
-                                        lng = len(nxt_pth)
-                                        found = True
-                                    elif lng is not None and \
-                                        len(nxt_pth) == lng:
-                                        shortest_paths += [(nxt_pth, gain)]
-                            else:
-                                ed_set = None
-                                if p:
-                                    ed_set = input_match
-                                else:
-                                    ed_set = non_match_edges
-                                assert ed_set is not None
-                                these_edges = [eid for eid in ed_set if \
-                                    eid not in nxt_pth and eid[p] == lst_nd \
-                                    and eid[1 - p] not in dst_nds]
-                                assert len(these_edges) > 0 
-                                if len(these_edges) > 0:
-                                    for eid in these_edges:
-                                        path_to_add = None
-                                        path_to_add = nxt_pth + [eid]
-                                        q.append(path_to_add)
-                # Check that found_shortest_path = True if and only if at 
-                # least one shortest path is in shortest_paths
-                assert not found or len(shortest_paths) > 0
-                assert len(shortest_paths) == 0 or found
-                # print("FOUND SHORTEST PATHS = " + str(shortest_paths))
-                if len(shortest_paths) > 0:
-                    # #  print(shortest_paths)
-                    result = self._so_fresh_so_clean(b, shortest_paths, \
-                        input_match)
-                else:
-                    result = input_match
-        else:
-            s = 'Ooops, check colored match didnt think input_match is'
-            s += ' a match of a single color.'
-            raise Exception(s)
-        return result
 
     def boost(self, b, input_match):
         """ Note : maximality of input_match implies no *augmenting* paths 
@@ -549,12 +438,12 @@ class BipartiteGraph(object):
         a sequence of vertex-disjoint alternating cycles with positive gain.
         """
         # TODO: MAKE MUCH FASTER BY ONLY SEARCHING NODES WITH >= 2 NEIGHBORS
-        print("\tBeginning boost.")
+        # print("\tBeginning boost.")
         result = None
         assert b in [0, 1]
-        assert self.chhk_colored_maximal_match(b, input_match)
+        assert self.chk_colored_maximal_match(b, input_match)
         
-        print("\tSetting weight dict")
+        # print("\tSetting weight dict")
         if b:
             wt_dct = self.red_edges
         else:
@@ -564,31 +453,31 @@ class BipartiteGraph(object):
         nds_shrt_cyc = []
         lng = None
 
-        print("Parsing input_match")
+        # print("Parsing input_match")
         (matched_lefts, matched_rights, unmatched_lefts, unmatched_rights, \
             bb, non_match_edges) = self._parse(b, input_match)
             
-        print("Collecting boostable left nodes")
+        # print("Collecting boostable left nodes")
         boostable_left_nodes = [nid for nid in matched_lefts if any([eid[0] == nid and fid[0] == nid for eid in wt_dct for fid in wt_dct if eid[1] != fid[1]])]
-        print("Collecting boostable right nodes")
+        # print("Collecting boostable right nodes")
         boostable_right_nodes = [nid for nid in matched_rights if any([eid[1] == nid and fid[1] == nid for eid in wt_dct for fid in wt_dct if eid[0] != fid[0]])]
-        print("Collecting boostable edges")
+        # print("Collecting boostable edges")
         boostable_edges = [eid for eid in wt_dct if eid[0] in boostable_left_nodes and eid[1] in boostable_right_nodes]
 
-        print("Constructing q")
+        # print("Constructing q")
         q = deque([[eid] for eid in non_match_edges if eid in boostable_edges])
         ct = 0
-        print("Entering q")
+        # print("Entering q")
         while len(q) > 0:
             nxt_pth = q.popleft()  # Get next path
             ct += 1
-            if ct % 100 == 0:
+            if ct % 10000 == 0:
                 s = "\tWorking on step " + str(ct) + " and len(q) = " 
                 s += str(len(q)) + ", longest is " 
                 s += str(max([len(x) for x in q])) + " and shortest is " 
                 s += str(min([len(x) for x in q])) + " and lng is "
                 s += str(lng)
-                print(s)
+                # print(s)
             
             if lng is None or (lng is not None and len(nxt_pth) <= lng):
                 # Paths have distinct edges and distinct vertices. Cycles are 
@@ -689,16 +578,16 @@ class BipartiteGraph(object):
         '''
         # TODO: Fix functions leading to this function so as to only result in 
         # *maximum* matchings.
-        print("Beginning optimization.")
+        # print("Beginning optimization.")
         assert b in [0, 1]
-        print("Extending empty match.")
-        next_match = self.xxtend(b) # starts with empty match by default
+        # print("Extending empty match.")
+        next_match = self.extend(b) # starts with empty match by default
         assert next_match is not None
         temp = None
         while next_match != temp and next_match is not None:
             temp = next_match
-            print("Extending previous match.")
-            next_match = self.xxtend(b, temp)
+            # print("Extending previous match.")
+            next_match = self.extend(b, temp)
             
         if b:
             wt_dct = self.red_edges
@@ -707,7 +596,7 @@ class BipartiteGraph(object):
         assert len(wt_dct) == 0 or \
             (next_match is not None and len(next_match) > 0)
 
-        print("Boosting previous match")
+        # print("Boosting previous match")
         temp = next_match
         w = sum([wt_dct[eid] for eid in temp])
         next_match = self.boost(b, temp)
@@ -716,7 +605,7 @@ class BipartiteGraph(object):
         assert len(temp) == len(next_match)
         while v - w > 0.0:
             temp = next_match
-            print("Boosting previus match")
+            # print("Boosting previous match")
             w = v
             next_match = self.boost(b, temp)
             v = sum([wt_dct[eid] for eid in next_match])
