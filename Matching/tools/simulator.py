@@ -47,7 +47,7 @@ class Simulator(object):
         self.fn = par['filename']  # str
         self.stoch_matrix = par['stochastic matrix']  # list
         self.hashrate = par['hashrate']  # list
-        self.minspendtime = 10
+        self.minspendtime = par['min spendtime']
         # dict with lambda functions 
         # PMFs with support on minspendtime, minspendtime + 1, ...
         self.spendtimes = par['spendtimes'] 
@@ -67,22 +67,34 @@ class Simulator(object):
         open(self.fn, "w+").close()
         self.last_mining_reward = None
         # Write to file each time these many blocks have been added
-        self.reporting_modulus = 10 
+        self.reporting_modulus = par['reporting modulus']
 
     def run(self):
         while self.t < self.runtime:
+            # print(self.t)
+            # print(self.g.right_nodes)
             self.make_coinbase()
+            # print(self.g.right_nodes)
             self.spend_from_buffer()
+            # print(self.g.right_nodes)
             self.report()
             self.t += 1
 
     def make_coinbase(self):
+        # print("Making coinbase")
+        # print("Picking owner.")
         owner = self.pick_coinbase_owner()
+        # print("Picking amount.")
         amt = self.pick_coinbase_amt()
+        # print("Picking delay.")
         dt = self.pick_spend_time(owner)
+        # print("Picking recipient.")
         recip = self.pick_next_recip(owner)
+        # print("Adding node.")
         node_to_spend = self.g.add_node(0, self.t)
+        # print("\n\nNTS = " + str(node_to_spend))
         self.ownership[node_to_spend] = owner
+        # print("Node added.")
         if self.t + dt < len(self.buffer):
             # at block self.t + dt, owner will send new_node to recip
             self.buffer[self.t + dt] += [(owner, recip, node_to_spend)]  
@@ -263,13 +275,13 @@ class Simulator(object):
     def pick_spend_time(self, owner):
         i = self.minspendtime # Minimal spend-time
         r = random()
-        u = self.spendtimes[owner](i)
+        u = sum([self.spendtimes[owner](x) for x in range(i+1)])
         found = (u >= r)
-        while not found:
+        while not found and i < self.runtime:
             u += self.spendtimes[owner](i)
             i += 1
             found = (u >= r)
-        assert found
+        assert found or i >= self.runtime
         return i
 
     def pick_next_recip(self, owner):

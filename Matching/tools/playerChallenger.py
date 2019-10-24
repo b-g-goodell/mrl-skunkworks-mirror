@@ -14,17 +14,17 @@ class Player(object):
         self.data = par
         
     def respond(self, g, my_knowledge):
-        print("Deleting known spurious ring members")
-        to_del = [fid for fid in g.red_edges if any([eid[1] == fid[1] and fid != eid for eid in my_knowledge])
+        # print("Deleting known spurious ring members")
+        to_del = [fid for fid in g.red_edges if any([eid[1] == fid[1] and fid != eid for eid in my_knowledge])]
         g.del_edge(to_del)
         
-        print("Weighting graph")
+        # print("Weighting graph")
         ct = 0
         dct = 0
         for sig_node in g.right_nodes:
             ct += 1
             if ct/len(g.right_nodes) > (dct+1)*0.099999:
-                print("We are " + str(round(100.0*float(ct/len(g.right_nodes)))) + "% done weighting.")
+                # print("We are " + str(round(100.0*float(ct/len(g.right_nodes)))) + "% done weighting.")
                 dct += 1
             ring = [eid for eid in g.red_edges if eid[1] == sig_node]
             ast = {} # alleged spendtimes
@@ -37,7 +37,7 @@ class Player(object):
             for eid in ring:
                 g.red_edges[eid] = base_likelihood*self.data['null'](ast[eid])/self.data['wallet'](ast[eid])
                 
-        print("Done weighting. Beginning optimization.")
+        # print("Done weighting. Beginning optimization.")
         return g.optimize(1)
                 
                 
@@ -50,20 +50,20 @@ class Challenger(object):
         # indices.
         sally = Simulator(self.data['simulator'])
         sally.run()
-        #print(len(sally.g.right_nodes))
+        # print(len(sally.g.right_nodes))
         return sally
         
 def tracing_game(par):
     ''' tracing_game executes the actual tracing game. '''
-    print("Beginning tracing game by initializing Chuck and Eve.")
+    # print("Beginning tracing game by initializing Chuck and Eve.")
     eve = Player(par['eve'])
     chuck = Challenger(par['chuck'])
     u = len(par['chuck']['simulator']['stochastic matrix'])
     
-    print("Running simulation.")
+    # print("Running simulation.")
     sally = chuck.generate()
     
-    print("Getting Eve's response.")
+    # print("Getting Eve's response.")
     # Ownership of an edge is the same as ownership of it's signature node.
     # Ownership of a signature node is a pair (k, x) where k is an 
     # owner index in the stochastic matrix, x is the left_node 
@@ -71,7 +71,7 @@ def tracing_game(par):
     # TODO: This is not correct; Eve receives all ownership info of both 
     # endpoints of all of her edges, not merely ownership information for 
     # the edge itself. 
-    eve_edges = [eid for eid in sally.g.red_edges if u-1 in [sally.ownership[eid[0]], sally.ownership[eid[1]]]
+    eve_edges = [eid for eid in sally.g.red_edges if u-1 in [sally.ownership[eid[0]], sally.ownership[eid[1]]]]
     eve_ownership = dict()
     for eid in eve_edges:
         eve_ownership[eid] = sally.ownership[eid]
@@ -79,7 +79,7 @@ def tracing_game(par):
         eve_ownership[eid[1]] = sally.ownership[eid[1]]
     resp = eve.respond(sally.g, eve_ownership) # response to the simulator (ownership dict)
             
-    print("Compiling confusion matrix.")
+    # print("Compiling confusion matrix.")
     positives = {}
     negatives = {}
     true_positives = {}
@@ -89,22 +89,22 @@ def tracing_game(par):
     
     for eid in sally.g.red_edges:
         assert eid in sally.ownership
-        if eid in resp:
-            # This indicates Eve thinks this eid belongs to Alice.
+        ow = sally.ownership[eid]
+        # print(ow)
+        if ow[0] != -1 % u and ow[0] != -2 % u:
             positives[eid] = eid
         else:
-            # This indicates Eve thinks/knows this eid does not.
             negatives[eid] = eid
             
     for eid in positives:
-        if sally.ownership[eid][0] != -1 % u and sally.ownership[eid][0] != -2 % u:
+        if eid in resp:
             true_positives[eid] = eid
         else:
-            false_positives[eid] = eid
+            false_negatives[eid] = eid
             
     for eid in negatives:
-        if sally.ownership[eid][0] != -1 % u and sally.ownership[eid][0] != -2 % u:
-            false_negatives[eid] = eid
+        if eid in resp:
+            false_positives[eid] = eid
         else:
             true_negatives[eid] = eid
             
@@ -186,36 +186,42 @@ def tracing_game(par):
     to_write += "Matthews Correlation Coefficient = " + str(MCC) + "\n"
     to_write += "Informedness = " + str(BM) + "\n"
     to_write += "Markedness = " + str(MK) + "\n"
+    to_write += "        ======\n"
     with open(par['filename'], "w+") as wf:
         wf.write(str(to_write))
-    print(to_write)            
-        
+    print(to_write)
+
 par = {}
 
 par['filename'] = "../data/confusion.txt"
 
 par['chuck'] = {}
 par['chuck']['simulator'] = {}
-par['chuck']['simulator']['runtime'] = 15
+par['chuck']['simulator']['min spendtime'] = 2
+par['chuck']['simulator']['runtime'] = 2
 par['chuck']['simulator']['filename'] = "../data/output.txt"
 par['chuck']['simulator']['stochastic matrix'] = [[0.0, 0.9, 0.1], [0.125, 0.75, 0.125], [0.75, 0.25, 0.0]]
 par['chuck']['simulator']['hashrate'] = [0.8075, 0.125, 0.0625]
-par['chuck']['simulator']['min spendtime'] = 10
 par['chuck']['simulator']['spendtimes'] = []
 # Alice's spendtime has expectation 20 blocks
 par['chuck']['simulator']['spendtimes'] += [lambda 
-    x: 0.05*((1.0-0.05)**(x-par['chuck']['simulator']['min spendtime']))]
+    x: 0.01*((1.0-0.01)**(x-par['chuck']['simulator']['min spendtime']))]
 # Eve's spenditme has expectation 100 blocks
 par['chuck']['simulator']['spendtimes'] += [lambda 
-    x: 0.01*((1.0-0.01)**(x-par['chuck']['simulator']['min spendtime']))]
+    x: 0.025*((1.0-0.025)**(x-par['chuck']['simulator']['min spendtime']))]
 # Bob's (background) spendtime has expectation 40 blocks.
 par['chuck']['simulator']['spendtimes'] += [lambda 
-    x: 0.025*((1.0-0.025)**(x-par['chuck']['simulator']['min spendtime']))]
+    x: 0.0125*((1.0-0.0125)**(x-par['chuck']['simulator']['min spendtime']))]
 par['chuck']['simulator']['ring size'] = 11
+par['chuck']['simulator']['reporting modulus'] = 1
 
 par['eve'] = {}
 par['eve']['min spendtime'] = deepcopy(par['chuck']['simulator']['min spendtime'])
 par['eve']['null'] = lambda x: 0.05*((1.0-0.05)**(x-par['chuck']['simulator']['min spendtime']))
 par['eve']['wallet'] = lambda x: 0.025*((1.0-0.025)**(x-par['chuck']['simulator']['min spendtime']))
 
-tracing_game(par)
+ss = 16
+
+for k in range(ss): 
+    par['chuck']['simulator']['runtime'] += 1
+    tracing_game(par)

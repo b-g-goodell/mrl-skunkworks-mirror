@@ -78,6 +78,7 @@ class BipartiteGraph(object):
         result = None
         assert b in [0, 1]
         result = (self.count, tag)
+        # print("\n\nRESULT = " + str(result))
         assert result not in self.right_nodes and result not in self.left_nodes
         self.count += 1
         if b:
@@ -477,7 +478,7 @@ class BipartiteGraph(object):
                 s += str(max([len(x) for x in q])) + " and shortest is " 
                 s += str(min([len(x) for x in q])) + " and lng is "
                 s += str(lng)
-                # print(s)
+                print(s)
             
             if lng is None or (lng is not None and len(nxt_pth) <= lng):
                 # Paths have distinct edges and distinct vertices. Cycles are 
