@@ -198,27 +198,37 @@ par['filename'] = "../data/confusion.txt"
 par['chuck'] = {}
 par['chuck']['simulator'] = {}
 par['chuck']['simulator']['min spendtime'] = 2
-par['chuck']['simulator']['runtime'] = 2
+par['chuck']['simulator']['runtime'] = 8
 par['chuck']['simulator']['filename'] = "../data/output.txt"
 par['chuck']['simulator']['stochastic matrix'] = [[0.0, 0.9, 0.1], [0.125, 0.75, 0.125], [0.75, 0.25, 0.0]]
 par['chuck']['simulator']['hashrate'] = [0.8075, 0.125, 0.0625]
 par['chuck']['simulator']['spendtimes'] = []
-# Alice's spendtime has expectation 20 blocks
+
+# Alice will always be the first few indices.
+# Alice's spendtime has expectation 20 blocks and support
+# on min_spendtime, min_spendtime + 1, ...
 par['chuck']['simulator']['spendtimes'] += [lambda 
     x: 0.01*((1.0-0.01)**(x-par['chuck']['simulator']['min spendtime']))]
-# Eve's spenditme has expectation 100 blocks
+# Eve will always be second-to-last-index.
+# Eve's spenditme has expectation 100 blocks and support
+# on min_spendtime, min_spendtime + 1, ...
 par['chuck']['simulator']['spendtimes'] += [lambda 
     x: 0.025*((1.0-0.025)**(x-par['chuck']['simulator']['min spendtime']))]
-# Bob's (background) spendtime has expectation 40 blocks.
+# Bob will be last index.
+# Bob's (background) spendtime has expectation 40 blocks and support
+# on min_spendtime, min_spendtime + 1, ...
 par['chuck']['simulator']['spendtimes'] += [lambda 
     x: 0.0125*((1.0-0.0125)**(x-par['chuck']['simulator']['min spendtime']))]
+    
 par['chuck']['simulator']['ring size'] = 11
 par['chuck']['simulator']['reporting modulus'] = 1
 
+# Eve's hypotheses about Bob's behavior (wallet) and Alice's behavior (null)
+# match the distributions above.
 par['eve'] = {}
 par['eve']['min spendtime'] = deepcopy(par['chuck']['simulator']['min spendtime'])
-par['eve']['null'] = lambda x: 0.05*((1.0-0.05)**(x-par['chuck']['simulator']['min spendtime']))
-par['eve']['wallet'] = lambda x: 0.025*((1.0-0.025)**(x-par['chuck']['simulator']['min spendtime']))
+par['eve']['null'] = par['chuck']['simulator']['spendtimes'][0]
+par['eve']['wallet'] = par['chuck']['simulator']['spendtimes'][-1]
 
 ss = 16
 

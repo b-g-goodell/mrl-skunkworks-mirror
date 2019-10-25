@@ -14,6 +14,7 @@ SPENDTIMES = [lambda x:0.05*((1.0-0.05)**(x-MINSPENDTIME)), \
     lambda x: 0.025*((1.0-0.025)**(x-MINSPENDTIME))]
 RINGSIZE = 11
 RUNTIME = 100
+REPORTING_MODULUS = 7  # lol whatever
 
 def make_sally():
     par = dict()
@@ -24,6 +25,7 @@ def make_sally():
     par['min spendtime'] = MINSPENDTIME
     par['spendtimes'] = SPENDTIMES
     par['ring size'] = RINGSIZE
+    par['reporting modulus'] = REPORTING_MODULUS
     sally = Simulator(par)
     return sally
 

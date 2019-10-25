@@ -473,12 +473,12 @@ class BipartiteGraph(object):
             nxt_pth = q.popleft()  # Get next path
             ct += 1
             if ct % 10000 == 0:
-                s = "\tWorking on step " + str(ct) + " and len(q) = " 
-                s += str(len(q)) + ", longest is " 
-                s += str(max([len(x) for x in q])) + " and shortest is " 
-                s += str(min([len(x) for x in q])) + " and lng is "
-                s += str(lng)
-                print(s)
+            #    s = "\tWorking on step " + str(ct) + " and len(q) = " 
+            #    s += str(len(q)) + ", longest is " 
+            #    s += str(max([len(x) for x in q])) + " and shortest is " 
+            #    s += str(min([len(x) for x in q])) + " and lng is "
+            #    s += str(lng)
+                print(".", end='')
             
             if lng is None or (lng is not None and len(nxt_pth) <= lng):
                 # Paths have distinct edges and distinct vertices. Cycles are 

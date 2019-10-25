@@ -275,11 +275,12 @@ class Simulator(object):
     def pick_spend_time(self, owner):
         i = self.minspendtime # Minimal spend-time
         r = random()
-        u = sum([self.spendtimes[owner](x) for x in range(i+1)])
+        # spend times are encoded with support on min_spendtime, min_spendtime+1, ...
+        u = self.spendtimes[owner](i)
         found = (u >= r)
         while not found and i < self.runtime:
-            u += self.spendtimes[owner](i)
             i += 1
+            u += self.spendtimes[owner](i)
             found = (u >= r)
         assert found or i >= self.runtime
         return i
