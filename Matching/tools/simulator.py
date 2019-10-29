@@ -84,6 +84,7 @@ class Simulator(object):
         # print("Making coinbase")
         # print("Picking owner.")
         owner = self.pick_coinbase_owner()
+        assert owner in range(len(self.hashrate))
         # print("Picking amount.")
         amt = self.pick_coinbase_amt()
         # print("Picking delay.")
@@ -116,6 +117,8 @@ class Simulator(object):
         orig_num_red_edges = len(self.g.red_edges)
         ct = 0
         for k, grp in groupby(to_spend, key=lambda x: (x[0], x[1])):
+            # k[0] is owner index of sender
+            # k[1] is owner index of receiver.
             assert orig_num_red_edges == len(self.g.red_edges) - ct
             temp = deepcopy(grp)
             assert orig_num_red_edges == len(self.g.red_edges) - ct
@@ -159,15 +162,22 @@ class Simulator(object):
             txn_bundles[-1] += [sig_nodes]
             assert orig_num_red_edges == len(self.g.red_edges) - ct
 
-            # add a left_node and assign ownership
+            # Recall: 
+            # k[0] is owner index of sender
+            # k[1] is owner index of receiver.
+
+            # Add a left_node and assign ownership
             change_node = self.g.add_node(0, self.t)  
             assert orig_num_red_edges == len(self.g.red_edges) - ct
+            # Ownership of left nodes is             
             self.ownership[change_node] = k[0]
             assert orig_num_red_edges == len(self.g.red_edges) - ct
-            # add a left_node and assign ownership
+
+            # Add another left_node and assign ownership
             recipient_node = self.g.add_node(0, self.t)  
             assert orig_num_red_edges == len(self.g.red_edges) - ct
             self.ownership[recipient_node] = k[1]
+
             assert orig_num_red_edges == len(self.g.red_edges) - ct
             assert len(sig_nodes) == len(set(sig_nodes))
             for snode in sig_nodes:
@@ -197,7 +207,9 @@ class Simulator(object):
                     assert orig_num_red_edges == len(self.g.red_edges) - ct
                     new_eid = self.g.add_edge(1, pairrr, 1.0, self.t)
                     red_eids += [new_eid] # adds red edge
+                    assert new_eid not in self.ownership
                     self.ownership[new_eid] = self.ownership[new_eid[1]]
+                    assert new_eid in self.ownership
                     ct += 1
                     assert orig_num_red_edges == len(self.g.red_edges) - ct
                 x = num_red_edges + len(rings[snode])
@@ -241,24 +253,23 @@ class Simulator(object):
             wf.write(line + "\n\n\n")
 
     def pick_coinbase_owner(self):
-        i = 0
         r = random()
-        u = self.hashrate[i]
-        found = (u >= r)
-        while not found and i < len(self.hashrate):
+        u = 0
+        found = False
+        for i in range(len(self.hashrate)):
             u += self.hashrate[i]
-            i += 1
-            found = (u >= r)
+            if u > r:
+                found = True
+                break
         assert found
+        assert i in range(len(self.hashrate))
         return i
             
     def pick_coinbase_amt(self):
         ''' This function starts with a max reward, multiplies the last mining 
         reward by a given decay ratio, until you hit a minimum. WARNING: If 
         Simulator is not run timestep-by-timestep, i.e. if any timepoints 
-        t=0, 1, 2, ... are skipped, then the coinbase reward will be off; to 
-        fix this, we could use self.t and just return the max(X, Y) where
-            X = MAX_MONERO_ATOMIC_UNITS, max(MIN_MINING_REWARD, DECAY_RATIO*MAX_MONERO_ATOMIC_UNITS(1.0 - DECAY_RATIO)**(self.t - 1)))
+        t=0, 1, 2, ... are skipped, then the coinbase reward will be off.
         '''
         if self.t==0:
             self.last_mining_reward = DECAY_RATIO*MAX_MONERO_ATOMIC_UNITS
@@ -273,6 +284,10 @@ class Simulator(object):
         return self.last_mining_reward
 
     def pick_spend_time(self, owner):
+        try:
+            assert owner in range(len(self.stoch_matrix))
+        except AssertionError:
+            print(owner)
         i = self.minspendtime # Minimal spend-time
         r = random()
         # spend times are encoded with support on min_spendtime, min_spendtime+1, ...

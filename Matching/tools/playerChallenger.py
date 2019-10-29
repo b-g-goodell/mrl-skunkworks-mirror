@@ -78,7 +78,10 @@ def tracing_game(par):
         eve_ownership[eid[0]] = sally.ownership[eid[0]]
         eve_ownership[eid[1]] = sally.ownership[eid[1]]
     resp = eve.respond(sally.g, eve_ownership) # response to the simulator (ownership dict)
-            
+
+    return sally, resp
+
+def interpret(par, sally, resp):
     # print("Compiling confusion matrix.")
     positives = {}
     negatives = {}
@@ -86,15 +89,17 @@ def tracing_game(par):
     true_negatives = {}
     false_positives = {}
     false_negatives = {}
+
+    u = len(sally.stoch_matrix)
     
     for eid in sally.g.red_edges:
         assert eid in sally.ownership
         ow = sally.ownership[eid]
         # print(ow)
-        if ow[0] != -1 % u and ow[0] != -2 % u:
-            positives[eid] = eid
-        else:
+        if ow[0] == u-1 or ow[0] == u-2:
             negatives[eid] = eid
+        else:
+            positives[eid] = eid
             
     for eid in positives:
         if eid in resp:
@@ -110,6 +115,8 @@ def tracing_game(par):
             
     P = len(positives)
     N = len(negatives)
+
+    assert P + N == len(sally.g.red_edges)
     TP = len(true_positives)
     TN = len(true_negatives)
     FP = len(false_positives)
@@ -191,47 +198,134 @@ def tracing_game(par):
         wf.write(str(to_write))
     print(to_write)
 
-par = {}
+def go():
+    par = {}
 
-par['filename'] = "../data/confusion.txt"
+    par['filename'] = "../data/confusion.txt"
 
-par['chuck'] = {}
-par['chuck']['simulator'] = {}
-par['chuck']['simulator']['min spendtime'] = 2
-par['chuck']['simulator']['runtime'] = 8
-par['chuck']['simulator']['filename'] = "../data/output.txt"
-par['chuck']['simulator']['stochastic matrix'] = [[0.0, 0.9, 0.1], [0.125, 0.75, 0.125], [0.75, 0.25, 0.0]]
-par['chuck']['simulator']['hashrate'] = [0.8075, 0.125, 0.0625]
-par['chuck']['simulator']['spendtimes'] = []
+    par['chuck'] = {}
+    par['chuck']['simulator'] = {}
+    par['chuck']['simulator']['min spendtime'] = 1
+    par['chuck']['simulator']['runtime'] = 8
+    par['chuck']['simulator']['filename'] = "../data/output.txt"
+    # Index order: Alice is @ 0, 1, 2, ..., then Eve @ -2, then Bob @ -1
+    par['chuck']['simulator']['stochastic matrix'] = [[0.0, 0.9, 0.1], [0.125, 0.75, 0.125], [0.75, 0.25, 0.0]]
 
-# Alice will always be the first few indices.
-# Alice's spendtime has expectation 20 blocks and support
-# on min_spendtime, min_spendtime + 1, ...
-par['chuck']['simulator']['spendtimes'] += [lambda 
-    x: 0.01*((1.0-0.01)**(x-par['chuck']['simulator']['min spendtime']))]
-# Eve will always be second-to-last-index.
-# Eve's spenditme has expectation 100 blocks and support
-# on min_spendtime, min_spendtime + 1, ...
-par['chuck']['simulator']['spendtimes'] += [lambda 
-    x: 0.025*((1.0-0.025)**(x-par['chuck']['simulator']['min spendtime']))]
-# Bob will be last index.
-# Bob's (background) spendtime has expectation 40 blocks and support
-# on min_spendtime, min_spendtime + 1, ...
-par['chuck']['simulator']['spendtimes'] += [lambda 
-    x: 0.0125*((1.0-0.0125)**(x-par['chuck']['simulator']['min spendtime']))]
-    
-par['chuck']['simulator']['ring size'] = 11
-par['chuck']['simulator']['reporting modulus'] = 1
+    alice_hashrate = 0.33
+    eve_hashrate = 0.33
+    bob_hashrate = 1.0 - alice_hashrate - eve_hashrate
+    par['chuck']['simulator']['hashrate'] = [alice_hashrate, eve_hashrate, bob_hashrate]
+    par['chuck']['simulator']['spendtimes'] = []
 
-# Eve's hypotheses about Bob's behavior (wallet) and Alice's behavior (null)
-# match the distributions above.
-par['eve'] = {}
-par['eve']['min spendtime'] = deepcopy(par['chuck']['simulator']['min spendtime'])
-par['eve']['null'] = par['chuck']['simulator']['spendtimes'][0]
-par['eve']['wallet'] = par['chuck']['simulator']['spendtimes'][-1]
+    u = len(par['chuck']['simulator']['stochastic matrix'])
+    # print(u)
 
-ss = 16
+    par['chuck']['simulator']['ring size'] = 11
+    par['chuck']['simulator']['reporting modulus'] = 1
 
-for k in range(ss): 
-    par['chuck']['simulator']['runtime'] += 1
-    tracing_game(par)
+    # These must be >= 1
+    exp_alice_spendtime = 5*par['chuck']['simulator']['runtime']
+    exp_bob_spendtime = 3*par['chuck']['simulator']['runtime']
+    exp_eve_spendtime = 4*par['chuck']['simulator']['runtime']	
+
+    # Which forces these to be 0<= * <= 1.0
+    pa = 1/exp_alice_spendtime
+    pb = 1/exp_bob_spendtime
+    pe = 1/exp_eve_spendtime
+
+    # Alice will always be the first few indices.
+    # Alice's spendtime has expectation 20 blocks and support
+    # on min_spendtime, min_spendtime + 1, ...
+    par['chuck']['simulator']['spendtimes'] += [lambda 
+        x: pa*((1.0-pa)**(x-par['chuck']['simulator']['min spendtime']))]
+
+    # Eve will always be second-to-last-index.
+    # Eve's spenditme has expectation 100 blocks and support
+    # on min_spendtime, min_spendtime + 1, ...
+    par['chuck']['simulator']['spendtimes'] += [lambda 
+        x: pe*((1.0-pe)**(x-par['chuck']['simulator']['min spendtime']))]
+
+    # Bob will be last index.
+    # Bob's (background) spendtime has expectation 40 blocks and support
+    # on min_spendtime, min_spendtime + 1, ...
+    par['chuck']['simulator']['spendtimes'] += [lambda 
+        x: pb*((1.0-pb)**(x-par['chuck']['simulator']['min spendtime']))]
+        
+    # Eve's hypotheses about Bob's behavior (wallet) and Alice's behavior (null)
+    # match the distributions above.
+    par['eve'] = {}
+    par['eve']['min spendtime'] = deepcopy(par['chuck']['simulator']['min spendtime'])
+    par['eve']['null'] = par['chuck']['simulator']['spendtimes'][0]
+    par['eve']['wallet'] = par['chuck']['simulator']['spendtimes'][-1]
+
+    ss = 16
+
+    repeats = []
+    ct = 0
+    mcc_none = []
+
+    for k in range(ss): 
+        par['chuck']['simulator']['ring size'] += 3
+        ct = 0
+        repeats += [0]
+
+        print("Calling tracing_game. Looking for a ledger")
+        sally, resp = tracing_game(par)
+        # Recall: ownership[new_eid] = ownership[new_eid[1]]
+        alice_edges = [x for x in sally.g.red_edges if sally.ownership[x[1]] != u-2 and sally.ownership[x[1]] != u-1]
+        al = len(alice_edges)
+
+        eve_edges = [x for x in sally.g.red_edges if sally.ownership[x[1]] == u - 2]
+        el = len(eve_edges)
+
+        bob_edges = [x for x in sally.g.red_edges if sally.ownership[x[1]] == u - 1]
+        bl = len(bob_edges)
+
+        while al == 0 or el == 0 or bl == 0:
+            print("Degenerate ledger. Calling again.")        
+
+            with open("temp.txt", "a") as wf:
+                s = "\n\nAnother degenerate ledger found. Here are the deets.\n"
+                s += "\nOwnership dict====\n"
+                for x in sally.ownership:
+                    s += str(x) + ": " + str(sally.ownership[x]) + "\n"
+                s += "\nLeft nodes====\n"
+                for x in sally.g.left_nodes:
+                    s += str(x) + "\n"
+                s += "\n\nRight nodes====\n"
+                for x in sally.g.right_nodes:
+                    s += str(x) + "\n"
+                s += "\n\nRed edges====\n"
+                for x in sally.g.red_edges:
+                    s += str(x) + "\n"
+                s += "\n\nBlue edges====\n"
+                for x in sally.g.blue_edges:
+                    s += str(x) + "\n"
+                s += "\n\nAlice edges====\n"
+                
+                for x in alice_edges:
+                    s += str(x) + "\n"
+                s += "\n\nEve edges====\n"
+                for x in eve_edges:
+                    s += str(x) + "\n"
+                s += "\n\nBob edges====\n"
+                for x in bob_edges:
+                    s += str(x) + "\n"
+                wf.write(s)
+            if ct % 10 == 0:
+                print(repeats)
+            repeats[-1] += 1
+            ct += 1
+
+            sally, resp = tracing_game(par)
+            al = len([x for x in sally.g.red_edges if sally.ownership[x][0] in range(u-2)])
+            el = len([x for x in sally.g.red_edges if sally.ownership[x][0] == u-2])
+            bl = len([x for x in sally.g.red_edges if sally.ownership[x][0] == u-1])
+
+        mcc = interpret(par, sally, resp)
+        mcc_none += [mcc is None]
+
+    print(repeats)
+    print(mcc_none)
+
+go()

@@ -6,7 +6,10 @@ from copy import deepcopy
 
 FILENAME = "../data/output.txt"
 STOCHMAT = [[0.0, 0.9, 0.1], [0.125, 0.75, 0.125], [0.75, 0.25, 0.0]]
-HASHRATE = [0.8075, 0.125, 0.0625]
+HASHRATE_ALICE = 0.33
+HASHRATE_EVE = 0.33
+HASHRATE_BOB = 1.0 - HASHRATE_ALICE - HASHRATE_EVE
+HASHRATE = [HASHRATE_ALICE, HASHRATE_EVE, HASHRATE_BOB]
 MINSPENDTIME = 10
 # Expected spend-times are 20.0, 100.0, and 50.0 blocks, respectively.
 SPENDTIMES = [lambda x:0.05*((1.0-0.05)**(x-MINSPENDTIME)), \
@@ -88,7 +91,10 @@ class TestSimulator(ut.TestCase):
         # print("\n\nTESTMAKECOINBASE\n\n", x, sally.ownership[x])
         self.assertTrue(sally.ownership[x] in range(len(sally.stoch_matrix)))
         if dt < sally.runtime:
-            self.assertTrue(len(sally.buffer[dt]) > 0)    
+            self.assertTrue(len(sally.buffer[dt]) > 0) 
+        # Test no repeats make it into the buffer.
+        for entry in sally.buffer:
+            self.assertEqual(len(list(set(entry))), len(entry))
 
     # @ut.skip("Skipping test_spend_from_buffer")
     def test_spend_from_buffer(self):
@@ -127,7 +133,15 @@ class TestSimulator(ut.TestCase):
         # Should add exactly one new right_node, two new left nodes, two new blue edges, and a variable number of red edges.
         # We can only expect max(len(sally.g.left_nodes), sally.ringsize) red edges, since a ring in our simulations has no repeated members.
         eff_rs = min(len(sally.g.left_nodes), sally.ringsize)
+
         sally.spend_from_buffer() 
+
+        # Test no repeats make it into the buffer.
+        for entry in sally.buffer:
+            set_entry = set(entry)
+            len_entry = len(entry)
+            len_set_entry = len(set_entry)
+            self.assertEqual(len_entry, len_set_entry)
 
         self.assertEqual(len(sally.g.left_nodes), num_left_nodes + 2)
         self.assertEqual(len(sally.g.right_nodes), num_right_nodes + 1)
