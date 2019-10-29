@@ -63,6 +63,76 @@ class TestSimulator(ut.TestCase):
         self.assertEqual(len(sally.g.blue_edges), 0)
         self.assertEqual(sally.t, 0)
         self.assertEqual(sally.dummy_monero_mining_flat, False)
+
+    # @ut.skip("Skipping test_halting_run")
+    def test_halting_run(self):
+        sally = make_sally()
+        # After each timestep, add >= 1 new left node (coinbase) and
+        # len(sally.buffer[sally.t]) new right nodes (signatures) and
+        # len(sally.buffer[sally.t])*ringsize new red edges (members) and
+        # len(sally.buffer[sally.t])*2 new blue edges.
+
+        old_t = sally.t
+        old_num_left_nodes = len(sally.g.left_nodes)
+        old_num_right_nodes = len(sally.g.right_nodes)
+        old_num_red_edges = len(sally.g.red_edges)
+        old_num_blue_edges = len(sally.g.blue_edges)
+
+        self.assertEqual(old_t, 0)
+        self.assertEqual(old_num_left_nodes, 0)
+        self.assertEqual(old_num_right_nodes, 0)
+        self.assertEqual(old_num_red_edges, 0)
+        self.assertEqual(old_num_blue_edges, 0)
+
+        num_left_nodes_to_be_spent = len(sally.buffer[sally.t+1])
+        self.assertEqual(num_left_nodes_to_be_spent, 0)
+        num_new_right_nodes = num_left_nodes_to_be_spent
+        
+        to_spend = sorted(sally.buffer[old_t+1], key=lambda x: (x[0], x[1]))
+        txn_bundles = groupby(to_spend, key=lambda x: (x[0], x[1]))         
+        temp = deepcopy(txn_bundles)
+        num_true_spenders = sum([1 for k, grp in temp for entry in deepcopy(grp)])
+        self.assertEqual(num_true_spenders, num_left_nodes_to_be_spent)
+        temp = deepcopy(txn_bundles)
+        num_txn_bundles = sum([2 for k, grp in temp]) # Each bundle produces 2 outputs.
+
+        num_new_blues = 2*num_txn_bundles
+        num_new_left_nodes = 2*num_txn_bundles + 1
+        num_new_reds = sally.ringsize*num_true_spenders
+
+        # print(sally.buffer[0])
+        # print(sally.buffer[1])
+        # print("Left node keys = " + str(list(sally.g.left_nodes.keys())))
+
+        while sally.t <= sally.runtime:
+            sally.halting_run()                    
+            # print(list(sally.g.left_nodes.keys()))
+
+            new_t = sally.t  
+            new_num_left_nodes = len(sally.g.left_nodes) 
+            new_num_right_nodes = len(sally.g.right_nodes)
+            new_num_red_edges = len(sally.g.red_edges)
+            new_num_blue_edges = len(sally.g.blue_edges)
+
+            self.assertEqual(num_new_left_nodes + old_num_left_nodes, new_num_left_nodes)
+            self.assertEqual(num_right_nodes_to_be_spent + old_num_right_nodes, new_num_right_nodes)
+            self.assertEqual(num_new_reds + old_num_red_edges, new_num_red_edges)
+            self.assertEqual(num_new_blues + old_num_blue_edges, new_num_blue_edges)
+
+            num_left_nodes_to_be_spent = len(sally.buffer[sally.t+1])
+            num_new_right_nodes = num_left_nodes_to_be_spent
+            
+            to_spend = sorted(sally.buffer[new_t+1], key=lambda x: (x[0], x[1]))
+            txn_bundles = groupby(to_spend, key=lambda x: (x[0], x[1]))         
+            temp = deepcopy(txn_bundles)
+            num_true_spenders = sum([1 for k, grp in temp for entry in deepcopy(grp)])
+            self.assertEqual(num_true_spenders, num_left_nodes_to_be_spent)
+            temp = deepcopy(txn_bundles)
+            num_txn_bundles = sum([2 for k, grp in temp]) # Each bundle produces 2 outputs.
+
+            num_new_blues = 2*num_txn_bundles
+            num_new_left_nodes = 2*num_txn_bundles + 1
+            num_new_reds = sally.ringsize*num_true_spenders        
         
     # @ut.skip("Skipping test_run")
     def test_run(self):
@@ -91,13 +161,13 @@ class TestSimulator(ut.TestCase):
         # print("\n\nTESTMAKECOINBASE\n\n", x, sally.ownership[x])
         self.assertTrue(sally.ownership[x] in range(len(sally.stoch_matrix)))
         if dt < sally.runtime:
-            self.assertTrue(len(sally.buffer[dt]) > 0) 
+            self.assertTrue(x in sally.buffer[dt])
         # Test no repeats make it into the buffer.
         for entry in sally.buffer:
             self.assertEqual(len(list(set(entry))), len(entry))
 
     # @ut.skip("Skipping test_spend_from_buffer")
-    def test_spend_from_buffer(self):
+    def test_spend_from_buffer_one(self):
         sally = make_sally()
         # mimic run() for a few iterations without spending from the buffer (forgetting any txns incidentally placed in buffer this early, nbd for the test)
         assert sally.runtime > 3*sally.minspendtime
@@ -147,6 +217,30 @@ class TestSimulator(ut.TestCase):
         self.assertEqual(len(sally.g.right_nodes), num_right_nodes + 1)
         self.assertEqual(len(sally.g.red_edges), num_red_edges + eff_rs)
         self.assertEqual(len(sally.g.blue_edges), num_blue_edges + 2)
+
+    def test_spend_from_buffer_two(self):
+        ''' test_spend_from_buffer_two does similar to test_spend_from_buffer_one but with simulation-generated buffer.'''
+        sally = make_sally()
+        assert sally.runtime > 3*sally.minspendtime
+        while len(sally.buffer[sally.t + 1]) != 0 and sally.t < sally.runtime:
+            sally.halting_run()
+
+        if sally.t < sally.runtime:
+            l = len(sally.buffer[sally.t+1])
+            num_left_nodes = len(sally.g.left_nodes)
+            num_right_nodes = len(sally.g.right_nodes)
+            num_red_edges = len(sally.g.red_edges)
+            num_blue_edges = len(sally.g.blue_edges)
+            num_to_be_spent = len(sally.buffer[sally.t+1])
+            num_in_tail_buffer = sum([len(x) for x in sally.buffer[sally.t + 2:]])
+
+            sally.spend_from_buffer()
+
+            self.assertEqual(len(sally.g.left_nodes), num_left_nodes + 2*num_to_be_spent)
+            self.assertEqual(len(sally.g.right_nodes), num_right_nodes + num_to_be_spent)
+            self.assertEqual(len(sally.g.red_edges), num_red_edges + sally.ringsize*num_to_be_spent)
+            self.assertEqual(len(sally.g.blue_edges), num_blue_edges + 2*num_to_be_spent)
+            self.assertEqual(sum([len(x) for x in sally.buffer[sally.t+1:]]), num_in_tail_buffer + 1 + 2*num_to_be_spent)
         
     # @ut.skip("Skipping test_pick_coinbase_owner_correctness")
     def test_pick_coinbase_owner_correctness(self):

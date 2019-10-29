@@ -69,15 +69,18 @@ class Simulator(object):
         # Write to file each time these many blocks have been added
         self.reporting_modulus = par['reporting modulus']
 
+    def halting_run(self):
+        if self.t < self.runtime:
+            self.make_coinbase()
+            self.spend_from_buffer()
+            # self.report()
+            self.t += 1
+
     def run(self):
         while self.t < self.runtime:
-            # print(self.t)
-            # print(self.g.right_nodes)
             self.make_coinbase()
-            # print(self.g.right_nodes)
             self.spend_from_buffer()
-            # print(self.g.right_nodes)
-            self.report()
+            # self.report()
             self.t += 1
 
     def make_coinbase(self):
@@ -103,6 +106,66 @@ class Simulator(object):
         assert node_to_spend in self.amounts 
         assert self.amounts[node_to_spend] == amt and dt >= 0
         return node_to_spend, dt
+
+    def spnd_from_buffer(self):
+        # results in txn_bundles, which is a list:
+        #   txn_bundles[i] = ith txn included in block with height self.t
+        #       txn_bundles[i][0] = list of keys (left node idents) being spent
+        #       txn_bundles[i][1] = total amount of input keys in this txn.
+        #       txn_bundles[i][2] = signature nodes (right node idents)
+        #       txn_bundles[i][3] = pair of a left node ident and change amount
+        #       txn_bundles[i][4] = pair of a left node ident and paym amount
+        txn_bundles = [] 
+        to_spend = sorted(self.buffer[self.t], key=lambda x: (x[0], x[1]))
+        ct = 0
+        for k, grp in groupby(to_spend, key=lambda x: (x[0], x[1])):
+            temp = deepcopy(grp)
+            keys_to_spend = [x[2] for x in temp]
+            txn_bundles += [keys_to_spend] 
+            tot_amt = sum([self.amounts[x] for x in keys_to_spend])
+            txn_bundles[-1] += [tot_amt]
+
+            temp = deepcopy(grp)
+            sig_nodes = []
+            rings = dict()
+            for x in temp:
+                sig_nodes += [self.g.add_node(1, self.t)]  
+                self.ownership[sig_nodes[-1]] = (k[0], x[2])  
+                rings[sig_nodes[-1]] = self.get_ring(x[2]) 
+            txn_bundles[-1] += [sig_nodes]
+            # txn_bundles[-1] = [keys_to_spend, tot_amt, sig_nodes]
+
+            change_node = self.g.add_node(0, self.t)  
+            self.ownership[change_node] = k[0]
+
+            recipient_node = self.g.add_node(0, self.t)  
+            self.ownership[recipient_node] = k[1]
+
+            for snode in sig_nodes:
+                pair = (recipient_node, snode)
+                blue_eid = self.g.add_edge(0, pair, 1.0, self.t)  # adds blue edge
+                self.ownership[blue_eid] = self.ownership[blue_eid[0]]
+
+                pairr = (change_node, snode)
+                blue_eidd = self.g.add_edge(0, pairr, 1.0, self.t)  # adds blue edge
+                self.ownership[blue_eidd] = self.ownership[blue_eidd[0]]
+
+                red_eids = []
+                for ring_member in rings[snode]:
+                    pairrr = (ring_member, snode)  
+                    new_eid = self.g.add_edge(1, pairrr, 1.0, self.t)
+                    red_eids += [new_eid] # adds red edge
+                    self.ownership[new_eid] = self.ownership[new_eid[1]]
+                    ct += 1
+
+            change = random()*tot_amt
+            self.amounts[change_node] = change
+            txn_bundles[-1] += [(change_node, change)]
+            txn_amt =  tot_amt - change
+            self.amounts[recipient_node] = txn_amt
+            txn_bundles[-1] += [(recipient_node, txn_amt)]
+
+        return txn_bundles
          
     def spend_from_buffer(self):
         # results in txn_bundles, which is a list:
