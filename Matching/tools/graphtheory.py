@@ -81,10 +81,10 @@ class BipartiteGraph(object):
         # print("\n\nRESULT = " + str(result))
         assert result not in self.right_nodes and result not in self.left_nodes
         self.count += 1
-        if b:
+        if b == 1:
             # right nodes are side one
             self.right_nodes.update({result: result})
-        else:
+        elif b == 0:
             # left nodes are side zero
             self.left_nodes.update({result: result})
         return result

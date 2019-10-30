@@ -57,7 +57,9 @@ class Simulator(object):
         else:
             # str, "uniform" or "monerolink"
             self.mode = par['ring selection mode'] 
-        self.buffer = [[]]*self.runtime
+        self.buffer = []
+        for i in range(self.runtime):
+            self.buffer += [[]]
         self.ownership = dict()
         self.amounts = dict()
         self.g = BipartiteGraph()
@@ -71,41 +73,98 @@ class Simulator(object):
 
     def halting_run(self):
         if self.t < self.runtime:
+            # print("Timestep = " + str(self.t))
+            # print("Next 10 timesteps of buffer: ")
+            # for i in range(10):
+            #     print(self.buffer[self.t + i])
             self.make_coinbase()
+            # print("Next 10 timesteps of buffer after calling make_coinbase: ")
+            # for i in range(10):
+            #     print(self.buffer[self.t + i])
             self.spend_from_buffer()
-            # self.report()
             self.t += 1
 
     def run(self):
         while self.t < self.runtime:
             self.make_coinbase()
             self.spend_from_buffer()
-            # self.report()
             self.t += 1
 
     def make_coinbase(self):
-        # print("Making coinbase")
-        # print("Picking owner.")
         owner = self.pick_coinbase_owner()
         assert owner in range(len(self.hashrate))
-        # print("Picking amount.")
         amt = self.pick_coinbase_amt()
-        # print("Picking delay.")
         dt = self.pick_spend_time(owner)
-        # print("Picking recipient.")
+        assert isinstance(dt, int)
+        assert 0 < dt
         recip = self.pick_next_recip(owner)
-        # print("Adding node.")
+
         node_to_spend = self.g.add_node(0, self.t)
-        # print("\n\nNTS = " + str(node_to_spend))
         self.ownership[node_to_spend] = owner
-        # print("Node added.")
-        if self.t + dt < len(self.buffer):
-            # at block self.t + dt, owner will send new_node to recip
-            self.buffer[self.t + dt] += [(owner, recip, node_to_spend)]  
+
+        s = self.t + dt
+        if s < len(self.buffer):
+            # at block s, owner will send new_node to recip
+            self.buffer[s].append((owner, recip, node_to_spend))
+            assert s > self.t
+        # assert node_to_spend in self.amounts 
         self.amounts[node_to_spend] = amt
-        assert node_to_spend in self.amounts 
-        assert self.amounts[node_to_spend] == amt and dt >= 0
-        return node_to_spend, dt
+        # return node_to_spend, dt
+
+    def spend_from_buffer(self):
+        txn_bundles = []
+        to_spend = sorted(self.buffer[self.t], key=lambda x: (x[0], x[1]))
+        ct = 0
+        num_left_nodes = len(self.g.left_nodes)
+        for k, grp in groupby(to_spend, key=lambda x: (x[0], x[1])):
+            txn_bundles += [self.new_ring_sigs(k, grp)]
+            ct += 1
+        assert num_left_nodes + 2*ct == len(self.g.left_nodes)
+        return txn_bundles
+
+    def new_ring_sigs(self, k, grp):
+        temp = deepcopy(grp)
+        left_nodes_being_spent = [x[2] for x in temp]
+        tot_amt = sum([self.amounts[x] for x in left_nodes_being_spent])
+
+        new_right_nodes = []
+        rings = {}
+        for left_node in left_nodes_being_spent:
+            new_right_nodes += [self.g.add_node(1, self.t)]
+            self.ownership[new_right_nodes[-1]] = (k[0], left_node)
+            rings[new_right_nodes[-1]] = self.get_ring(left_node)
+
+        change_node = self.g.add_node(0, self.t)  
+        self.ownership[change_node] = k[0]
+
+        recipient_node = self.g.add_node(0, self.t)  
+        self.ownership[recipient_node] = k[1]
+
+        change = random()*tot_amt
+        txn_amt =  tot_amt - change
+
+        self.amounts[change_node] = change
+        self.amounts[recipient_node] = txn_amt
+
+
+        for rnode in new_right_nodes:
+            pair = (recipient_node, rnode)
+            blue_eid = self.g.add_edge(0, pair, 1.0, self.t)  # adds blue edge
+            self.ownership[blue_eid] = self.ownership[blue_eid[0]]
+
+            pairr = (change_node, rnode)
+            blue_eidd = self.g.add_edge(0, pairr, 1.0, self.t)  # adds blue edge
+            self.ownership[blue_eidd] = self.ownership[blue_eidd[0]]
+
+            red_eids = []
+            for ring_member in rings[rnode]:
+                pairrr = (ring_member, rnode)  
+                red_eids += [self.g.add_edge(1, pairrr, 1.0, self.t)] # adds red edge
+                self.ownership[red_eids[-1]] = self.ownership[red_eids[-1][1]]
+
+
+        result = [left_nodes_being_spent, tot_amt, new_right_nodes, (change_node, change), (recipient_node, txn_amt), [blue_eid, blue_eidd], red_eids]
+        return result
 
     def spnd_from_buffer(self):
         # results in txn_bundles, which is a list:
@@ -117,8 +176,14 @@ class Simulator(object):
         #       txn_bundles[i][4] = pair of a left node ident and paym amount
         txn_bundles = [] 
         to_spend = sorted(self.buffer[self.t], key=lambda x: (x[0], x[1]))
+        # print(to_spend)
         ct = 0
         for k, grp in groupby(to_spend, key=lambda x: (x[0], x[1])):
+            # for each k, grp, we:
+            #     add new right nodes (grp size)
+            #     add two new left nodes
+            #     add (grp size)*2 new blue edges
+            #     add (grp size)*eff_ringsize new red edges
             temp = deepcopy(grp)
             keys_to_spend = [x[2] for x in temp]
             txn_bundles += [keys_to_spend] 
@@ -164,134 +229,6 @@ class Simulator(object):
             txn_amt =  tot_amt - change
             self.amounts[recipient_node] = txn_amt
             txn_bundles[-1] += [(recipient_node, txn_amt)]
-
-        return txn_bundles
-         
-    def spend_from_buffer(self):
-        # results in txn_bundles, which is a list:
-        #   txn_bundles[i] = ith txn included in block with height self.t
-        #       txn_bundles[i][0] = list of keys (left node idents) being spent
-        #       txn_bundles[i][1] = total amount of input keys in this txn.
-        #       txn_bundles[i][2] = signature nodes (right node idents)
-        #       txn_bundles[i][3] = pair of a left node ident and change amount
-        #       txn_bundles[i][4] = pair of a left node ident and paym amount
-        txn_bundles = [] 
-        to_spend = sorted(self.buffer[self.t], key=lambda x: (x[0], x[1]))
-        orig_num_red_edges = len(self.g.red_edges)
-        ct = 0
-        for k, grp in groupby(to_spend, key=lambda x: (x[0], x[1])):
-            # k[0] is owner index of sender
-            # k[1] is owner index of receiver.
-            assert orig_num_red_edges == len(self.g.red_edges) - ct
-            temp = deepcopy(grp)
-            assert orig_num_red_edges == len(self.g.red_edges) - ct
-            keys_to_spend = [x[2] for x in temp]
-            assert orig_num_red_edges == len(self.g.red_edges) - ct
-            # assert len(keys_to_spend) > 0
-            # s = sum([self.amounts[x] for x in keys_to_spend])
-            # ss = len(keys_to_spend)*MIN_MINING_REWARD
-            # assert s > ss
-            txn_bundles += [[keys_to_spend]]
-            assert orig_num_red_edges == len(self.g.red_edges) - ct
-            tot_amt = sum([self.amounts[x] for x in keys_to_spend])
-            assert orig_num_red_edges == len(self.g.red_edges) - ct
-            txn_bundles[-1] += [tot_amt]
-            assert orig_num_red_edges == len(self.g.red_edges) - ct
-
-            sig_nodes = []
-            assert orig_num_red_edges == len(self.g.red_edges) - ct
-            rings = dict()
-            assert orig_num_red_edges == len(self.g.red_edges) - ct
-            temp = deepcopy(grp)
-            assert orig_num_red_edges == len(self.g.red_edges) - ct
-            for x in temp:
-                # For each left_node being spent in this transaction, we add a 
-                # new right_node and assign ownership, and we set ring members.
-                assert orig_num_red_edges == len(self.g.red_edges) - ct
-                num_red_edges = len(self.g.red_edges)
-                assert orig_num_red_edges == len(self.g.red_edges) - ct
-                sig_nodes += [self.g.add_node(1, self.t)]  
-                assert orig_num_red_edges == len(self.g.red_edges) - ct
-                y = sig_nodes[-1]
-                assert orig_num_red_edges == len(self.g.red_edges) - ct
-                # ownership of a right_node is a pair (k, x) where k is an 
-                # owner index in the stochastic matrix, x is the left_node 
-                # being spent
-                self.ownership[y] = (k[0], x[2])  
-                assert orig_num_red_edges == len(self.g.red_edges) - ct
-                rings[y] = self.get_ring(x[2]) 
-                assert orig_num_red_edges == len(self.g.red_edges) - ct
-                
-            txn_bundles[-1] += [sig_nodes]
-            assert orig_num_red_edges == len(self.g.red_edges) - ct
-
-            # Recall: 
-            # k[0] is owner index of sender
-            # k[1] is owner index of receiver.
-
-            # Add a left_node and assign ownership
-            change_node = self.g.add_node(0, self.t)  
-            assert orig_num_red_edges == len(self.g.red_edges) - ct
-            # Ownership of left nodes is             
-            self.ownership[change_node] = k[0]
-            assert orig_num_red_edges == len(self.g.red_edges) - ct
-
-            # Add another left_node and assign ownership
-            recipient_node = self.g.add_node(0, self.t)  
-            assert orig_num_red_edges == len(self.g.red_edges) - ct
-            self.ownership[recipient_node] = k[1]
-
-            assert orig_num_red_edges == len(self.g.red_edges) - ct
-            assert len(sig_nodes) == len(set(sig_nodes))
-            for snode in sig_nodes:
-                num_red_edges = len(self.g.red_edges)
-                assert orig_num_red_edges == len(self.g.red_edges) - ct
-                pair = (recipient_node, snode)
-                assert orig_num_red_edges == len(self.g.red_edges) - ct
-                assert pair not in self.g.blue_edges
-                assert orig_num_red_edges == len(self.g.red_edges) - ct
-                blue_eid = self.g.add_edge(0, pair, 1.0, self.t)  # adds blue edge
-                assert orig_num_red_edges == len(self.g.red_edges) - ct
-                pairr = (change_node, snode)
-                assert orig_num_red_edges == len(self.g.red_edges) - ct
-                assert pairr not in self.g.blue_edges
-                assert orig_num_red_edges == len(self.g.red_edges) - ct
-                blue_eidd = self.g.add_edge(0, pairr, 1.0, self.t)  # adds blue edge
-                assert orig_num_red_edges == len(self.g.red_edges) - ct
-                assert len(rings[snode]) == len(set(rings[snode]))
-                self.ownership[blue_eid] = self.ownership[blue_eid[0]]
-                self.ownership[blue_eidd] = self.ownership[blue_eidd[0]]
-                red_eids = []
-                for ring_member in rings[snode]:
-                    # when is talk like a pirate day anyway?
-                    pairrr = (ring_member, snode)  
-                    assert orig_num_red_edges == len(self.g.red_edges) - ct
-                    assert pairrr not in self.g.red_edges
-                    assert orig_num_red_edges == len(self.g.red_edges) - ct
-                    new_eid = self.g.add_edge(1, pairrr, 1.0, self.t)
-                    red_eids += [new_eid] # adds red edge
-                    assert new_eid not in self.ownership
-                    self.ownership[new_eid] = self.ownership[new_eid[1]]
-                    assert new_eid in self.ownership
-                    ct += 1
-                    assert orig_num_red_edges == len(self.g.red_edges) - ct
-                x = num_red_edges + len(rings[snode])
-                y = len(self.g.red_edges)
-                assert x == y
-                assert orig_num_red_edges == len(self.g.red_edges) - ct
-
-            change = random()*tot_amt
-            assert orig_num_red_edges == len(self.g.red_edges) - ct
-            self.amounts[change_node] = change
-            assert orig_num_red_edges == len(self.g.red_edges) - ct
-            txn_bundles[-1] += [(change_node, change)]
-            assert orig_num_red_edges == len(self.g.red_edges) - ct
-            txn_amt =  tot_amt - change
-            assert orig_num_red_edges == len(self.g.red_edges) - ct
-            self.amounts[recipient_node] = txn_amt
-            assert orig_num_red_edges == len(self.g.red_edges) - ct
-            txn_bundles[-1] += [(recipient_node, txn_amt)]
-            assert orig_num_red_edges == len(self.g.red_edges) - ct
 
         return txn_bundles
 

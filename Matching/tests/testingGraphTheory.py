@@ -31,6 +31,7 @@ def make_deterministic_graph_for_integration_test():
     
     return g
 
+
 def make_r_graph():
     g = BipartiteGraph(None)
 
@@ -169,7 +170,7 @@ def make_dd_graph():
 class TestBipartiteGraph(ut.TestCase):
     """ TestBipartiteGraph tests BipartiteGraph objects """
     
-    #  @ut.skip("Skipping test_d_init")
+    @ut.skip("Skipping test_d_init")
     def test_d_init(self):
         ''' test_d_init deterministically tests initialization of a graph. '''
         g = make_d_graph()
@@ -193,7 +194,7 @@ class TestBipartiteGraph(ut.TestCase):
                 wt += 4.0
 
 
-    #  @ut.skip("Skipping test_d_init_by_hand")
+    @ut.skip("Skipping test_d_init_by_hand")
     def test_d_init_by_hand(self):
         """ test_d_init_by_hand deterministically tests initialization of a graph. """
         g = BipartiteGraph()
@@ -245,7 +246,7 @@ class TestBipartiteGraph(ut.TestCase):
         self.assertTrue((2, 4) in g.red_edges and g.red_edges[(2, 4)] == 1)
         self.assertEqual(len(g.red_edges), 4)
 
-    # @ut.skip("Skipping test_r_init")
+    @ut.skip("Skipping test_r_init")
     def test_r_init(self):
         ''' test_r_init randomly tests initialization of a graph. '''
         g = make_r_graph()
@@ -292,7 +293,7 @@ class TestBipartiteGraph(ut.TestCase):
                 t = (x, y, None) in g.blue_edges
                 self.assertTrue((s or t) and not (s and t))
 
-    #  #  @ut.skip("Skipping test_d_add_node")
+    @ut.skip("Skipping test_d_add_node")
     def test_d_add_node(self):
         ''' test_d_add_node deterministically tests adding a node to a graph.'''
         g = BipartiteGraph()
@@ -332,7 +333,7 @@ class TestBipartiteGraph(ut.TestCase):
             self.assertEqual(g.count-1, len(g.left_nodes)+len(g.right_nodes))
 
 
-    #  @ut.skip("Skipping test_r_add_node")
+    @ut.skip("Skipping test_r_add_node")
     def test_r_add_node(self):
         ''' test_r_add_node randomly tests adding a node to a graph.'''
         g = make_r_graph()  
@@ -364,7 +365,7 @@ class TestBipartiteGraph(ut.TestCase):
             self.assertEqual(g.count-1, len(g.left_nodes)+len(g.right_nodes))
 
 
-    #  @ut.skip("Skipping test_d_add_edge")
+    @ut.skip("Skipping test_d_add_edge")
     def test_d_add_edge(self):
         ''' test_d_add_edge deterministically tests adding an edge.'''
         g = make_d_graph()  
@@ -416,7 +417,7 @@ class TestBipartiteGraph(ut.TestCase):
         self.assertTrue(len(g.red_edges), 7)
 
 
-    #  @ut.skip("Skipping test_r_add_edge")
+    @ut.skip("Skipping test_r_add_edge")
     def test_r_add_edge(self):
         ''' test_r_add_edge randomly tests adding an edge.'''
         g = make_r_graph()
@@ -467,7 +468,7 @@ class TestBipartiteGraph(ut.TestCase):
         self.assertEqual(c, cc)
 
 
-    #  @ut.skip("Skipping test_d_del_edge")
+    @ut.skip("Skipping test_d_del_edge")
     def test_d_del_edge(self):
         ''' test_d_del_edge deterministically tests deletion of edges.'''
         # we will delete edge (4, 9)
@@ -499,7 +500,7 @@ class TestBipartiteGraph(ut.TestCase):
         self.assertEqual(c, cc)
 
 
-    #  @ut.skip("Skipping test_r_del_edge")
+    @ut.skip("Skipping test_r_del_edge")
     def test_r_del_edge(self):
         ''' test_r_del_edge randomly tests deleting an edge. '''
         g = make_r_graph()
@@ -537,7 +538,7 @@ class TestBipartiteGraph(ut.TestCase):
         self.assertEqual(c, cc)
 
 
-    #  @ut.skip("Skipping test_d_del_node")
+    @ut.skip("Skipping test_d_del_node")
     def test_d_del_node(self):
         ''' test_d_del_node determinsitically tests deletion of nodes.'''
         g = make_d_graph()
@@ -586,7 +587,7 @@ class TestBipartiteGraph(ut.TestCase):
         self.assertEqual(m-mm, 3)
 
 
-    #  @ut.skip("Skipping test_r_del_node")
+    @ut.skip("Skipping test_r_del_node")
     def test_r_del_node(self):
         ''' test_r_del_node randomly tests deletion of nodes. '''
         g = make_r_graph()
@@ -621,7 +622,7 @@ class TestBipartiteGraph(ut.TestCase):
         self.assertEqual(m-mm, len(blue_eids_incident_with_x))
 
 
-    #  @ut.skip("Skipping test_d_chk_colored_match")
+    @ut.skip("Skipping test_d_chk_colored_match")
     def test_d_chk_colored_match(self):
         ''' test_d_chk_colored_match deterministically tests the chk_colored_match function'''
         g = make_d_graph()
@@ -675,7 +676,7 @@ class TestBipartiteGraph(ut.TestCase):
         self.assertFalse(g.chk_colored_match(1 - b, match))
 
 
-    #  @ut.skip("Skipping test_r_chk_colored_match")
+    @ut.skip("Skipping test_r_chk_colored_match")
     def test_r_chk_colored_match(self):
         ''' test_r_chk_colored_match randomly tests the chk_colored_match function '''
         g = make_r_graph()
@@ -718,7 +719,7 @@ class TestBipartiteGraph(ut.TestCase):
             self.assertTrue(g.chk_colored_match(b, match))
             self.assertFalse(g.chk_colored_match(1-b, match))
 
-    #  @ut.skip("Skipping test_d_chk_colored_maximal_match")
+    @ut.skip("Skipping test_d_chk_colored_maximal_match")
     def test_d_chk_colored_maximal_match(self):
         '''test_d_chk_colored_maximal_match deterministically tests the chk_colored_maximal_match function. '''
         # print("\n\nEntering test_d_chk_colored_maximal_match\n")
@@ -770,7 +771,7 @@ class TestBipartiteGraph(ut.TestCase):
         self.assertFalse(g.chk_colored_maximal_match(b, match))
         self.assertFalse(g.chk_colored_maximal_match(1 - b, match))
 
-    #  @ut.skip("Skipping test_r_chk_colored_maximal_match")
+    @ut.skip("Skipping test_r_chk_colored_maximal_match")
     def test_r_chk_colored_maximal_match_one(self):
         ''' test_r_chk_colored_maximal_match_one randomly tests the chk_colored_maximal_match function.'''
         # TODO: We should verify this with an independent implementation...
@@ -834,7 +835,7 @@ class TestBipartiteGraph(ut.TestCase):
         self.assertFalse(g.chk_colored_maximal_match(0, match))  
         self.assertFalse(g.chk_colored_maximal_match(1, match)) 
 
-    #  @ut.skip("Skipping test_r_chk_colored_maximal_match_two")
+    @ut.skip("Skipping test_r_chk_colored_maximal_match_two")
     def test_r_chk_colored_maximal_match_two(self):
         ''' test_r_chk_colored_maximal_match_two randomly tests the chk_colored_maximal_match function in a different way.'''
         # TODO: We should verify this with an independent implementation...
@@ -974,7 +975,7 @@ class TestBipartiteGraph(ut.TestCase):
                 not any([eid[0] in unmatched_lefts and eid[1] in \
                 unmatched_rights for eid in temp]))
 
-    #  @ut.skip("Skipping test_d_parse")
+    @ut.skip("Skipping test_d_parse")
     def test_d_parse(self):
         ''' test_d_parse deterministically tests the _parse function. '''
         g = make_d_graph() 
@@ -1013,7 +1014,7 @@ class TestBipartiteGraph(ut.TestCase):
         self.assertTrue(((5, None), (7, None), None) in non_match_edges)
         self.assertEqual(len(non_match_edges), 6 - len(input_match))
 
-    #  @ut.skip("Skipping test_d_clean")
+    @ut.skip("Skipping test_d_clean")
     def test_d_clean(self):
         """ test_d_cleanup deterministically tests the cleanup function.
         """
@@ -1170,7 +1171,7 @@ class TestBipartiteGraph(ut.TestCase):
         # dumb matching (1, 6), (2, 7), (3, 8), (4, 9), (5, 10)
         self.assertTrue(len(result) == 4)
 
-    # #  @ut.skip("Skipping test_d_extend")
+    @ut.skip("Skipping test_d_extend")
     def test_d_extend(self):
         ''' test_d_extend deterministically tests the extend function. '''
         # print("BEGINNING TEST_D_EXTEND")
@@ -1317,7 +1318,7 @@ class TestBipartiteGraph(ut.TestCase):
             self.assertIn(i, grnd_trth)
             
 
-    #  @ut.skip("Skipping test_dd_extend")
+    @ut.skip("Skipping test_dd_extend")
     def test_dd_extend(self):
         ''' test_dd_extend deterministically tests the extend function in a second way.'''
         # Recall we say a matching is MAXIMAL if no edge can be added to the 
@@ -1440,7 +1441,7 @@ class TestBipartiteGraph(ut.TestCase):
         self.assertEqual(set(result), set(result_test))
         self.assertEqual(set(result), set(grnd_trth))
 
-    #  @ut.skip("Skipping test_r_extend")
+    @ut.skip("Skipping test_r_extend")
     def test_r_extend(self):
         ''' test_r_extend randomly tests the extend function.'''
         g = make_r_graph()
@@ -1455,7 +1456,7 @@ class TestBipartiteGraph(ut.TestCase):
         s = s or len(result) > len(input_match)
         self.assertTrue(s)
 
-    #  @ut.skip("Skipping test_dd_boost")
+    @ut.skip("Skipping test_dd_boost")
     def test_dd_boost(self):
         ''' test_dd_boost deterministically tests the boost function.'''
         g = make_dd_graph()
@@ -1535,7 +1536,7 @@ class TestBipartiteGraph(ut.TestCase):
         self.assertTrue(((1, None), (9, None), None) in result)
         self.assertTrue(((3, None), (7, None), None) in result)
 
-    #  @ut.skip("Skipping test_d_optimize")
+    @ut.skip("Skipping test_d_optimize")
     def test_d_optimize(self):
         ''' test_d_optimize deterministically tests the optimize function. '''
         g = make_d_graph()
@@ -1545,6 +1546,7 @@ class TestBipartiteGraph(ut.TestCase):
         self.assertTrue(((3, None), (7, None), None) in final_answer)
         self.assertEqual(len(final_answer), 2)
         
+    @ut.skip("Skipping test_d_integration")
     def test_d_integration(self):
         ''' test_d_integration deterministically tests everything. '''
         g = make_deterministic_graph_for_integration_test()
@@ -1573,20 +1575,10 @@ class TestBipartiteGraph(ut.TestCase):
         grnd_truth += [((9, None), (18, None), None)]
         grnd_truth += [((8, None), (19, None), None)]
         grnd_truth += [((10, None), (20, None), None)]
-        # grnd_truth = [((3, None), (13, None), None)]
-        # grnd_truth += [((2, None), (12, None), None)]
-        # grnd_truth += [((5, None), (15, None), None)]
-        # grnd_truth += [((4, None), (14, None), None)]
-        # grnd_truth += [((7, None), (16, None), None)]
-        # grnd_truth += [((6, None), (17, None), None)]
-        # grnd_truth += [((9, None), (18, None), None)]
-        # grnd_truth += [((8, None), (19, None), None)]
-        # grnd_truth += [((10, None), (20, None), None)]
         for eid in grnd_truth:
             self.assertIn(eid, final_answer)
         assert len(final_answer) == len(grnd_truth)
         
-
 tests = [TestBipartiteGraph]
 for test in tests:
     ttr = ut.TextTestRunner(verbosity=2, failfast=True)
