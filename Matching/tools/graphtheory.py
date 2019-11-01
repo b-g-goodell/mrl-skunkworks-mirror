@@ -1,5 +1,4 @@
 from collections import deque
-import itertools
 import sys
 
 # Check version number
@@ -75,7 +74,6 @@ class BipartiteGraph(object):
         isn't. Otherwise, create a new node on side b, outputting the 
         node_ident = (self.count, tag)
         """
-        result = None
         assert b in [0, 1]
         result = (self.count, tag)
         # print("\n\nRESULT = " + str(result))
@@ -110,7 +108,7 @@ class BipartiteGraph(object):
         elif result and w > 0.0:
             result = eid
             new_dict = {result: w}
-            if b==1:
+            if b == 1:
                 self.red_edges.update(new_dict)
             else:
                 self.blue_edges.update(new_dict)
@@ -124,7 +122,8 @@ class BipartiteGraph(object):
         side, then the edge entry is deleted from the dictionary. This always 
         succeeds so we return True.
         """
-        if not isinstance(input_eids, list) and (input_eids in self.red_edges or input_eids in self.blue_edges):
+        if not isinstance(input_eids, list) and (
+                input_eids in self.red_edges or input_eids in self.blue_edges):
             x = []
             x += [input_eids]
             input_eids = x
@@ -135,7 +134,6 @@ class BipartiteGraph(object):
                     del self.red_edges[eid]
                 if eid in self.blue_edges:
                     del self.blue_edges[eid]
-            
 
     def del_node(self, nid):
         """  Take node identity nid as input (a node ident).
@@ -151,10 +149,10 @@ class BipartiteGraph(object):
         if nid in self.right_nodes:
             del self.right_nodes[nid]
 
-        eids_to_remove = [eid for eid in list(self.blue_edges.keys()) \
-            if (eid[0] == nid or eid[1] == nid)]
-        eids_to_remove += [eid for eid in list(self.red_edges.keys()) \
-            if (eid[0] == nid or eid[1] == nid)]
+        eids_to_remove = [eid for eid in list(self.blue_edges.keys()) if
+                          (eid[0] == nid or eid[1] == nid)]
+        eids_to_remove += [eid for eid in list(self.red_edges.keys()) if
+                           (eid[0] == nid or eid[1] == nid)]
         for eid in eids_to_remove:
             self.del_edge(eid)
             
@@ -162,13 +160,13 @@ class BipartiteGraph(object):
         """ chk_colored_match takes a color, b, and an alleged match, 
         input_match. Produces as output a boolean.
         """
-        result = None
         assert b in [0, 1]
-        if len(input_match)==0:
+        if len(input_match) == 0:
             result = True
         else:
-            correct_edge_space = not any([eid not in self.red_edges and \
-                eid not in self.blue_edges for eid in input_match])
+            correct_edge_space = not any(
+                [eid not in self.red_edges and eid not in self.blue_edges for
+                 eid in input_match])
             # print("Correct edge space = " + str(correct_edge_space))
             exists_red = any([eid in self.red_edges for eid in input_match])
             exists_blue = any([eid in self.blue_edges for eid in input_match])
@@ -180,8 +178,9 @@ class BipartiteGraph(object):
             else:
                 correct_color = single_color and exists_blue
             # print("correct color = " + str(correct_color))
-            vertex_disjoint = not any([(eid[0]==fid[0] or eid[1] == fid[1]) \
-                for eid in input_match for fid in input_match if eid != fid]) 
+            vertex_disjoint = not any(
+                [(eid[0] == fid[0] or eid[1] == fid[1]) for eid in input_match
+                 for fid in input_match if eid != fid])
             # print("vertex disjoint = " + str(vertex_disjoint))
             result = single_color 
             result = result and vertex_disjoint 
@@ -200,12 +199,12 @@ class BipartiteGraph(object):
                 wt_dct = self.red_edges
             else:
                 wt_dct = self.blue_edges
-            unmatched_lefts = list(set([eid[0] for eid in wt_dct \
-                if eid[0] not in matched_lefts]))
-            unmatched_rights = list(set([eid[1] for eid in wt_dct \
-                if eid[1] not in matched_rights]))
-            temp = [eid[0] in unmatched_lefts and eid[1] in unmatched_rights \
-                for eid in wt_dct]
+            unmatched_lefts = list(
+                set([eid[0] for eid in wt_dct if eid[0] not in matched_lefts]))
+            unmatched_rights = list(
+                set([eid[1] for eid in wt_dct if eid[1] not in matched_rights]))
+            temp = [eid[0] in unmatched_lefts and eid[1] in unmatched_rights for
+                    eid in wt_dct]
             result = not any(temp)
         return result
 
@@ -238,73 +237,85 @@ class BipartiteGraph(object):
         # Node sets
         matched_lefts = [eid[0] for eid in input_match]
         matched_rights = [eid[1] for eid in input_match]
-        unmatched_lefts = [nid for nid in self.left_nodes \
-            if nid not in matched_lefts]
-        unmatched_rights = [nid for nid in self.right_nodes \
-            if nid not in matched_rights]
+        unmatched_lefts = [nid for nid in self.left_nodes if
+                           nid not in matched_lefts]
+        unmatched_rights = [nid for nid in self.right_nodes if
+                            nid not in matched_rights]
 
         # non-match edges
-        non_match_edges = [eid for eid in wt_dct \
-            if eid not in input_match and wt_dct[eid] > 0.0]
-        
-        result = (matched_lefts, matched_rights, unmatched_lefts, \
-            unmatched_rights, b, non_match_edges)
+        non_match_edges = [eid for eid in wt_dct if
+                           eid not in input_match and wt_dct[eid] > 0.0]
+
+        result = (matched_lefts, matched_rights, unmatched_lefts,
+                  unmatched_rights, b, non_match_edges)
         return result
 
+    # @staticmethod
+    # def _so_fresh_soclean(shortest_paths_with_gains, input_match):
+    #     ordered_shortest_paths = sorted(shortest_paths_with_gains,
+    #                                     key=lambda z: z[1], reverse=True)
+    #
+    #     tn = []
+    #     paths_to_add = []
+    #
+    #     # Greedily make shortest_paths_with_gains into a vtx-disjoint list
+    #     for nxt_pth_and_gain in ordered_shortest_paths:
+    #         nxt_pth, gain = nxt_pth_and_gain
+    #         # print("Processing " + str((nxt_pth, gain)))
+    #         touched = False
+    #         for eid in nxt_pth:
+    #             if eid[0] in tn or eid[1] in tn:
+    #                 touched = True
+    #                 break
+    #         if not touched and gain > 0.0:
+    #             # print("Not touched and with positive gain!")
+    #             paths_to_add += [nxt_pth]
+    #             # print("Collected paths = " + str(paths_to_add))
+    #             tn += [eid[0] for eid in nxt_pth]
+    #             tn += [eid[1] for eid in nxt_pth]
+    #             # print("Touched nodes = " + str(tn))
+    #
+    #     # Next we iteratively XOR these with the input_match.
+    #     # print("Working with paths to add: " + str(paths_to_add))
+    #     result = input_match
+    #     # print("Starting match = " + str(input_match))
+    #     for nxt_pth in paths_to_add:
+    #         # print("XORING with " + str(nxt_pth))
+    #         temp = [eid for eid in result if eid not in nxt_pth]
+    #         temp += [eid for eid in nxt_pth if eid not in result]
+    #         result = temp
+    #         # print("Result = " + str(result))
+    #     return result
+
     @staticmethod
-    def _so_fresh_so_clean(b, shortest_paths_with_gains, input_match):
-        ordered_shortest_paths = sorted(shortest_paths_with_gains, \
-            key=lambda z:z[1], reverse=True)
-        
-        tn = []
-        paths_to_add = []
-        
-        # Greedily make shortest_paths_with_gains into a vtx-disjoint list
-        for nxt_pth_and_gain in ordered_shortest_paths:
-            nxt_pth, gain = nxt_pth_and_gain
-             #print("Processing " + str((nxt_pth, gain)))
-            touched = False
-            for eid in nxt_pth:
-                if eid[0] in tn or eid[1] in tn:
-                    touched = True
-                    break
-            if not touched and gain > 0.0:
-                # print("Not touched and with positive gain!")
-                paths_to_add += [nxt_pth]
-                # print("Collected paths = " + str(paths_to_add))
-                tn += [eid[0] for eid in nxt_pth]
-                tn += [eid[1] for eid in nxt_pth] 
-                # print("Touched nodes = " + str(tn))
-                
-        
-        # Next we iteratively XOR these with the input_match.
-        # print("Working with paths to add: " + str(paths_to_add))
-        result = input_match
-        temp = result
-        # print("Starting match = " + str(input_match))
-        for nxt_pth in paths_to_add:
-            # print("XORING with " + str(nxt_pth))
-            temp = [eid for eid in result if eid not in nxt_pth]
-            temp += [eid for eid in nxt_pth if eid not in result]
-            result = temp
-            # print("Result = " + str(result))
-        return result
-        
-    @staticmethod
-    def _clean(b, shortest_paths_with_gains, input_match):
+    def _get_nodes_on_path(nxt_pth):
+        """ Returns a list of node identities on the input path. """
+        temp = []
+        if len(nxt_pth) >= 1:
+            idx_p = None
+            for i in range(len(nxt_pth)):
+                eid = nxt_pth[i]
+                idx_p = i % 2  # index parity
+                temp += [eid[idx_p]]
+            temp += [nxt_pth[-1][1 - idx_p]]
+        return temp
+
+    def clean(self, b, shortest_paths_with_gains, input_match):
         """ Returns the input_match (when input shortest_paths is empty) or the
-        iterative symdif of input_match """
+        iterative symdif of input_match with a greedily-constructed vtx-disj
+        subset of the shortest_paths_with_gains """
+        # TODO: Should chk input match is a match.
         assert b in [0, 1]
         result = input_match
-        # s = "Starting _clean with input_match = "
+        # s = "Starting clean with input_match = "
         # s += str(input_match)
         # s += " and shortest_paths_with_gains = "
         # s += str(shortest_paths_with_gains)
         # print(s)
         if len(shortest_paths_with_gains) > 0:
             # Order the list
-            ordered_shortest_paths = sorted(shortest_paths_with_gains, \
-                key=lambda z: z[1], reverse=True)
+            ordered_shortest_paths = sorted(shortest_paths_with_gains,
+                                            key=lambda w: w[1], reverse=True)
             # Construct vertex-disjoint list greedily
             vd = []
             touched_nodes = []
@@ -319,24 +330,17 @@ class BipartiteGraph(object):
                     p = len(nxt_pth) % 2  # path parity
                     assert p in [0, 1]
                     # lst_nd = last_edge[p]
-                    # num_distinct_edges = len(list(set(nxt_pth)))  
+                    # num_distinct_edges = len(list(set(nxt_pth)))
                     # collect sequence of nodes
-                    temp = []
-                    if len(nxt_pth) >= 1:
-                        idx_p = None
-                        for i in range(len(nxt_pth)):
-                            eid = nxt_pth[i]
-                            idx_p = i % 2  # index parity
-                            temp += [eid[idx_p]]
-                        temp += [nxt_pth[-1][1 - idx_p]]
-                    dst_nds = list(set(temp))
+                    nds = self._get_nodes_on_path(nxt_pth)
+                    # num_dst_nds = len(list(set(nds)))
 
-                    path_is_disj = (len([nid for nid in dst_nds if nid \
-                        in touched_nodes]) == 0)
+                    path_is_disj = (len(
+                        [nid for nid in nds if nid in touched_nodes]) == 0)
                     if path_is_disj:
                         vd += [nxt_pth]
-                        touched_nodes += dst_nds
-            
+                        touched_nodes += nds
+
             # Iteratively take symmetric differences with input_match = result
             if len(vd) > 0:
                 x = input_match
@@ -347,9 +351,9 @@ class BipartiteGraph(object):
                 result = x
         return result
 
-    def extend(self, b, input_match=[]):
+    def extend(self, b, input_match=None):
         """ Find all shortest paths P satisfying the following constraints and 
-        call _cleanup with them.
+        call cleanup with them.
               (i)   all edges in P share the same color with input_match and
               (ii)  edges in P alternate with respect to input_match and
               (iii) the initial endpoint of P is an unmatched node and
@@ -357,77 +361,79 @@ class BipartiteGraph(object):
                     ernating with respect to input_match without self-
                     intersecting.
         """
-        result = None
+        if input_match is None:
+            input_match = []
+        else:
+            assert isinstance(input_match, list)
+
+        vd_solns = []
+
         if not self.chk_colored_match(b, input_match):
             s = 'Tried to extend an input_match that is not a unicolor match.'
             raise Exception(s)
-        else:
-            if self.chk_colored_maximal_match(b, input_match):
-                result = input_match
-            else:       
-                found = False
-                lng = 0     
-                soln_box = []
-                #  print("Setting wt_dct.")
-                if b:
-                    wt_dct = self.red_edges
-                else:
-                    wt_dct = self.blue_edges
-                #  #  print("Parsing (b, input_match):")
-                temp = self._parse(b, input_match)
-                (matched_lefts, matched_rights, unmatched_lefts, \
-                    unmatched_rights, bb, non_match_edges) = temp
+        elif not self.chk_colored_maximal_match(b, input_match):
+            found = False
+            lng = 0
+            soln_box = []
+            #  print("Setting wt_dct.")
+            if b:
+                wt_dct = self.red_edges
+            else:
+                wt_dct = self.blue_edges
+            #  #  print("Parsing (b, input_match):")
+            temp = self._parse(b, input_match)
+            (matched_lefts, matched_rights, unmatched_lefts,
+             unmatched_rights, bb, non_match_edges) = temp
 
-                q = deque([[eid] for eid in non_match_edges \
-                    if eid[0] in unmatched_lefts])
-                while len(q) > 0:
-                    nxt_pth = q.popleft()
-                    s = not found and lng == 0
-                    s = s or (found and len(nxt_pth) <= lng)
-                    if s:
-                        nxt_wt = sum([wt_dct[eid] for eid in nxt_pth \
-                            if eid not in input_match])
-                        nxt_wt += sum([wt_dct[eid] for eid in input_match \
-                            if eid not in nxt_pth])
-                        gn = nxt_wt - sum([wt_dct[eid] for eid in input_match])
-                        endpts = [eid[0] for eid in nxt_pth]
-                        endpts += [eid[1] for eid in nxt_pth]
-                        tn = set(endpts )
-                        p = len(nxt_pth) % 2
-                        last_edge = nxt_pth[-1]
-                        lst_nd = last_edge[p]
-                        if gn > 0.0 and lst_nd in unmatched_rights:
-                            if not found:
-                                assert lng == 0
-                                found = True
-                                lng = len(nxt_pth)
-                            else:
-                                assert 0 < len(nxt_pth) <= lng
-                            soln_box += [(nxt_pth, gn)]
-                            #  #  print("soln box:")
-                            #  #  print(soln_box)
-                        elif lst_nd not in unmatched_rights:
-                            for eid in wt_dct:
-                                if eid[p] == lst_nd and eid[1-p] not in tn:
-                                    q.append(nxt_pth + [eid])
-                #  #  print("Sorting soln box")
-                soln_box = sorted(soln_box, key=lambda x:x[1], reverse=True)
-                vd_solns = []
-                tn = []
-                for path_gain_pair in soln_box:
-                    (nxt_pth, gain) = path_gain_pair
-                    s = [eid[0] in tn for eid in nxt_pth]
-                    s += [eid[1] in tn for eid in nxt_pth]
-                    if not any(s):
-                        vd_solns += [nxt_pth]
-                        for eid in nxt_pth:
-                            tn = list(set(tn + [eid[0], eid[1]]))
+            q = deque(
+                [[eid] for eid in non_match_edges if eid[0] in unmatched_lefts])
+            while len(q) > 0:
+                nxt_pth = q.popleft()
+                s = not found and lng == 0
+                s = s or (found and len(nxt_pth) <= lng)
+                if s:
+                    nxt_wt = sum([wt_dct[eid] for eid in nxt_pth if
+                                  eid not in input_match])
+                    nxt_wt += sum([wt_dct[eid] for eid in input_match if
+                                   eid not in nxt_pth])
+                    gn = nxt_wt - sum([wt_dct[eid] for eid in input_match])
+                    endpts = [eid[0] for eid in nxt_pth]
+                    endpts += [eid[1] for eid in nxt_pth]
+                    tn = set(endpts)
+                    p = len(nxt_pth) % 2
+                    last_edge = nxt_pth[-1]
+                    lst_nd = last_edge[p]
+                    if gn > 0.0 and lst_nd in unmatched_rights:
+                        if not found:
+                            assert lng == 0
+                            found = True
+                            lng = len(nxt_pth)
+                        else:
+                            assert 0 < len(nxt_pth) <= lng
+                        soln_box += [(nxt_pth, gn)]
+                        #  #  print("soln box:")
+                        #  #  print(soln_box)
+                    elif lst_nd not in unmatched_rights:
+                        for eid in wt_dct:
+                            if eid[p] == lst_nd and eid[1-p] not in tn:
+                                q.append(nxt_pth + [eid])
+            #  #  print("Sorting soln box")
+            soln_box = sorted(soln_box, key=lambda x: x[1], reverse=True)
+            tn = []
+            for path_gain_pair in soln_box:
+                (nxt_pth, gain) = path_gain_pair
+                s = [eid[0] in tn for eid in nxt_pth]
+                s += [eid[1] in tn for eid in nxt_pth]
+                if not any(s):
+                    vd_solns += [nxt_pth]
+                    for eid in nxt_pth:
+                        tn = list(set(tn + [eid[0], eid[1]]))
 
-                result = input_match
-                for soln in vd_solns:
-                    temp = [eid for eid in soln if eid not in result]
-                    temp += [eid for eid in result if eid not in soln]
-                    result = temp
+        result = input_match
+        for soln in vd_solns:
+            temp = [eid for eid in soln if eid not in result]
+            temp += [eid for eid in result if eid not in soln]
+            result = temp
         return result
 
     def boost(self, b, input_match):
@@ -438,9 +444,10 @@ class BipartiteGraph(object):
         can be written as the symmetric difference between the input match and 
         a sequence of vertex-disjoint alternating cycles with positive gain.
         """
-        # TODO: MAKE MUCH FASTER BY ONLY SEARCHING NODES WITH >= 2 NEIGHBORS
+        # TODO: MAKE MUCH FASTER BY ONLY SEARCHING NODES WITH >= 2 NEIGHBORS?
+        # Still requires touching each neighbor, but this would be a "prune
+        # then process" approach...
         # print("\tBeginning boost.")
-        result = None
         assert b in [0, 1]
         assert self.chk_colored_maximal_match(b, input_match)
         
@@ -455,15 +462,27 @@ class BipartiteGraph(object):
         lng = None
 
         # print("Parsing input_match")
-        (matched_lefts, matched_rights, unmatched_lefts, unmatched_rights, \
-            bb, non_match_edges) = self._parse(b, input_match)
-            
+        parse_out = self._parse(b, input_match)
+        matched_lefts = parse_out[0]
+        matched_rights = parse_out[1]
+        # Some unused data:
+        # unmatched_lefts = parse_out[2]
+        # unmatched_rights = parse_out[3]
+        # bb = parse_out[4]
+        non_match_edges = parse_out[5]
+
         # print("Collecting boostable left nodes")
-        boostable_left_nodes = [nid for nid in matched_lefts if any([eid[0] == nid and fid[0] == nid for eid in wt_dct for fid in wt_dct if eid[1] != fid[1]])]
+        boostable_left_nodes = [nid for nid in matched_lefts if any(
+            [eid[0] == nid and fid[0] == nid for eid in wt_dct for fid in wt_dct
+             if eid[1] != fid[1]])]
         # print("Collecting boostable right nodes")
-        boostable_right_nodes = [nid for nid in matched_rights if any([eid[1] == nid and fid[1] == nid for eid in wt_dct for fid in wt_dct if eid[0] != fid[0]])]
+        boostable_right_nodes = [nid for nid in matched_rights if any(
+            [eid[1] == nid and fid[1] == nid for eid in wt_dct for fid in wt_dct
+             if eid[0] != fid[0]])]
         # print("Collecting boostable edges")
-        boostable_edges = [eid for eid in wt_dct if eid[0] in boostable_left_nodes and eid[1] in boostable_right_nodes]
+        boostable_edges = [eid for eid in wt_dct if
+                           eid[0] in boostable_left_nodes and eid[
+                               1] in boostable_right_nodes]
 
         # print("Constructing q")
         q = deque([[eid] for eid in non_match_edges if eid in boostable_edges])
@@ -473,11 +492,11 @@ class BipartiteGraph(object):
             nxt_pth = q.popleft()  # Get next path
             ct += 1
             if ct % 10000 == 0:
-            #    s = "\tWorking on step " + str(ct) + " and len(q) = " 
-            #    s += str(len(q)) + ", longest is " 
-            #    s += str(max([len(x) for x in q])) + " and shortest is " 
-            #    s += str(min([len(x) for x in q])) + " and lng is "
-            #    s += str(lng)
+                # s = "\tWorking on step " + str(ct) + " and len(q) = "
+                # s += str(len(q)) + ", longest is "
+                # s += str(max([len(x) for x in q])) + " and shortest is "
+                # s += str(min([len(x) for x in q])) + " and lng is "
+                # s += str(lng)
                 print(".", end='')
             
             if lng is None or (lng is not None and len(nxt_pth) <= lng):
@@ -500,31 +519,24 @@ class BipartiteGraph(object):
                 num_distinct_edges = len(list(set(nxt_pth)))
 
                 # collect sequence of nodes
-                temp = []
-                if len(nxt_pth) >= 1:
-                    idx_p = None
-                    for i in range(len(nxt_pth)):
-                        eid = nxt_pth[i]
-                        idx_p = i % 2  # index parity
-                        temp += [eid[idx_p]]
-                    temp += [nxt_pth[-1][1-idx_p]]
-
-                num_dst_nds = len(list(set(temp)))  # count distinct vertices
+                dst_nds = self._get_nodes_on_path(nxt_pth)
+                num_dst_nds = len(list(set(dst_nds)))
                 
-                assert len(nxt_pth) == num_distinct_edges 
-                assert len(temp) - num_dst_nds in [0, 1]
+                assert len(nxt_pth) == num_distinct_edges
+                # Up to one repeat allowed on a cycle
+                assert len(dst_nds) - num_dst_nds in [0, 1]
                 # Paths have distinct edges. Paths of N distinct edges have N+1
                 # vertices, except when the path is degenerate or a cycle in 
                 # which case they have N vertices.
-                if len(temp) - num_dst_nds == 1:
+                if len(dst_nds) - num_dst_nds == 1:
                     # such a path is either a cycle or is degenerate.
                     if first_node == lst_nd:
                         # this path is a cycle. If it has positive gain, put it
                         # into the solution box and update nds_shrt_cyc
-                        sd = [wt_dct[eid] for eid in nxt_pth if \
-                            eid not in input_match]
-                        sd += [wt_dct[eid] for eid in input_match if \
-                            eid not in nxt_pth]
+                        sd = [wt_dct[eid] for eid in nxt_pth if
+                              eid not in input_match]
+                        sd += [wt_dct[eid] for eid in input_match if
+                               eid not in nxt_pth]
                         gain = sum([wt_dct[eid] for eid in input_match])
                         gain -= sum(sd)
                         gain = -gain
@@ -555,34 +567,36 @@ class BipartiteGraph(object):
                     # vertices. Extend the path with allowable alternating 
                     # edges, placing the extended paths back into the queue.
                     if p:
-                        ed_set = [eid for eid in input_match if eid in boostable_edges]
+                        ed_set = [eid for eid in input_match if eid in
+                                  boostable_edges]
                     else:
-                        ed_set = [eid for eid in non_match_edges if eid in boostable_edges]
+                        ed_set = [eid for eid in non_match_edges if eid in
+                                  boostable_edges]
 
                     for eid in ed_set:
                         if eid not in nxt_pth and eid[p] == lst_nd:
                             assert eid in boostable_edges
-                            path_to_add = None
-                            path_to_add = nxt_pth + [eid]
-                            q.append(path_to_add)
+                            q.append(nxt_pth + [eid])
             else:
                 # in this case, lng is not None and len(nxt_pth) > lng, so we 
                 # discard nxt_pth
                 pass
-        result = self._so_fresh_so_clean(b, shrt_cyc_pos, input_match)
-        return result
+        return self.clean(b, shrt_cyc_pos, input_match)
 
     def optimize(self, b):
-        ''' Finds a maximal (but not maximum) matching and then optimizes it. 
+        """ Finds a maximal (but not maximum) matching and then optimizes it.
         These are sub-optimal matchings unless the match is not only maximal 
         but maximum.
-        '''
-        # TODO: Fix functions leading to this function so as to only result in 
-        # *maximum* matchings.
+        """
+        # TODO: Fix so as to only result in *maximum* matchings.
+        # Maximal matchings leave no edges available with two untouched end-
+        # points, whereas maximum matchings are maximal and also have the prop-
+        # erty that no other maximal matchings have more edges.
+
         # print("Beginning optimization.")
         assert b in [0, 1]
         # print("Extending empty match.")
-        next_match = self.extend(b) # starts with empty match by default
+        next_match = self.extend(b)  # starts with empty match by default
         assert next_match is not None
         temp = None
         while next_match != temp and next_match is not None:
