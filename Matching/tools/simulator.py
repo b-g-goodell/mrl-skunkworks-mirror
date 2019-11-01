@@ -1,12 +1,12 @@
 from itertools import groupby
 from graphtheory import *
-from math import *
 from random import *
 from copy import deepcopy
 
 MAX_MONERO_ATOMIC_UNITS = 2**64 - 1
 DECAY_RATIO = 2**-18
 MIN_MINING_REWARD = 6e11
+
 
 class Simulator(object):
     def __init__(self, par=None):
@@ -31,7 +31,7 @@ class Simulator(object):
         for elt in par['hashrate']:
             assert isinstance(elt, float)
             assert 0.0 <= elt <= 1.0
-        assert sum(row) == 1.0
+        assert sum(par['hashrate']) == 1.0
         assert 'spendtimes' in par
         assert isinstance(par['spendtimes'], list)
         for elt in par['spendtimes']:
@@ -51,8 +51,9 @@ class Simulator(object):
         # dict with lambda functions 
         # PMFs with support on minspendtime, minspendtime + 1, ...
         self.spendtimes = par['spendtimes'] 
-        self.ringsize = par['ring size'] # int, positive
-        if 'ring selection mode' not in par or par['ring selection mode'] is None:
+        self.ringsize = par['ring size']  # int, positive
+        if 'ring selection mode' not in par or \
+                par['ring selection mode'] is None:
             self.mode = "uniform" 
         else:
             # str, "uniform" or "monerolink"
@@ -73,14 +74,7 @@ class Simulator(object):
 
     def halting_run(self):
         if self.t < self.runtime:
-            # print("Timestep = " + str(self.t))
-            # print("Next 10 timesteps of buffer: ")
-            # for i in range(10):
-            #     print(self.buffer[self.t + i])
             self.make_coinbase()
-            # print("Next 10 timesteps of buffer after calling make_coinbase: ")
-            # for i in range(10):
-            #     print(self.buffer[self.t + i])
             self.spend_from_buffer()
             self.t += 1
 
@@ -109,7 +103,7 @@ class Simulator(object):
             assert s > self.t
         # assert node_to_spend in self.amounts 
         self.amounts[node_to_spend] = amt
-        # return node_to_spend, dt
+        return node_to_spend, dt
 
     def spend_from_buffer(self):
         txn_bundles = []
@@ -141,29 +135,20 @@ class Simulator(object):
         self.ownership[recipient_node] = k[1]
 
         change = random()*tot_amt
-        txn_amt =  tot_amt - change
+        txn_amt = tot_amt - change
 
         self.amounts[change_node] = change
         self.amounts[recipient_node] = txn_amt
 
+        blue_eid, blue_eidd, red_eids = self.get_eids(recipient_node,
+                                                      change_node,
+                                                      self.ownership,
+                                                      self.t, self.g,
+                                                      new_right_nodes, rings)
 
-        for rnode in new_right_nodes:
-            pair = (recipient_node, rnode)
-            blue_eid = self.g.add_edge(0, pair, 1.0, self.t)  # adds blue edge
-            self.ownership[blue_eid] = self.ownership[blue_eid[0]]
-
-            pairr = (change_node, rnode)
-            blue_eidd = self.g.add_edge(0, pairr, 1.0, self.t)  # adds blue edge
-            self.ownership[blue_eidd] = self.ownership[blue_eidd[0]]
-
-            red_eids = []
-            for ring_member in rings[rnode]:
-                pairrr = (ring_member, rnode)  
-                red_eids += [self.g.add_edge(1, pairrr, 1.0, self.t)] # adds red edge
-                self.ownership[red_eids[-1]] = self.ownership[red_eids[-1][1]]
-
-
-        result = [left_nodes_being_spent, tot_amt, new_right_nodes, (change_node, change), (recipient_node, txn_amt), [blue_eid, blue_eidd], red_eids]
+        result = [left_nodes_being_spent, tot_amt, new_right_nodes,
+                  (change_node, change), (recipient_node, txn_amt),
+                  [blue_eid, blue_eidd], red_eids]
         return result
 
     def spnd_from_buffer(self):
@@ -191,13 +176,13 @@ class Simulator(object):
             txn_bundles[-1] += [tot_amt]
 
             temp = deepcopy(grp)
-            sig_nodes = []
+            new_right_nodes = []
             rings = dict()
             for x in temp:
-                sig_nodes += [self.g.add_node(1, self.t)]  
-                self.ownership[sig_nodes[-1]] = (k[0], x[2])  
-                rings[sig_nodes[-1]] = self.get_ring(x[2]) 
-            txn_bundles[-1] += [sig_nodes]
+                new_right_nodes += [self.g.add_node(1, self.t)]
+                self.ownership[new_right_nodes[-1]] = (k[0], x[2])
+                rings[new_right_nodes[-1]] = self.get_ring(x[2])
+            txn_bundles[-1] += [new_right_nodes]
             # txn_bundles[-1] = [keys_to_spend, tot_amt, sig_nodes]
 
             change_node = self.g.add_node(0, self.t)  
@@ -206,27 +191,27 @@ class Simulator(object):
             recipient_node = self.g.add_node(0, self.t)  
             self.ownership[recipient_node] = k[1]
 
-            for snode in sig_nodes:
-                pair = (recipient_node, snode)
-                blue_eid = self.g.add_edge(0, pair, 1.0, self.t)  # adds blue edge
+            for rnode in new_right_nodes:
+                pair = (recipient_node, rnode)
+                blue_eid = self.g.add_edge(0, pair, 1.0, self.t)
                 self.ownership[blue_eid] = self.ownership[blue_eid[0]]
 
-                pairr = (change_node, snode)
-                blue_eidd = self.g.add_edge(0, pairr, 1.0, self.t)  # adds blue edge
+                pairr = (change_node, rnode)
+                blue_eidd = self.g.add_edge(0, pairr, 1.0, self.t)
                 self.ownership[blue_eidd] = self.ownership[blue_eidd[0]]
 
                 red_eids = []
-                for ring_member in rings[snode]:
-                    pairrr = (ring_member, snode)  
+                for ring_member in rings[rnode]:
+                    pairrr = (ring_member, rnode)
                     new_eid = self.g.add_edge(1, pairrr, 1.0, self.t)
-                    red_eids += [new_eid] # adds red edge
+                    red_eids += [new_eid]
                     self.ownership[new_eid] = self.ownership[new_eid[1]]
                     ct += 1
 
             change = random()*tot_amt
             self.amounts[change_node] = change
             txn_bundles[-1] += [(change_node, change)]
-            txn_amt =  tot_amt - change
+            txn_amt = tot_amt - change
             self.amounts[recipient_node] = txn_amt
             txn_bundles[-1] += [(recipient_node, txn_amt)]
 
@@ -255,28 +240,32 @@ class Simulator(object):
     def pick_coinbase_owner(self):
         r = random()
         u = 0
+        i = 0
         found = False
-        for i in range(len(self.hashrate)):
+        while i < len(self.hashrate):
             u += self.hashrate[i]
             if u > r:
                 found = True
                 break
+            else:
+                i += 1
         assert found
         assert i in range(len(self.hashrate))
         return i
             
     def pick_coinbase_amt(self):
-        ''' This function starts with a max reward, multiplies the last mining 
+        """ This function starts with a max reward, multiplies the last mining 
         reward by a given decay ratio, until you hit a minimum. WARNING: If 
         Simulator is not run timestep-by-timestep, i.e. if any timepoints 
         t=0, 1, 2, ... are skipped, then the coinbase reward will be off.
-        '''
-        if self.t==0:
+        """
+        if self.t == 0:
             self.last_mining_reward = DECAY_RATIO*MAX_MONERO_ATOMIC_UNITS
         elif self.t > 0:
             if not self.dummy_monero_mining_flat:
-                self.last_mining_reward = (1.0-DECAY_RATIO)*self.last_mining_reward
-                if self.last_mining_reward < MIN_MINING_REWARD: # minimum monero mining reward is 0.6 XMR or 6e11 atomic units
+                self.last_mining_reward = 1.0-DECAY_RATIO
+                self.last_mining_reward *= self.last_mining_reward
+                if self.last_mining_reward < MIN_MINING_REWARD:
                     self.last_mining_reward = MIN_MINING_REWARD
                     self.dummy_monero_mining_flat = True
             else:
@@ -287,10 +276,10 @@ class Simulator(object):
         try:
             assert owner in range(len(self.stoch_matrix))
         except AssertionError:
-            print(owner)
-        i = self.minspendtime # Minimal spend-time
+            print("Owner not found in stochastic matrix. owner = " + str(owner))
+        i = self.minspendtime  # Minimal spend-time
         r = random()
-        # spend times are encoded with support on min_spendtime, min_spendtime+1, ...
+        # spend times gend support on min_spendtime, min_spendtime + 1, ...
         u = self.spendtimes[owner](i)
         found = (u >= r)
         while not found and i < self.runtime:
@@ -312,11 +301,32 @@ class Simulator(object):
         assert found
         return i
 
-
     def get_ring(self, spender):
         ring = []
-        available_keys = [x for x in list(self.g.left_nodes.keys()) if x != spender]
+        available_keys = [x for x in list(self.g.left_nodes.keys()) if
+                          x != spender]
         if self.mode == "uniform":
-            ring = sample(available_keys, min(len(self.g.left_nodes), self.ringsize) - 1) + [spender]
+            ring = sample(available_keys, min(len(self.g.left_nodes),
+                                              self.ringsize) - 1)
+            ring += [spender]
         return ring
+
+    @staticmethod
+    def get_eids(recipient_node, change_node, ownership, t, g, new_right_nodes,
+                 rings):
+        for rnode in new_right_nodes:
+            pair = (recipient_node, rnode)
+            blue_eid = g.add_edge(0, pair, 1.0, t)  # adds blue edge
+            ownership[blue_eid] = ownership[blue_eid[0]]
+
+            pairr = (change_node, rnode)
+            blue_eidd = g.add_edge(0, pairr, 1.0, t)  # adds blue edge
+            ownership[blue_eidd] = ownership[blue_eidd[0]]
+
+            red_eids = []
+            for ring_member in rings[rnode]:
+                pairrr = (ring_member, rnode)
+                red_eids += [g.add_edge(1, pairrr, 1.0, t)]  # adds red edge
+                ownership[red_eids[-1]] = ownership[red_eids[-1][1]]
+        return blue_eid, blue_eidd, red_eids
 
