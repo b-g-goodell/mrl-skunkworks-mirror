@@ -105,7 +105,7 @@ class TestSimulator(ut.TestCase):
         self.assertEqual(new_num_blue_edges, old_num_blue_edges +
                          blue_edges_to_be_added)
 
-    def next_timestep(self, old_stats, predictions, sally):
+    def next_timestep(self, dt, old_stats, predictions, sally):
         """ next_timestep(self.gather_stats(sally), predictions, sally)
         """
         # Process old stats
@@ -135,64 +135,58 @@ class TestSimulator(ut.TestCase):
                         blue_edges_to_be_added)
         return result
 
-    def test_halting_run_manual_buffer_two(self):
-        """ test_halting_run_manual_buffer tests the step-by-step halting run
+    def stepwise_predict_and_verify(self, dt, sally, n, old_stats = None):
+        if old_stats is None:
+            old_stats = self.gather_stats(sally)
+        while n > 0:
+            n -= 1
+            # Make predictions
+            right_nodes_to_be_added = old_stats[5]
+            num_txn_bundles = sum([1 for k, grp in deepcopy(old_stats[6])])
+            num_true_spenders = sum(
+                [1 for k, grp in deepcopy(old_stats[6]) for
+                 entry in deepcopy(grp)])
+            self.assertEqual(num_true_spenders, right_nodes_to_be_added)
+            blue_edges_to_be_added = 2 * num_txn_bundles
+            left_nodes_to_be_added = 2 * num_txn_bundles + 1
+            red_edges_per_sig = max(1, min(old_stats[1], sally.ringsize))
+            red_edges_to_be_added = red_edges_per_sig * num_true_spenders
+            predictions = [dt, left_nodes_to_be_added,
+                           right_nodes_to_be_added,
+                           red_edges_to_be_added, blue_edges_to_be_added]
+
+            # Verify predictions and get next stats
+            old_stats = self.next_timestep(dt, old_stats, predictions, sally)
+        return sally, old_stats
+
+    def test_halting_run(self):
+        """ test_halting_run tests step-by-step halting run
         function by manually manipulating the buffer to ensure expected beh-
         avior. TODO: an automated/randomized test that isn't manually tweaked,
         see test_halting_run."""
         # Initialize simulator
-        sally = make_sally()
-        # print("L" + str(list(sally.g.left_nodes.keys())))
-        # print("R" + str(list(sally.g.right_nodes.keys())))
-
-        old_stats = self.gather_stats(sally)
-        # print(old_stats)
-
         dt = 1
+        sally = make_sally()
+        old_stats = self.gather_stats(sally)
+
+        # Make predictions
         left_nodes_to_be_added = 1
         right_nodes_to_be_added = 0
         red_edges_to_be_added = 0
         blue_edges_to_be_added = 0
-
         predictions = [dt, left_nodes_to_be_added, right_nodes_to_be_added,
                        red_edges_to_be_added, blue_edges_to_be_added]
-        old_stats = self.next_timestep(old_stats, predictions, sally)
+
+        # Verify predictions and get next stats.
+        old_stats = self.next_timestep(dt, old_stats, predictions, sally)
 
         # Check sally.buffer is all empty except for <= 1 entry (genesis block)
         genesis_block = list(sally.g.left_nodes.keys())[0]
-        last_non_empty_idx = None
         for entry in sally.buffer:
             self.assertTrue(len(entry) == 0 or (
                         len(entry) == 1 and genesis_block == entry[0][2]))
-            if len(entry) == 1:
-                last_non_empty_idx = sally.buffer.index(entry)
 
-        # Make next predictions
-        dt = 1
-        right_nodes_to_be_added = old_stats[-2]
-        left_nodes_to_be_added = 1
-        red_edges_to_be_added = 0
-        blue_edges_to_be_added = 0
-
-        predictions = [dt, left_nodes_to_be_added, right_nodes_to_be_added,
-                       red_edges_to_be_added, blue_edges_to_be_added]
-        old_stats = self.next_timestep(old_stats, predictions, sally)
-
-        # Make next predictions
-        dt = 1
-        right_nodes_to_be_added = old_stats[5]
-        num_txn_bundles = sum([1 for k, grp in deepcopy(old_stats[6])])
-        num_true_spenders = sum([1 for k, grp in deepcopy(old_stats[6]) for
-                                 entry in deepcopy(grp)])
-        self.assertEqual(num_true_spenders, right_nodes_to_be_added)
-        blue_edges_to_be_added = 2*num_txn_bundles   # Each bundle produces 2 outputs.
-        left_nodes_to_be_added = 2*num_txn_bundles + 1  # don't forget the coinbase
-        red_edges_per_sig = max(1, min(old_stats[1], sally.ringsize))
-        red_edges_to_be_added = red_edges_per_sig*num_true_spenders  # Each true spender picks max(0, min(num_left_nodes, ringsize-1)) mix-ins
-
-        predictions = [dt, left_nodes_to_be_added, right_nodes_to_be_added,
-                       red_edges_to_be_added, blue_edges_to_be_added]
-        old_stats = self.next_timestep(old_stats, predictions, sally)
+        sally, old_stats = self.stepwise_predict_and_verify(dt, sally, 12, old_stats)
 
         # Manually mess with the buffer. Swap next
         # block of planned spends with the first non-empty one we come across.
@@ -204,32 +198,7 @@ class TestSimulator(ut.TestCase):
         self.assertTrue(sally.t + offset < len(sally.buffer))  # True w high prob
         self.assertTrue(len(sally.buffer[sally.t]) > 0)  # True w high prob
 
-        # Gather some "new" stats to reflect this change
-        old_stats = self.gather_stats(sally)
-
-        # Make next predictions
-        dt = 1
-        right_nodes_to_be_added = old_stats[5]
-        num_txn_bundles = sum([1 for k, grp in deepcopy(old_stats[6])])
-        num_true_spenders = sum([1 for k, grp in deepcopy(old_stats[6]) for
-                                 entry in deepcopy(grp)])
-        self.assertEqual(num_true_spenders, right_nodes_to_be_added)
-        blue_edges_to_be_added = 2 * num_txn_bundles  # Each bundle produces
-        # 2 outputs.
-        left_nodes_to_be_added = 2 * num_txn_bundles + 1  # don't forget the
-        # coinbase
-        red_edges_per_sig = max(1, min(old_stats[1], sally.ringsize))
-        red_edges_to_be_added = red_edges_per_sig * num_true_spenders  # Each
-        # true spender picks max(0, min(num_left_nodes, ringsize-1)) mix-ins
-
-        predictions = [dt, left_nodes_to_be_added, right_nodes_to_be_added,
-                       red_edges_to_be_added, blue_edges_to_be_added]
-        old_stats = self.next_timestep(old_stats, predictions, sally)
-            
-    # @ut.skip("Skipping test_halting_run")
-    def test_halting_run(self):
-        """ test_halting_run tests the step-by-step halting_run. TODO: This test is incomplete, see test_halting_run_manual_buffer."""
-        pass
+        sally, old_stats = self.stepwise_predict_and_verify(dt, sally, 12)
         
     # @ut.skip("Skipping test_run")
     def test_run(self):
