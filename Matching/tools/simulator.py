@@ -94,10 +94,10 @@ class Simulator(object):
         recip = self.pick_next_recip(owner)
 
         # print("Making coinbase.")
-        l = len(self.g.left_nodes)
+        tomato = len(self.g.left_nodes)
         node_to_spend = self.g.add_node(0, self.t)
         # print("Coinbase with ident " + str(node_to_spend) + " created.")
-        assert len(self.g.left_nodes) == l + 1
+        assert len(self.g.left_nodes) == tomato + 1
         self.ownership[node_to_spend] = owner
 
         s = self.t + dt
@@ -163,19 +163,12 @@ class Simulator(object):
 
         """
         summary = []
-        buffer_len = len(self.buffer[self.t])
-        bundles = groupby(self.buffer[self.t], key=lambda x: (x[0], x[1]))
-        # print("Spending from buffer = " + str(self.buffer[self.t]) + "\n")
-        # for k, grp in deepcopy(bundles):
-        #     print("\t\t k = " + str(k))
-        #     for itm in grp:
-        #         print("\t\t itm in grp = " + str(itm))
+        bndl = groupby(self.buffer[self.t], key=lambda x: (x[0], x[1]))
 
         # Make some predictions
         right_nodes_to_be_added = len(self.buffer[self.t])
-        num_txn_bundles = sum([1 for k, grp in deepcopy(bundles)])
-        num_true_spenders = sum(
-            [1 for k, grp in deepcopy(bundles) for entry in deepcopy(grp)])
+        num_txn_bundles = sum([1 for _ in deepcopy(bndl)])
+        num_true_spenders = sum([1 for k, grp in deepcopy(bndl) for _ in grp])
         assert num_true_spenders == right_nodes_to_be_added
 
         old_lnids = len(self.g.left_nodes)
@@ -189,7 +182,7 @@ class Simulator(object):
         new_beids = len(self.g.blue_edges)
 
         blue_edges_to_be_added = 2 * num_true_spenders
-        left_nodes_to_be_added = 2 * num_txn_bundles  # Coinbases taken care of elsewhere
+        left_nodes_to_be_added = 2 * num_txn_bundles  # Coinbases elsewhere
         red_edges_per_sig = max(1, min(old_lnids, self.ringsize))
         red_edges_to_be_added = red_edges_per_sig * num_true_spenders
 
@@ -201,13 +194,27 @@ class Simulator(object):
         # print("\tWe have " + str(old_rnids) + " right_nodes before beginning.")
         # print("\tWe have " + str(old_reids) + " red_edges before beginning.")
         # print("\tWe have " + str(old_beids) + " blue_edges before beginning.")
-        # print("\tOur buffer indicates that we have " + str(num_txn_bundles) + " different txns to be constructed in this transaction. So we can expect " + str(2*num_txn_bundles) + " new left_nodes.")
-        # print("\tOur buffer indicates that we have " + str(num_true_spenders) + " different left nodes to be spent, each creating a right node. So we can expect " + str(num_true_spenders) + " new right nodes.")
-        # print("\tEach txn has 2 outputs, so each ring signature (right node) has two blue edges. So we can expect " + str(blue_edges_to_be_added) + " new blue edges.")
-        # print("\tEach new right node needs a ring, and we have " + str(max(1, min(old_lnids, self.ringsize))) + " ring members to choose from, so we can expect " + str(red_edges_to_be_added) + " new red edges.")
+        # print("\tOur buffer indicates that we have " + str(
+        #     num_txn_bundles) + " different txns to be constructed in this "
+        #                        "transaction. So we can expect " + str(
+        #     2 * num_txn_bundles) + " new left_nodes.")
+        # print("\tOur buffer indicates that we have " + str(
+        #     num_true_spenders) + " different left nodes to be spent, "
+        #                          "each creating a right node. So we can "
+        #                          "expect " + str(
+        #     num_true_spenders) + " new right nodes.")
+        # print(
+        #     "\tEach txn has 2 outputs, so each ring signature (right node) "
+        #     "has two blue edges. So we can expect " + str(
+        #         blue_edges_to_be_added) + " new blue edges.")
+        # print(
+        #     "\tEach new right node needs a ring, and we have a plethora of " +
+        #     str(max(1,min(old_lnids,self.ringsize))))
+        # print("So we can expect " + str(
+        #     red_edges_to_be_added) + " new red edges.")
 
         ct = 0
-        for k, grp in bundles:
+        for k, grp in bndl:
             # Collect keys to be spent in this group.
             temp = deepcopy(grp)
             keys_to_spend = [x[2] for x in temp]
@@ -256,6 +263,13 @@ class Simulator(object):
             new_rnids = len(self.g.right_nodes)
             new_reids = len(self.g.red_edges)
             new_beids = len(self.g.blue_edges)
+
+            # for rnode in new_right_nodes:
+            #     print("Here is the ring for rnode = " + str(rnode))
+            #     for itm in rings[rnode]:
+            #         print("\t " + str(itm))
+            for rnode in new_right_nodes:
+                assert 1 <= len(rings[rnode]) <= self.ringsize
 
             for rnode in new_right_nodes:
                 # Add blue edges from each new right node to each new left node
@@ -306,6 +320,8 @@ class Simulator(object):
 
         assert new_lnids == old_lnids + left_nodes_to_be_added
         assert new_rnids == old_rnids + right_nodes_to_be_added
+        assert new_reids == old_reids + ct
+        print("Expected " + str(red_edges_to_be_added) + " red edges to be added, but got " + str(new_reids - old_reids) + " new red edges instead.")
         assert new_reids == old_reids + red_edges_to_be_added
         assert new_beids == old_beids + blue_edges_to_be_added
 

@@ -55,34 +55,23 @@ class Challenger(object):
         
 def tracing_game(par):
     ''' tracing_game executes the actual tracing game. '''
-    # print("Beginning tracing game by initializing Chuck and Eve.")
+    # TODO: Modify to ensure Eve receives all info she is due eg amounts
     eve = Player(par['eve'])
     chuck = Challenger(par['chuck'])
     u = len(par['chuck']['simulator']['stochastic matrix'])
-    
-    # print("Running simulation.")
     sally = chuck.generate()
-    
-    # print("Getting Eve's response.")
-    # Ownership of an edge is the same as ownership of it's signature node.
-    # Ownership of a signature node is a pair (k, x) where k is an 
-    # owner index in the stochastic matrix, x is the left_node 
-    # being spent
-    # TODO: This is not correct; Eve receives all ownership info of both 
-    # endpoints of all of her edges, not merely ownership information for 
-    # the edge itself. 
     eve_edges = [eid for eid in sally.g.red_edges if u-1 in [sally.ownership[eid[0]], sally.ownership[eid[1]]]]
     eve_ownership = dict()
     for eid in eve_edges:
         eve_ownership[eid] = sally.ownership[eid]
         eve_ownership[eid[0]] = sally.ownership[eid[0]]
         eve_ownership[eid[1]] = sally.ownership[eid[1]]
-    resp = eve.respond(sally.g, eve_ownership) # response to the simulator (ownership dict)
-
+    resp = eve.respond(sally.g, eve_ownership)  # response to the simulator (ownership dict)
     return sally, resp
 
 def interpret(par, sally, resp):
-    # print("Compiling confusion matrix.")
+    """ interpret prints a confusion matrix to the screen and to file
+    """
     positives = {}
     negatives = {}
     true_positives = {}
@@ -313,7 +302,7 @@ def go():
                     s += str(x) + "\n"
                 wf.write(s)
             if ct % 10 == 0:
-                print(repeats)
+                print("Repeats vector = " + str(repeats))
             repeats[-1] += 1
             ct += 1
 
@@ -325,7 +314,7 @@ def go():
         mcc = interpret(par, sally, resp)
         mcc_none += [mcc is None]
 
-    print(repeats)
-    print(mcc_none)
+    print("Repeats vector = " + str(repeats))
+    print("mcc_none = " + str(mcc_none))
 
 go()
