@@ -88,13 +88,22 @@ class TestSimulator(ut.TestCase):
                    new_num_red_edges, old_num_red_edges, red_edges_to_be_added,
                    new_num_blue_edges, old_num_blue_edges,
                    blue_edges_to_be_added):
-        print("CALLING NEW_VS_OLD:\n")
-        print("INPUT = " + str((new_t, old_t, dt, new_num_left_nodes, old_num_left_nodes,
-                   left_nodes_to_be_added, new_num_right_nodes,
-                   old_num_right_nodes, right_nodes_to_be_added,
-                   new_num_red_edges, old_num_red_edges, red_edges_to_be_added,
-                   new_num_blue_edges, old_num_blue_edges,
-                   blue_edges_to_be_added)))
+        # print("CALLING NEW_VS_OLD WITH\n")
+        # print("new_t = " + str(new_t))
+        # print("old_t = " + str(old_t))
+        # print("dt = " + str(dt))
+        # print("new_num_left_nodes = " + str(new_num_left_nodes))
+        # print("old_num_left_nodes = " + str(old_num_left_nodes))
+        # print("left nodes to be added = " + str(left_nodes_to_be_added))
+        # print("new_num_right_nodes = " + str(new_num_right_nodes))
+        # print("old_num_right_nodes = " + str(old_num_right_nodes))
+        # print("right nodes to be added = " + str(right_nodes_to_be_added))
+        # print("new_num_red_edges = " + str(new_num_red_edges))
+        # print("old_num_red_edges = " + str(old_num_red_edges))
+        # print("red edges to be added = " + str(red_edges_to_be_added))
+        # print("new_num_blue_edges = " + str(new_num_blue_edges))
+        # print("old_num_blue_edges = " + str(old_num_blue_edges))
+        # print("blue edges to be added = " + str(blue_edges_to_be_added))
         self.assertEqual(new_t, old_t + dt)
         self.assertEqual(new_num_left_nodes, old_num_left_nodes +
                          left_nodes_to_be_added)
@@ -104,6 +113,7 @@ class TestSimulator(ut.TestCase):
                          red_edges_to_be_added)
         self.assertEqual(new_num_blue_edges, old_num_blue_edges +
                          blue_edges_to_be_added)
+        return True
 
     def next_timestep(self, dt, old_stats, predictions, sally):
         """ next_timestep(self.gather_stats(sally), predictions, sally)
@@ -111,6 +121,12 @@ class TestSimulator(ut.TestCase):
         # Process old stats
         [old_t, old_num_left_nodes, old_num_right_nodes, old_num_red_edges,
          old_num_blue_edges, old_buffer_len, old_txn_bundles] = old_stats
+        # print("next_timestep: Processing old stats")
+        #
+        # for k, grp in deepcopy(old_txn_bundles):
+        #     print("next_timestep: k = " + str(k))
+        #     for itm in deepcopy(grp):
+        #         print("next_timestep:\titm = " + str(itm))
 
         # Process prediction
         [dt, left_nodes_to_be_added, right_nodes_to_be_added,
@@ -126,18 +142,21 @@ class TestSimulator(ut.TestCase):
          new_txn_bundles] = result
 
         # Test new stats against predictions based on old stats
-        self.new_vs_old(new_t, old_t, dt, new_num_left_nodes,
+        self.assertTrue(self.new_vs_old(new_t, old_t, dt, new_num_left_nodes,
                         old_num_left_nodes, left_nodes_to_be_added,
                         new_num_right_nodes, old_num_right_nodes,
                         right_nodes_to_be_added, new_num_red_edges,
                         old_num_red_edges, red_edges_to_be_added,
                         new_num_blue_edges, old_num_blue_edges,
-                        blue_edges_to_be_added)
+                        blue_edges_to_be_added))
         return result
 
     def stepwise_predict_and_verify(self, dt, sally, n, old_stats = None):
         if old_stats is None:
             old_stats = self.gather_stats(sally)
+        # Recall: gather_stats returns
+        #    old_stats = [t, num_left_nodes, num_right_nodes, num_red_edges,
+        #                 num_blue_edges, buffer_len, txn_bundles]
         while n > 0:
             n -= 1
             # Make predictions
@@ -147,18 +166,24 @@ class TestSimulator(ut.TestCase):
                 [1 for k, grp in deepcopy(old_stats[6]) for
                  entry in deepcopy(grp)])
             self.assertEqual(num_true_spenders, right_nodes_to_be_added)
-            blue_edges_to_be_added = 2 * num_txn_bundles
+            blue_edges_to_be_added = 2 * num_true_spenders
             left_nodes_to_be_added = 2 * num_txn_bundles + 1
-            red_edges_per_sig = max(1, min(old_stats[1], sally.ringsize))
+            red_edges_per_sig = min(old_stats[1], sally.ringsize)
             red_edges_to_be_added = red_edges_per_sig * num_true_spenders
-            predictions = [dt, left_nodes_to_be_added,
-                           right_nodes_to_be_added,
+            predictions = [dt, left_nodes_to_be_added, right_nodes_to_be_added,
                            red_edges_to_be_added, blue_edges_to_be_added]
+
+            # print("State of buffer = " + str(sally.buffer[sally.t]))
+            # print("List left nodes = " + str(list(sally.g.left_nodes.keys())))
+            # print("List right nodes = " + str(list(sally.g.right_nodes.keys())))
+            # print("List red edges = " + str(list(sally.g.red_edges.keys())))
+            # print("List blue edges = " + str(list(sally.g.blue_edges.keys())))
 
             # Verify predictions and get next stats
             old_stats = self.next_timestep(dt, old_stats, predictions, sally)
         return sally, old_stats
 
+    # @ut.skip("Skipping test_halting_run")
     def test_halting_run(self):
         """ test_halting_run tests step-by-step halting run
         function by manually manipulating the buffer to ensure expected beh-
@@ -212,11 +237,14 @@ class TestSimulator(ut.TestCase):
     # @ut.skip("Skipping test_make_coinbase")
     def test_make_coinbase(self):
         """ test_make_coinbase tests making a coinbase output. TODO: should include a test that the buffer contains no repeats."""
+        # print("Beginning test_make_coinbase")
         sally = make_sally()
         self.assertEqual(len(sally.g.left_nodes), 0)
         self.assertEqual(len(sally.g.right_nodes), 0)
         self.assertEqual(len(sally.g.red_edges), 0)
         self.assertEqual(len(sally.g.blue_edges), 0)
+        predicted_amt = sally.next_mining_reward
+        # print("Making first coinbase")
         x, dt = sally.make_coinbase()
         self.assertEqual(len(sally.g.left_nodes), 1)
         self.assertEqual(len(sally.g.right_nodes), 0)
@@ -224,11 +252,13 @@ class TestSimulator(ut.TestCase):
         self.assertEqual(len(sally.g.blue_edges), 0)
         self.assertTrue(x in sally.g.left_nodes)
         self.assertTrue(0 < dt)
-        self.assertEqual(sally.amounts[x], sally.pick_coinbase_amt())
+        self.assertEqual(sally.amounts[x], predicted_amt)
+        self.assertEqual(sally.next_mining_reward, (1.0 - EMISSION_RATIO)*predicted_amt)
         # print("\n\nTESTMAKECOINBASE\n\n", x, sally.ownership[x])
         self.assertTrue(sally.ownership[x] in range(len(sally.stoch_matrix)))
         if dt < sally.runtime:
-            print("x, buffer = " + str((x, sally.buffer[dt])))
+            # print("Result from make_coinbase x = " + str(x))
+            # print("State of buffer =" + str(sally.buffer[sally.t]))
             self.assertTrue(any([y[2] == x for y in sally.buffer[dt]]))
             
         # Test no repeats make it into the buffer at any timestep.
@@ -278,7 +308,7 @@ class TestSimulator(ut.TestCase):
         # We can only expect max(len(sally.g.left_nodes), sally.ringsize) red edges, since a ring in our simulations has no repeated members.
         eff_rs = min(len(sally.g.left_nodes), sally.ringsize)
 
-        sally.spnd_from_buffer() 
+        sally.spend_from_buffer()
 
         # Test no repeats make it into the buffer.
         for entry in sally.buffer:
@@ -292,7 +322,7 @@ class TestSimulator(ut.TestCase):
         self.assertEqual(len(sally.g.red_edges), num_red_edges + eff_rs)
         self.assertEqual(len(sally.g.blue_edges), num_blue_edges + 2)
 
-    # @ut.skip("Skipping test_spend_from_buffer_three")
+    @ut.skip("Skipping test_spend_from_buffer_three")
     def test_spend_from_buffer_three(self):
         """ test_spend_from_buffer_three does a similar test to
         test_spend_from_buffer_one but with simulation-generated buffer. """
@@ -304,7 +334,7 @@ class TestSimulator(ut.TestCase):
                         
         if sally.t < sally.runtime:
             self.assertTrue(len(sally.buffer[sally.t+1]) > 0)
-            print("Next buffer = " + str(sally.buffer[sally.t+1]))
+            # print("Next buffer = " + str(sally.buffer[sally.t+1]))
 
             # Gather some "old" stats
             [old_t, old_num_left_nodes, old_num_right_nodes,
@@ -325,7 +355,7 @@ class TestSimulator(ut.TestCase):
             red_edges_to_be_added = red_edges_per_sig*num_true_spenders # Each true spender picks max(0, min(num_left_nodes, ringsize-1)) mix-ins
 
             # Spend from dat buffer tho
-            sally.spnd_from_buffer()
+            sally.spend_from_buffer()
 
             # Gather some "new" stats
             [new_t, new_num_left_nodes, new_num_right_nodes,
@@ -333,15 +363,22 @@ class TestSimulator(ut.TestCase):
              new_txn_bundles] = self.gather_stats(sally)
 
             # Test new stats against predictions based on old stats
-            self.new_vs_old(new_t-1, old_t, new_num_left_nodes,
-                            old_num_left_nodes,
-                            left_nodes_to_be_added, new_num_right_nodes,
-                            old_num_right_nodes, right_nodes_to_be_added,
-                            new_num_red_edges, old_num_red_edges,
-                            red_edges_to_be_added, new_num_blue_edges,
-                            old_num_blue_edges, blue_edges_to_be_added)
+            # new_t, old_t, dt, new_num_left_nodes, old_num_left_nodes,
+            #                    left_nodes_to_be_added, new_num_right_nodes,
+            #                    old_num_right_nodes, right_nodes_to_be_added,
+            #                    new_num_red_edges, old_num_red_edges,
+            #                    red_edges_to_be_added,
+            #                    new_num_blue_edges, old_num_blue_edges,
+            #                    blue_edges_to_be_added
+            self.new_vs_old(new_t, old_t, 0, new_num_left_nodes,
+                            old_num_left_nodes, left_nodes_to_be_added,
+                            new_num_right_nodes, old_num_right_nodes,
+                            right_nodes_to_be_added, new_num_red_edges,
+                            old_num_red_edges, red_edges_to_be_added,
+                            new_num_blue_edges, old_num_blue_edges,
+                            blue_edges_to_be_added)
 
-    # @ut.skip("Skipping test_spend_from_buffer_two")
+    @ut.skip("Skipping test_spend_from_buffer_two")
     def test_spend_from_buffer_two(self):
         """ test_spend_from_buffer_two does similar to test_spend_from_buffer_one but with simulation-generated buffer."""
         sally = make_sally()
@@ -358,7 +395,7 @@ class TestSimulator(ut.TestCase):
             num_to_be_spent = len(sally.buffer[sally.t+1])
             num_in_tail_buffer = sum([len(x) for x in sally.buffer[sally.t + 2:]])
 
-            sally.spnd_from_buffer()
+            sally.spend_from_buffer()
 
             self.assertEqual(len(sally.g.left_nodes), num_left_nodes + 2*num_to_be_spent)
             self.assertEqual(len(sally.g.right_nodes), num_right_nodes + num_to_be_spent)
@@ -386,11 +423,13 @@ class TestSimulator(ut.TestCase):
     def test_pick_coinbase_amt(self):
         """ test pick_coinbase_amt : Check that pick_coinbase_amt produces coins on schedule. See comments in simulator.py - the way we've coded this, setting sally.t = 17 and skipping sally.2 = 3, 4, 5, ..., 16 will produce the *wrong* coinbase reward... but skipping blocks like this is the only way this formula goes wrong, and that requires having blocks with no block reward, which isn't acceptable, so it shouldn't be a big deal. """
         sally = make_sally()
-        self.assertEqual(sally.pick_coinbase_amt(), DECAY_RATIO*MAX_MONERO_ATOMIC_UNITS) 
+        x = sally.pick_coinbase_amt()
+        self.assertEqual(x, EMISSION_RATIO*MAX_MONERO_ATOMIC_UNITS)
         sally.t += 1
-        self.assertEqual(sally.pick_coinbase_amt(), DECAY_RATIO*MAX_MONERO_ATOMIC_UNITS*(1.0-DECAY_RATIO))
+
+        self.assertEqual(sally.pick_coinbase_amt(), EMISSION_RATIO*MAX_MONERO_ATOMIC_UNITS*(1.0-EMISSION_RATIO))
         sally.t += 1
-        self.assertEqual(sally.pick_coinbase_amt(), DECAY_RATIO*MAX_MONERO_ATOMIC_UNITS*(1.0-DECAY_RATIO)**2)
+        self.assertEqual(sally.pick_coinbase_amt(), EMISSION_RATIO*MAX_MONERO_ATOMIC_UNITS*(1.0-EMISSION_RATIO)**2)
     
     # @ut.skip("Skipping test_r_pick_spend_time_correctness")
     def test_r_pick_spend_time_correctness(self):

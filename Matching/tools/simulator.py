@@ -4,7 +4,7 @@ from random import *
 from copy import deepcopy
 
 MAX_MONERO_ATOMIC_UNITS = 2**64 - 1
-DECAY_RATIO = 2**-18
+EMISSION_RATIO = 2**-18
 MIN_MINING_REWARD = 6e11
 
 
@@ -68,21 +68,21 @@ class Simulator(object):
         # whether constant block reward has started
         self.dummy_monero_mining_flat = False  
         open(self.fn, "w+").close()
-        self.last_mining_reward = None
+        self.next_mining_reward = EMISSION_RATIO*MAX_MONERO_ATOMIC_UNITS
         # Write to file each time these many blocks have been added
         self.reporting_modulus = par['reporting modulus']
 
     def halting_run(self):
-        if self.t < self.runtime:
+        if self.t + 1 < self.runtime:
+            self.t += 1
             self.make_coinbase()
             self.spend_from_buffer()
-            self.t += 1
 
     def run(self):
-        while self.t < self.runtime:
+        while self.t + 1 < self.runtime:
+            self.t += 1
             self.make_coinbase()
             self.spend_from_buffer()
-            self.t += 1
 
     def make_coinbase(self):
         owner = self.pick_coinbase_owner()
@@ -93,7 +93,11 @@ class Simulator(object):
         assert 0 < dt
         recip = self.pick_next_recip(owner)
 
+        # print("Making coinbase.")
+        l = len(self.g.left_nodes)
         node_to_spend = self.g.add_node(0, self.t)
+        # print("Coinbase with ident " + str(node_to_spend) + " created.")
+        assert len(self.g.left_nodes) == l + 1
         self.ownership[node_to_spend] = owner
 
         s = self.t + dt
@@ -104,17 +108,6 @@ class Simulator(object):
         # assert node_to_spend in self.amounts 
         self.amounts[node_to_spend] = amt
         return node_to_spend, dt
-
-    def spend_from_buffer(self):
-        txn_bundles = []
-        to_spend = sorted(self.buffer[self.t], key=lambda x: (x[0], x[1]))
-        ct = 0
-        num_left_nodes = len(self.g.left_nodes)
-        for k, grp in groupby(to_spend, key=lambda x: (x[0], x[1])):
-            txn_bundles += [self.new_ring_sigs(k, grp)]
-            ct += 1
-        assert num_left_nodes + 2*ct == len(self.g.left_nodes)
-        return txn_bundles
 
     def new_ring_sigs(self, k, grp):
         temp = deepcopy(grp)
@@ -151,47 +144,121 @@ class Simulator(object):
                   [blue_eid, blue_eidd], red_eids]
         return result
 
-    def spnd_from_buffer(self):
-        # results in txn_bundles, which is a list:
-        #   txn_bundles[i] = ith txn included in block with height self.t
-        #       txn_bundles[i][0] = list of keys (left node idents) being spent
-        #       txn_bundles[i][1] = total amount of input keys in this txn.
-        #       txn_bundles[i][2] = signature nodes (right node idents)
-        #       txn_bundles[i][3] = pair of a left node ident and change amount
-        #       txn_bundles[i][4] = pair of a left node ident and paym amount
-        txn_bundles = [] 
-        to_spend = sorted(self.buffer[self.t], key=lambda x: (x[0], x[1]))
-        # print(to_spend)
+    def spend_from_buffer(self):
+        """ spend_from_buffer groups the buffer by sender-recipient pairs.
+        For each of these, amounts are decided, new right nodes are created,
+        new left nodes are created, new red edges are created, and new blue
+        edges are created.
+
+        For convenience, we return a summary.
+
+        :return: summary (list)
+                 summary[i] = ith txn included in block with height self.t
+                        idx : entry
+                          0 : left nodes being spent
+                          1 : sum of amounts of left nodes being spent
+                          2 : right nodes being created
+                          3 : pair left node and amt (change)
+                          4 : pair left node and amt (recipient)
+
+        """
+        summary = []
+        buffer_len = len(self.buffer[self.t])
+        bundles = groupby(self.buffer[self.t], key=lambda x: (x[0], x[1]))
+        # print("Spending from buffer = " + str(self.buffer[self.t]) + "\n")
+        # for k, grp in deepcopy(bundles):
+        #     print("\t\t k = " + str(k))
+        #     for itm in grp:
+        #         print("\t\t itm in grp = " + str(itm))
+
+        # Make some predictions
+        right_nodes_to_be_added = len(self.buffer[self.t])
+        num_txn_bundles = sum([1 for k, grp in deepcopy(bundles)])
+        num_true_spenders = sum(
+            [1 for k, grp in deepcopy(bundles) for entry in deepcopy(grp)])
+        assert num_true_spenders == right_nodes_to_be_added
+
+        old_lnids = len(self.g.left_nodes)
+        old_rnids = len(self.g.right_nodes)
+        old_reids = len(self.g.red_edges)
+        old_beids = len(self.g.blue_edges)
+
+        new_lnids = len(self.g.left_nodes)
+        new_rnids = len(self.g.right_nodes)
+        new_reids = len(self.g.red_edges)
+        new_beids = len(self.g.blue_edges)
+
+        blue_edges_to_be_added = 2 * num_true_spenders
+        left_nodes_to_be_added = 2 * num_txn_bundles  # Coinbases taken care of elsewhere
+        red_edges_per_sig = max(1, min(old_lnids, self.ringsize))
+        red_edges_to_be_added = red_edges_per_sig * num_true_spenders
+
+        # print("Spending from buffer. Here's the dealio.")
+        # print("\tWe have buffer:" + str(self.buffer[self.t]))
+        # for itm in self.buffer[self.t]:
+        #     print("\t\t" + str(itm))
+        # print("\tWe have " + str(old_lnids) + " left_nodes before beginning.")
+        # print("\tWe have " + str(old_rnids) + " right_nodes before beginning.")
+        # print("\tWe have " + str(old_reids) + " red_edges before beginning.")
+        # print("\tWe have " + str(old_beids) + " blue_edges before beginning.")
+        # print("\tOur buffer indicates that we have " + str(num_txn_bundles) + " different txns to be constructed in this transaction. So we can expect " + str(2*num_txn_bundles) + " new left_nodes.")
+        # print("\tOur buffer indicates that we have " + str(num_true_spenders) + " different left nodes to be spent, each creating a right node. So we can expect " + str(num_true_spenders) + " new right nodes.")
+        # print("\tEach txn has 2 outputs, so each ring signature (right node) has two blue edges. So we can expect " + str(blue_edges_to_be_added) + " new blue edges.")
+        # print("\tEach new right node needs a ring, and we have " + str(max(1, min(old_lnids, self.ringsize))) + " ring members to choose from, so we can expect " + str(red_edges_to_be_added) + " new red edges.")
+
         ct = 0
-        for k, grp in groupby(to_spend, key=lambda x: (x[0], x[1])):
-            # for each k, grp, we:
-            #     add new right nodes (grp size)
-            #     add two new left nodes
-            #     add (grp size)*2 new blue edges
-            #     add (grp size)*eff_ringsize new red edges
+        for k, grp in bundles:
+            # Collect keys to be spent in this group.
             temp = deepcopy(grp)
             keys_to_spend = [x[2] for x in temp]
-            txn_bundles += [keys_to_spend] 
-            tot_amt = sum([self.amounts[x] for x in keys_to_spend])
-            txn_bundles[-1] += [tot_amt]
+            summary += [[keys_to_spend]]
 
+            # Compute amount for those keys.
+            tot_amt = sum([self.amounts[x] for x in keys_to_spend])
+            summary[-1] += [tot_amt]
+
+            # Create new right node for each key being spent and generate a
+            # ring for that node.
             temp = deepcopy(grp)
             new_right_nodes = []
             rings = dict()
             for x in temp:
+                # Note: we can add a right node and then select ring members like
+                # this just so long as we don't create any new left nodes before
+                # all ring members are selected.
                 new_right_nodes += [self.g.add_node(1, self.t)]
                 self.ownership[new_right_nodes[-1]] = (k[0], x[2])
                 rings[new_right_nodes[-1]] = self.get_ring(x[2])
-            txn_bundles[-1] += [new_right_nodes]
-            # txn_bundles[-1] = [keys_to_spend, tot_amt, sig_nodes]
 
+                assert len(self.g.left_nodes) == new_lnids
+                assert len(self.g.right_nodes) == new_rnids + 1
+                assert len(self.g.red_edges) == new_reids
+                assert len(self.g.blue_edges) == new_beids
+
+                new_lnids = len(self.g.left_nodes)
+                new_rnids = len(self.g.right_nodes)
+                new_reids = len(self.g.red_edges)
+                new_beids = len(self.g.blue_edges)
+            summary[-1] += [new_right_nodes]
+
+            # Create two new left nodes
             change_node = self.g.add_node(0, self.t)  
             self.ownership[change_node] = k[0]
-
             recipient_node = self.g.add_node(0, self.t)  
             self.ownership[recipient_node] = k[1]
 
+            assert len(self.g.left_nodes) == new_lnids + 2
+            assert len(self.g.right_nodes) == new_rnids
+            assert len(self.g.red_edges) == new_reids
+            assert len(self.g.blue_edges) == new_beids
+
+            new_lnids = len(self.g.left_nodes)
+            new_rnids = len(self.g.right_nodes)
+            new_reids = len(self.g.red_edges)
+            new_beids = len(self.g.blue_edges)
+
             for rnode in new_right_nodes:
+                # Add blue edges from each new right node to each new left node
                 pair = (recipient_node, rnode)
                 blue_eid = self.g.add_edge(0, pair, 1.0, self.t)
                 self.ownership[blue_eid] = self.ownership[blue_eid[0]]
@@ -200,6 +267,17 @@ class Simulator(object):
                 blue_eidd = self.g.add_edge(0, pairr, 1.0, self.t)
                 self.ownership[blue_eidd] = self.ownership[blue_eidd[0]]
 
+                assert len(self.g.left_nodes) == new_lnids
+                assert len(self.g.right_nodes) == new_rnids
+                assert len(self.g.red_edges) == new_reids
+                assert len(self.g.blue_edges) == new_beids + 2
+
+                new_lnids = len(self.g.left_nodes)
+                new_rnids = len(self.g.right_nodes)
+                new_reids = len(self.g.red_edges)
+                new_beids = len(self.g.blue_edges)
+
+                # Add red edges to each ring member.
                 red_eids = []
                 for ring_member in rings[rnode]:
                     pairrr = (ring_member, rnode)
@@ -208,14 +286,30 @@ class Simulator(object):
                     self.ownership[new_eid] = self.ownership[new_eid[1]]
                     ct += 1
 
+                    assert len(self.g.left_nodes) == new_lnids
+                    assert len(self.g.right_nodes) == new_rnids
+                    assert len(self.g.red_edges) == new_reids + 1
+                    assert len(self.g.blue_edges) == new_beids
+
+                    new_lnids = len(self.g.left_nodes)
+                    new_rnids = len(self.g.right_nodes)
+                    new_reids = len(self.g.red_edges)
+                    new_beids = len(self.g.blue_edges)
+
+            # Determine amounts.
             change = random()*tot_amt
             self.amounts[change_node] = change
-            txn_bundles[-1] += [(change_node, change)]
+            summary[-1] += [(change_node, change)]
             txn_amt = tot_amt - change
             self.amounts[recipient_node] = txn_amt
-            txn_bundles[-1] += [(recipient_node, txn_amt)]
+            summary[-1] += [(recipient_node, txn_amt)]
 
-        return txn_bundles
+        assert new_lnids == old_lnids + left_nodes_to_be_added
+        assert new_rnids == old_rnids + right_nodes_to_be_added
+        assert new_reids == old_reids + red_edges_to_be_added
+        assert new_beids == old_beids + blue_edges_to_be_added
+
+        return summary
 
     def report(self):
         line = "\n\n\n\nREPORTING FOR TIMESTEP" + str(self.t) + "\n\n"
@@ -259,18 +353,13 @@ class Simulator(object):
         Simulator is not run timestep-by-timestep, i.e. if any timepoints 
         t=0, 1, 2, ... are skipped, then the coinbase reward will be off.
         """
-        if self.t == 0:
-            self.last_mining_reward = DECAY_RATIO*MAX_MONERO_ATOMIC_UNITS
-        elif self.t > 0:
-            if not self.dummy_monero_mining_flat:
-                self.last_mining_reward = 1.0-DECAY_RATIO
-                self.last_mining_reward *= self.last_mining_reward
-                if self.last_mining_reward < MIN_MINING_REWARD:
-                    self.last_mining_reward = MIN_MINING_REWARD
-                    self.dummy_monero_mining_flat = True
-            else:
-                self.last_mining_reward = MIN_MINING_REWARD
-        return self.last_mining_reward
+        result = self.next_mining_reward
+        if not self.dummy_monero_mining_flat:
+            self.next_mining_reward *= (1.0-EMISSION_RATIO)
+            if self.next_mining_reward < MIN_MINING_REWARD:
+                self.next_mining_reward = MIN_MINING_REWARD
+                self.dummy_monero_mining_flat = True
+        return result
 
     def pick_spend_time(self, owner):
         try:
