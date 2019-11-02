@@ -191,6 +191,7 @@ class TestSimulator(ut.TestCase):
         see test_halting_run."""
         # Initialize simulator
         dt = 1
+        sally = None  # clear sally
         sally = make_sally()
         old_stats = self.gather_stats(sally)
 
@@ -322,39 +323,79 @@ class TestSimulator(ut.TestCase):
         self.assertEqual(len(sally.g.red_edges), num_red_edges + eff_rs)
         self.assertEqual(len(sally.g.blue_edges), num_blue_edges + 2)
 
-    @ut.skip("Skipping test_spend_from_buffer_three")
-    def test_spend_from_buffer_three(self):
-        """ test_spend_from_buffer_three does a similar test to
-        test_spend_from_buffer_one but with simulation-generated buffer. """
+    # @ut.skip("Skipping test_spend_from_buffer_two")
+    def test_spend_from_buffer_two(self):
+        """ test_spend_from_buffer_two does similar to test_spend_from_buffer_one but with simulation-generated buffer."""
+        dt = 1
+        sally = None  # Clear sally
         sally = make_sally()
         assert sally.runtime > 3*sally.minspendtime
-        while(sally.t + 1 < sally.runtime and \
-            len(sally.buffer[sally.t + 1]) == 0):
+        while len(sally.buffer[sally.t + 1]) != 0 and sally.t < sally.runtime:
             sally.halting_run()
-                        
-        if sally.t < sally.runtime:
-            self.assertTrue(len(sally.buffer[sally.t+1]) > 0)
-            # print("Next buffer = " + str(sally.buffer[sally.t+1]))
 
-            # Gather some "old" stats
+        # Gather some "old" stats
+        [old_t, old_num_left_nodes, old_num_right_nodes,
+         old_num_red_edges, old_num_blue_edges, old_buffer_len,
+         old_txn_bundles] = self.gather_stats(sally)
+
+        # Make some predictions
+        right_nodes_to_be_added = old_buffer_len
+        num_txn_bundles = sum([1 for k, grp in deepcopy(old_txn_bundles)])
+        num_true_spenders = sum([1 for k, grp in deepcopy(old_txn_bundles) \
+                                 for entry in deepcopy(grp)])
+
+        self.assertEqual(num_true_spenders, right_nodes_to_be_added)
+
+        blue_edges_to_be_added = 2 * num_true_spenders
+        left_nodes_to_be_added = 2 * num_txn_bundles
+        red_edges_per_sig = max(1, min(old_num_left_nodes, sally.ringsize))
+        red_edges_to_be_added = red_edges_per_sig * num_true_spenders
+
+        # Spend from dat buffer tho
+        sally.t += 1
+        sally.spend_from_buffer()
+
+        # Gather some "new" stats
+        [new_t, new_num_left_nodes, new_num_right_nodes,
+         new_num_red_edges, new_num_blue_edges, new_buffer_len,
+         new_txn_bundles] = self.gather_stats(sally)
+
+        # Test new stats against predictions based on old stats
+        # new_t, old_t, dt, new_num_left_nodes, old_num_left_nodes,
+        #                    left_nodes_to_be_added, new_num_right_nodes,
+        #                    old_num_right_nodes, right_nodes_to_be_added,
+        #                    new_num_red_edges, old_num_red_edges,
+        #                    red_edges_to_be_added,
+        #                    new_num_blue_edges, old_num_blue_edges,
+        #                    blue_edges_to_be_added
+        self.new_vs_old(new_t, old_t, dt, new_num_left_nodes,
+                        old_num_left_nodes, left_nodes_to_be_added,
+                        new_num_right_nodes, old_num_right_nodes,
+                        right_nodes_to_be_added, new_num_red_edges,
+                        old_num_red_edges, red_edges_to_be_added,
+                        new_num_blue_edges, old_num_blue_edges,
+                        blue_edges_to_be_added)
+
+        if sally.t < sally.runtime:
             [old_t, old_num_left_nodes, old_num_right_nodes,
              old_num_red_edges, old_num_blue_edges, old_buffer_len,
-             old_txn_bundles] = self.gather_stats(sally)
-            
+             old_txn_bundles] = [new_t, new_num_left_nodes, new_num_right_nodes,
+                                 new_num_red_edges, new_num_blue_edges,
+                                 new_buffer_len,
+                                 new_txn_bundles]
+
             # Make some predictions
             right_nodes_to_be_added = old_buffer_len
-            num_txn_bundles = sum([1 for k, grp in deepcopy(old_txn_bundles)]) 
+            num_txn_bundles = sum([1 for k, grp in deepcopy(old_txn_bundles)])
             num_true_spenders = sum([1 for k, grp in deepcopy(old_txn_bundles) \
-                for entry in deepcopy(grp)]) 
-
+                                     for entry in deepcopy(grp)])
             self.assertEqual(num_true_spenders, right_nodes_to_be_added)
-
-            blue_edges_to_be_added = 2*num_txn_bundles  # Each bundle produces 2 outputs.
-            left_nodes_to_be_added = 2*num_txn_bundles + 1 # don't forget the coinbase
+            blue_edges_to_be_added = 2 * num_true_spenders
+            left_nodes_to_be_added = 2 * num_txn_bundles
             red_edges_per_sig = max(1, min(old_num_left_nodes, sally.ringsize))
-            red_edges_to_be_added = red_edges_per_sig*num_true_spenders # Each true spender picks max(0, min(num_left_nodes, ringsize-1)) mix-ins
+            red_edges_to_be_added = red_edges_per_sig * num_true_spenders
 
-            # Spend from dat buffer tho
+            sally.t += 1
             sally.spend_from_buffer()
 
             # Gather some "new" stats
@@ -362,15 +403,7 @@ class TestSimulator(ut.TestCase):
              new_num_red_edges, new_num_blue_edges, new_buffer_len,
              new_txn_bundles] = self.gather_stats(sally)
 
-            # Test new stats against predictions based on old stats
-            # new_t, old_t, dt, new_num_left_nodes, old_num_left_nodes,
-            #                    left_nodes_to_be_added, new_num_right_nodes,
-            #                    old_num_right_nodes, right_nodes_to_be_added,
-            #                    new_num_red_edges, old_num_red_edges,
-            #                    red_edges_to_be_added,
-            #                    new_num_blue_edges, old_num_blue_edges,
-            #                    blue_edges_to_be_added
-            self.new_vs_old(new_t, old_t, 0, new_num_left_nodes,
+            self.new_vs_old(new_t, old_t, dt, new_num_left_nodes,
                             old_num_left_nodes, left_nodes_to_be_added,
                             new_num_right_nodes, old_num_right_nodes,
                             right_nodes_to_be_added, new_num_red_edges,
@@ -378,31 +411,6 @@ class TestSimulator(ut.TestCase):
                             new_num_blue_edges, old_num_blue_edges,
                             blue_edges_to_be_added)
 
-    @ut.skip("Skipping test_spend_from_buffer_two")
-    def test_spend_from_buffer_two(self):
-        """ test_spend_from_buffer_two does similar to test_spend_from_buffer_one but with simulation-generated buffer."""
-        sally = make_sally()
-        assert sally.runtime > 3*sally.minspendtime
-        while len(sally.buffer[sally.t + 1]) != 0 and sally.t < sally.runtime:
-            sally.halting_run()
-
-        if sally.t < sally.runtime:
-            l = len(sally.buffer[sally.t+1])
-            num_left_nodes = len(sally.g.left_nodes)
-            num_right_nodes = len(sally.g.right_nodes)
-            num_red_edges = len(sally.g.red_edges)
-            num_blue_edges = len(sally.g.blue_edges)
-            num_to_be_spent = len(sally.buffer[sally.t+1])
-            num_in_tail_buffer = sum([len(x) for x in sally.buffer[sally.t + 2:]])
-
-            sally.spend_from_buffer()
-
-            self.assertEqual(len(sally.g.left_nodes), num_left_nodes + 2*num_to_be_spent)
-            self.assertEqual(len(sally.g.right_nodes), num_right_nodes + num_to_be_spent)
-            self.assertEqual(len(sally.g.red_edges), num_red_edges + sally.ringsize*num_to_be_spent)
-            self.assertEqual(len(sally.g.blue_edges), num_blue_edges + 2*num_to_be_spent)
-            self.assertEqual(sum([len(x) for x in sally.buffer[sally.t+1:]]), num_in_tail_buffer + 1 + 2*num_to_be_spent)
-        
     # @ut.skip("Skipping test_pick_coinbase_owner_correctness")
     def test_pick_coinbase_owner_correctness(self):
         """ test_pick_coinbase_owner_correctness : Check that pick_coinbase_owner produces an index suitable for indexing into the stochastic matrix. This test does not check that pick_coinbase_owner is drawing from the stochastic matrix appropriately (see test_pick_coinbase_owner_dist).
