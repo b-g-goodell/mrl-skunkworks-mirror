@@ -162,10 +162,14 @@ class Simulator(object):
                           4 : pair left node and amt (recipient)
 
         """
+        print("Beginning spend from buffer")
         summary = []
+
+        print("Bundling transactions by sender-receiver pair")
         bndl = groupby(self.buffer[self.t], key=lambda x: (x[0], x[1]))
 
         # Make some predictions
+        print("Making predictions of how many graphs and edges are to be added.")
         right_nodes_to_be_added = len(self.buffer[self.t])
         num_txn_bundles = sum([1 for _ in deepcopy(bndl)])
         num_true_spenders = sum([1 for k, grp in deepcopy(bndl) for _ in grp])
@@ -182,60 +186,69 @@ class Simulator(object):
         new_beids = len(self.g.blue_edges)
 
         blue_edges_to_be_added = 2 * num_true_spenders
-        left_nodes_to_be_added = 2 * num_txn_bundles  # Coinbases elsewhere
-        red_edges_per_sig = max(1, min(old_lnids, self.ringsize))
+        left_nodes_to_be_added = 2 * num_txn_bundles  # Coinbase elsewhere
+        available_ring_members = min(old_lnids, self.ringsize)
+        red_edges_per_sig = max(1, available_ring_members)
         red_edges_to_be_added = red_edges_per_sig * num_true_spenders
 
-        # print("Spending from buffer. Here's the dealio.")
-        # print("\tWe have buffer:" + str(self.buffer[self.t]))
-        # for itm in self.buffer[self.t]:
-        #     print("\t\t" + str(itm))
-        # print("\tWe have " + str(old_lnids) + " left_nodes before beginning.")
-        # print("\tWe have " + str(old_rnids) + " right_nodes before beginning.")
-        # print("\tWe have " + str(old_reids) + " red_edges before beginning.")
-        # print("\tWe have " + str(old_beids) + " blue_edges before beginning.")
-        # print("\tOur buffer indicates that we have " + str(
-        #     num_txn_bundles) + " different txns to be constructed in this "
-        #                        "transaction. So we can expect " + str(
-        #     2 * num_txn_bundles) + " new left_nodes.")
-        # print("\tOur buffer indicates that we have " + str(
-        #     num_true_spenders) + " different left nodes to be spent, "
-        #                          "each creating a right node. So we can "
-        #                          "expect " + str(
-        #     num_true_spenders) + " new right nodes.")
-        # print(
-        #     "\tEach txn has 2 outputs, so each ring signature (right node) "
-        #     "has two blue edges. So we can expect " + str(
-        #         blue_edges_to_be_added) + " new blue edges.")
-        # print(
-        #     "\tEach new right node needs a ring, and we have a plethora of " +
-        #     str(max(1,min(old_lnids,self.ringsize))))
-        # print("So we can expect " + str(
-        #     red_edges_to_be_added) + " new red edges.")
+        print("Spending from buffer. Here's the dealio.")
+        print("\tWe have buffer:" + str(self.buffer[self.t]))
+        for itm in self.buffer[self.t]:
+            print("\t\t" + str(itm))
+        print("\tWe have " + str(old_lnids) + " left_nodes before beginning.")
+        print("\tWe have " + str(old_rnids) + " right_nodes before beginning.")
+        print("\tWe have " + str(old_reids) + " red_edges before beginning.")
+        print("\tWe have " + str(old_beids) + " blue_edges before beginning.")
+        print("\tOur buffer indicates that we have " + str(
+            num_txn_bundles) + " different txns to be constructed in this "
+                               "transaction. So we can expect " + str(
+            2 * num_txn_bundles) + " new left_nodes.")
+        print("\tOur buffer indicates that we have " + str(
+            num_true_spenders) + " different left nodes to be spent, "
+                                 "each creating a right node. So we can "
+                                 "expect " + str(
+            num_true_spenders) + " new right nodes.")
+        print(
+            "\tEach txn has 2 outputs, so each ring signature (right node) "
+            "has two blue edges. So we can expect " + str(
+                blue_edges_to_be_added) + " new blue edges.")
+        print(
+            "\tEach new right node needs a ring, and we have a plethora of " +
+            str(max(1,min(old_lnids,self.ringsize))))
+        print("So we can expect " + str(
+            red_edges_to_be_added) + " new red edges.")
 
+        print("Entering main spend loop.")
         ct = 0
+        tot_ring_membs = 0
+        rings = dict()
+        new_right_nodes = []
         for k, grp in bndl:
+            print("Processing k, grp = " + str((k, grp)))
             # Collect keys to be spent in this group.
             temp = deepcopy(grp)
             keys_to_spend = [x[2] for x in temp]
             summary += [[keys_to_spend]]
 
+            print("Computing amounts")
             # Compute amount for those keys.
             tot_amt = sum([self.amounts[x] for x in keys_to_spend])
             summary[-1] += [tot_amt]
 
             # Create new right node for each key being spent and generate a
             # ring for that node.
+            print("Creating new right nodes for this grp.")
             temp = deepcopy(grp)
-            new_right_nodes = []
-            rings = dict()
             for x in temp:
-                # Note: we can add a right node and then select ring members like
-                # this just so long as we don't create any new left nodes before
-                # all ring members are selected.
+                print("Picking rings for " + str(x))
+                # Note: we can add a right node for each group, set ownership
                 new_right_nodes += [self.g.add_node(1, self.t)]
                 self.ownership[new_right_nodes[-1]] = (k[0], x[2])
-                rings[new_right_nodes[-1]] = self.get_ring(x[2])
+
+                # Select ring members for each key in the group
+                for tmp in x:
+                    print("Picking rings for " + str(tmp))
+                    rings[new_right_nodes[-1]] = self.get_ring(tmp)
 
                 assert len(self.g.left_nodes) == new_lnids
                 assert len(self.g.right_nodes) == new_rnids + 1
@@ -246,9 +259,11 @@ class Simulator(object):
                 new_rnids = len(self.g.right_nodes)
                 new_reids = len(self.g.red_edges)
                 new_beids = len(self.g.blue_edges)
+
             summary[-1] += [new_right_nodes]
 
             # Create two new left nodes
+            print("Creating two new left nodes for this group")
             change_node = self.g.add_node(0, self.t)  
             self.ownership[change_node] = k[0]
             recipient_node = self.g.add_node(0, self.t)  
@@ -268,15 +283,17 @@ class Simulator(object):
             #     print("Here is the ring for rnode = " + str(rnode))
             #     for itm in rings[rnode]:
             #         print("\t " + str(itm))
-            for rnode in new_right_nodes:
-                assert 1 <= len(rings[rnode]) <= self.ringsize
+            # for rnode in new_right_nodes:
+            #     assert 1 <= len(rings[rnode]) <= self.ringsize
 
             for rnode in new_right_nodes:
                 # Add blue edges from each new right node to each new left node
+                print("Adding blue edge for recipient")
                 pair = (recipient_node, rnode)
                 blue_eid = self.g.add_edge(0, pair, 1.0, self.t)
                 self.ownership[blue_eid] = self.ownership[blue_eid[0]]
 
+                print("Adding blue edge for change")
                 pairr = (change_node, rnode)
                 blue_eidd = self.g.add_edge(0, pairr, 1.0, self.t)
                 self.ownership[blue_eidd] = self.ownership[blue_eidd[0]]
@@ -292,17 +309,21 @@ class Simulator(object):
                 new_beids = len(self.g.blue_edges)
 
                 # Add red edges to each ring member.
-                red_eids = []
+                print("Adding red edges to ring members")
                 for ring_member in rings[rnode]:
                     pairrr = (ring_member, rnode)
                     new_eid = self.g.add_edge(1, pairrr, 1.0, self.t)
-                    red_eids += [new_eid]
+                    assert new_eid in self.g.red_edges
                     self.ownership[new_eid] = self.ownership[new_eid[1]]
                     ct += 1
 
                     assert len(self.g.left_nodes) == new_lnids
                     assert len(self.g.right_nodes) == new_rnids
-                    assert len(self.g.red_edges) == new_reids + 1
+                    try:
+                        assert len(self.g.red_edges) == new_reids + 1
+                    except AssertionError:
+                        print("Tried to add a single red edge and got " + str(len(self.g.red_edges) - new_reids) + " instead.")
+                        assert False
                     assert len(self.g.blue_edges) == new_beids
 
                     new_lnids = len(self.g.left_nodes)
@@ -318,14 +339,21 @@ class Simulator(object):
             self.amounts[recipient_node] = txn_amt
             summary[-1] += [(recipient_node, txn_amt)]
 
+        new_lnids = len(self.g.left_nodes)
+        new_rnids = len(self.g.right_nodes)
+        new_reids = len(self.g.red_edges)
+        new_beids = len(self.g.blue_edges)
+
         assert new_lnids == old_lnids + left_nodes_to_be_added
         assert new_rnids == old_rnids + right_nodes_to_be_added
         assert new_reids == old_reids + ct
-        print("Expected " + str(red_edges_to_be_added) + " red edges to be added, but got " + str(new_reids - old_reids) + " new red edges instead.")
+        s = "Expected " + str(red_edges_to_be_added)
+        s += " red edges to be added, but got " + str(new_reids - old_reids)
+        s += " new red edges instead."
         assert new_reids == old_reids + red_edges_to_be_added
         assert new_beids == old_beids + blue_edges_to_be_added
 
-        return summary
+        return summary, s
 
     def report(self):
         line = "\n\n\n\nREPORTING FOR TIMESTEP" + str(self.t) + "\n\n"
@@ -408,12 +436,12 @@ class Simulator(object):
 
     def get_ring(self, spender):
         ring = []
-        available_keys = [x for x in list(self.g.left_nodes.keys()) if
-                          x != spender]
+        avail = [x for x in list(self.g.left_nodes.keys()) if x != spender]
         if self.mode == "uniform":
-            ring = sample(available_keys, min(len(self.g.left_nodes),
-                                              self.ringsize) - 1)
+            k = min(len(self.g.left_nodes), self.ringsize) - 1
+            ring = sample(avail, k)
             ring += [spender]
+        assert len(ring)
         return ring
 
     @staticmethod
