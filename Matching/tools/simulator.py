@@ -164,64 +164,39 @@ class Simulator(object):
         """
         summary = []
         s = None
+
+        old_lnids = len(self.g.left_nodes)
+        old_rnids = len(self.g.right_nodes)
+        old_reids = len(self.g.red_edges)
+        old_beids = len(self.g.blue_edges)
+
+        # print("Bundling transactions by sender-receiver pair")
+        bndl = groupby(self.buffer[self.t], key=lambda x: (x[0], x[1]))
+
+        # Make some predictions
+        # print("Making predictions of how many graphs and edges are to be
+        # added.")
+        right_nodes_to_be_added = len(self.buffer[self.t])
+        num_txn_bundles = sum([1 for _ in deepcopy(bndl)])
+        num_true_spenders = sum([1 for k, grp in deepcopy(bndl) for _ in grp])
+        assert num_true_spenders == right_nodes_to_be_added
+
+        blue_edges_to_be_added = 2 * right_nodes_to_be_added
+        left_nodes_to_be_added = 2 * num_txn_bundles  # Coinbase elsewhere
+        available_ring_members = min(old_lnids, self.ringsize)
+        red_edges_per_sig = max(1, available_ring_members)
+        red_edges_to_be_added = red_edges_per_sig * right_nodes_to_be_added
+
+        ct = 0
+
         if len(self.buffer[self.t]) > 0:
             # print("Beginning spend from buffer")
-
-            # print("Bundling transactions by sender-receiver pair")
-            bndl = groupby(self.buffer[self.t], key=lambda x: (x[0], x[1]))
-
-            # Make some predictions
-            # print("Making predictions of how many graphs and edges are to be added.")
-            right_nodes_to_be_added = len(self.buffer[self.t])
-            num_txn_bundles = sum([1 for _ in deepcopy(bndl)])
-            num_true_spenders = sum([1 for k, grp in deepcopy(bndl) for _ in grp])
-            assert num_true_spenders == right_nodes_to_be_added
-
-            old_lnids = len(self.g.left_nodes)
-            old_rnids = len(self.g.right_nodes)
-            old_reids = len(self.g.red_edges)
-            old_beids = len(self.g.blue_edges)
 
             new_lnids = len(self.g.left_nodes)
             new_rnids = len(self.g.right_nodes)
             new_reids = len(self.g.red_edges)
             new_beids = len(self.g.blue_edges)
 
-            blue_edges_to_be_added = 2 * num_true_spenders
-            left_nodes_to_be_added = 2 * num_txn_bundles  # Coinbase elsewhere
-            available_ring_members = min(old_lnids, self.ringsize)
-            red_edges_per_sig = max(1, available_ring_members)
-            red_edges_to_be_added = red_edges_per_sig * num_true_spenders
-
-            # print("Spending from buffer. Here's the dealio.")
-            # print("\tWe have buffer:" + str(self.buffer[self.t]))
-            # for itm in self.buffer[self.t]:
-            #     print("\t\t" + str(itm))
-            # print("\tWe have " + str(old_lnids) + " left_nodes before beginning.")
-            # print("\tWe have " + str(old_rnids) + " right_nodes before beginning.")
-            # print("\tWe have " + str(old_reids) + " red_edges before beginning.")
-            # print("\tWe have " + str(old_beids) + " blue_edges before beginning.")
-            # print("\tOur buffer indicates that we have " + str(
-            #     num_txn_bundles) + " different txns to be constructed in this "
-            #                        "transaction. So we can expect " + str(
-            #     2 * num_txn_bundles) + " new left_nodes.")
-            # print("\tOur buffer indicates that we have " + str(
-            #     num_true_spenders) + " different left nodes to be spent, "
-            #                          "each creating a right node. So we can "
-            #                          "expect " + str(
-            #     num_true_spenders) + " new right nodes.")
-            # print(
-            #     "\tEach txn has 2 outputs, so each ring signature (right node) "
-            #     "has two blue edges. So we can expect " + str(
-            #         blue_edges_to_be_added) + " new blue edges.")
-            # print(
-            #     "\tEach new right node needs a ring, and we have a plethora of " +
-            #     str(max(1,min(old_lnids,self.ringsize))))
-            # print("So we can expect " + str(
-            #     red_edges_to_be_added) + " new red edges.")
-            #
-            # print("Entering main spend loop.")
-            ct = 0
             tot_ring_membs = 0
             rings = dict()
             new_right_nodes = []
@@ -349,19 +324,23 @@ class Simulator(object):
                 self.amounts[recipient_node] = txn_amt
                 summary[-1] += [(recipient_node, txn_amt)]
 
-            new_lnids = len(self.g.left_nodes)
-            new_rnids = len(self.g.right_nodes)
-            new_reids = len(self.g.red_edges)
-            new_beids = len(self.g.blue_edges)
+        new_lnids = len(self.g.left_nodes)
+        new_rnids = len(self.g.right_nodes)
+        new_reids = len(self.g.red_edges)
+        new_beids = len(self.g.blue_edges)
 
-            assert new_lnids == old_lnids + left_nodes_to_be_added
-            assert new_rnids == old_rnids + right_nodes_to_be_added
-            assert new_reids == old_reids + ct
-            s = "Expected " + str(red_edges_to_be_added)
-            s += " red edges to be added, but got " + str(new_reids - old_reids)
-            s += " new red edges instead."
+        assert new_lnids == old_lnids + left_nodes_to_be_added
+        assert new_rnids == old_rnids + right_nodes_to_be_added
+        assert new_reids == old_reids + ct
+        s = "Expected " + str(red_edges_to_be_added)
+        s += " red edges to be added, but got " + str(new_reids - old_reids)
+        s += " new red edges instead."
+        try:
             assert new_reids == old_reids + red_edges_to_be_added
-            assert new_beids == old_beids + blue_edges_to_be_added
+        except AssertionError:
+            print(s)
+            assert False
+        assert new_beids == old_beids + blue_edges_to_be_added
 
         return summary, s
 

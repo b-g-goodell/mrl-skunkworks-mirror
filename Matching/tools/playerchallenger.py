@@ -249,14 +249,12 @@ def go():
 
     ss = 16
 
-    repeats = []
     ct = 0
     mcc_none = []
 
     for k in range(ss): 
         par['chuck']['simulator']['ring size'] += 3
         ct = 0
-        repeats += [0]
 
         print("Calling tracing_game. Looking for a ledger")
         sally, resp = tracing_game(par)
@@ -271,7 +269,7 @@ def go():
         bl = len(bob_edges)
 
         while al == 0 or el == 0 or bl == 0:
-            print("Degenerate ledger. Calling again.")        
+            # print("Degenerate ledger. Calling again.")
 
             with open("temp.txt", "a") as wf:
                 s = "\n\nAnother degenerate ledger found. Here are the deets.\n"
@@ -301,9 +299,6 @@ def go():
                 for x in bob_edges:
                     s += str(x) + "\n"
                 wf.write(s)
-            if ct % 10 == 0:
-                print("Repeats vector = " + str(repeats))
-            repeats[-1] += 1
             ct += 1
 
             sally, resp = tracing_game(par)
@@ -314,7 +309,7 @@ def go():
         mcc = interpret(par, sally, resp)
         mcc_none += [mcc is None]
 
-    print("Repeats vector = " + str(repeats))
+    # print("Repeats vector = " + str(repeats))
     print("mcc_none = " + str(mcc_none))
 
 go()
