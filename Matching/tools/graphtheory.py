@@ -250,43 +250,6 @@ class BipartiteGraph(object):
                   unmatched_rights, b, non_match_edges)
         return result
 
-    # @staticmethod
-    # def _so_fresh_soclean(shortest_paths_with_gains, input_match):
-    #     ordered_shortest_paths = sorted(shortest_paths_with_gains,
-    #                                     key=lambda z: z[1], reverse=True)
-    #
-    #     tn = []
-    #     paths_to_add = []
-    #
-    #     # Greedily make shortest_paths_with_gains into a vtx-disjoint list
-    #     for nxt_pth_and_gain in ordered_shortest_paths:
-    #         nxt_pth, gain = nxt_pth_and_gain
-    #         # print("Processing " + str((nxt_pth, gain)))
-    #         touched = False
-    #         for eid in nxt_pth:
-    #             if eid[0] in tn or eid[1] in tn:
-    #                 touched = True
-    #                 break
-    #         if not touched and gain > 0.0:
-    #             # print("Not touched and with positive gain!")
-    #             paths_to_add += [nxt_pth]
-    #             # print("Collected paths = " + str(paths_to_add))
-    #             tn += [eid[0] for eid in nxt_pth]
-    #             tn += [eid[1] for eid in nxt_pth]
-    #             # print("Touched nodes = " + str(tn))
-    #
-    #     # Next we iteratively XOR these with the input_match.
-    #     # print("Working with paths to add: " + str(paths_to_add))
-    #     result = input_match
-    #     # print("Starting match = " + str(input_match))
-    #     for nxt_pth in paths_to_add:
-    #         # print("XORING with " + str(nxt_pth))
-    #         temp = [eid for eid in result if eid not in nxt_pth]
-    #         temp += [eid for eid in nxt_pth if eid not in result]
-    #         result = temp
-    #         # print("Result = " + str(result))
-    #     return result
-
     @staticmethod
     def _get_nodes_on_path(nxt_pth):
         """ Returns a list of node identities on the input path. """

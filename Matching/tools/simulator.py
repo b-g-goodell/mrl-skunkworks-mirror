@@ -74,12 +74,16 @@ class Simulator(object):
 
     def halting_run(self):
         if self.t + 1 < self.runtime:
+            if self.t % 100 == 0:
+                print(self.t)
             self.t += 1
             self.make_coinbase()
             self.spend_from_buffer()
 
     def run(self):
         while self.t + 1 < self.runtime:
+            if self.t % 100 == 0:
+                print(self.t)
             self.t += 1
             self.make_coinbase()
             self.spend_from_buffer()
@@ -152,6 +156,9 @@ class Simulator(object):
 
         For convenience, we return a summary.
 
+        WARNING: Ring members must be selected from the set of right_nodes
+        excluding all new right_nodes.
+
         :return: summary (list)
                  summary[i] = ith txn included in block with height self.t
                         idx : entry
@@ -199,17 +206,9 @@ class Simulator(object):
             tot_ring_membs = 0
             rings = dict()
             new_right_nodes = []
-            # TODO: FIX ORDER IN WHICH NODES AND EDGES ARE BEING ADDED
+            ring_member_choices = deepcopy(list(self.g.left_nodes.keys()))
+
             for k, grp in bndl:
-                # Add new nodes in this loop.
-
-                # k = (sender, recipient) stochastic_matrix indices
-                # grp = iterator of left node indices.
-                # kk = deepcopy(k)
-                # ggrp = deepcopy(grp)
-                # print("Working with k = " + str(kk))
-                # print("Working with grp = " + str([_ for _ in grp]))
-
                 # Collect keys to be spent in this group.
                 temp = deepcopy(grp)
                 keys_to_spend = [x[2] for x in temp]
@@ -222,20 +221,15 @@ class Simulator(object):
 
                 # Create new right node for each key being spent and generate a
                 # ring for that node.
-                # print("Creating new right nodes for this grp.")
-                temp = deepcopy(grp)
-                for x in temp:
-                    # Pick ring members.
-
-                    temp_ring = self.get_ring(x[2])
-                    assert len(temp_ring) == red_edges_per_sig
-                    rings[new_right_nodes[-1]] = temp_ring
 
                 temp = deepcopy(grp)
                 for x in temp:
                     # Add new right nodes and set ownership.
                     new_right_nodes += [self.g.add_node(1, self.t)]
                     self.ownership[new_right_nodes[-1]] = (k[0], x[2])
+                    temp_ring = self.get_ring(x[2], ring_member_choices)
+                    assert len(temp_ring) == red_edges_per_sig
+                    rings[new_right_nodes[-1]] = temp_ring
 
                     # Select ring members for each key in the group
                     # print("Picking rings for " + str(x[2]))
@@ -251,6 +245,7 @@ class Simulator(object):
                     new_beids = len(self.g.blue_edges)
 
                 summary[-1] += [new_right_nodes]
+                summary[-1] += [rings]
 
                 # Create two new left nodes
                 # print("Creating two new left nodes for this group")
@@ -288,6 +283,7 @@ class Simulator(object):
                 assert len(self.g.right_nodes) == new_rnids
                 assert len(self.g.red_edges) == new_reids
                 assert len(self.g.blue_edges) == new_beids + 2
+                assert len(rings[rnode]) == len(list(set(rings[rnode])))
 
                 new_lnids = len(self.g.left_nodes)
                 new_rnids = len(self.g.right_nodes)
@@ -296,12 +292,14 @@ class Simulator(object):
 
                 # Add red edges to each ring member.
                 # print("Adding red edges to ring members")
+                # print("rnode = " + str(rnode))
+                # print("rings[rnode] = " + str(rings[rnode]))
                 for ring_member in rings[rnode]:
                     pairrr = (ring_member, rnode)
-                    # print("pairrr = " + str(pairrr))
-                    # print("EIDS? = " + str([eid for eid in self.g.red_edges]))
-                    # print("any([pairrr[0] == eid[0] and pairrr[1] == eid[1] for eid in self.g.red_edges])? = " + str(any([pairrr[0] == eid[0] and pairrr[1] == eid[1] for eid in self.g.red_edges])))
-                    new_eid = self.g.add_edge(1, pairrr, 1.0, self.t)
+                    expected_new_eid = (pairrr[0], pair[1], self.t)
+                    if expected_new_eid not in self.g.red_edges:
+                        new_eid = self.g.add_edge(1, pairrr, 1.0, self.t)
+                    assert expected_new_eid == new_eid
                     assert new_eid in self.g.red_edges
                     assert len(self.g.left_nodes) == new_lnids
                     assert len(self.g.right_nodes) == new_rnids
@@ -429,17 +427,18 @@ class Simulator(object):
         assert found
         return i
 
-    def get_ring(self, spender):
+    def get_ring(self, spender, ring_member_choices):
         ring = []
-        avail = [x for x in list(self.g.left_nodes.keys()) if x != spender]
+        assert spender in ring_member_choices
         if self.mode == "uniform":
-            # TODO: DO WE UPDATE LEFT NODES ITERATIVELY???
-            k = min(len(self.g.left_nodes), self.ringsize) - 1
-            ring = sample(avail, k)
+            k = min(len(ring_member_choices), self.ringsize)
+            ring = sample(ring_member_choices, k)
+            if spender not in ring:
+                i = choice(range(len(ring)))
+                ring[i] = spender
             assert len(ring) == k
-            ring += [spender]
-            assert len(ring) == k + 1
-            print("ring = " + str(len(ring)) + " , " + str(ring))
+            assert len(list(set(ring))) == len(ring)
+            # print("ring = " + str(len(ring)) + " , " + str(ring))
         return ring
 
     @staticmethod

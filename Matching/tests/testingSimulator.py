@@ -3,6 +3,7 @@ import itertools
 from graphtheory import *
 from simulator import *
 from copy import deepcopy
+from random import choice, sample
 
 FILENAME = "../data/output.txt"
 STOCHASTIC_MATRIX = [[0.0, 0.9, 0.1], [0.125, 0.75, 0.125], [0.75, 0.25, 0.0]]
@@ -486,9 +487,10 @@ class TestSimulator(ut.TestCase):
         """
         sally = make_sally()
         sally.run()
+        ring_member_choices = list(set(sally.g.left_nodes.keys()))
         spender = choice(list(sally.g.left_nodes.keys()))
         self.assertTrue(spender in sally.g.left_nodes)
-        ring = sally.get_ring(spender)
+        ring = sally.get_ring(spender, ring_member_choices)
         self.assertEqual(len(ring), min(sally.ringsize, len(sally.g.left_nodes)))
         self.assertTrue(spender in ring)
         for elt in ring:

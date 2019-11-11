@@ -60,6 +60,10 @@ def tracing_game(par):
     chuck = Challenger(par['chuck'])
     u = len(par['chuck']['simulator']['stochastic matrix'])
     sally = chuck.generate()
+    print(" Number of left nodes after chuck generates = " + str(len(sally.g.left_nodes)))
+    print(" Number of right nodes after chuck generates = " + str(len(sally.g.right_nodes)))
+    print(" Number of red edges after chuck generates = " + str(len(sally.g.red_edges)))
+    print(" Number of blue edges after chuck generates = " + str(len(sally.g.blue_edges)))
     eve_edges = [eid for eid in sally.g.red_edges if u-1 in [sally.ownership[eid[0]], sally.ownership[eid[1]]]]
     eve_ownership = dict()
     for eid in eve_edges:
@@ -194,8 +198,8 @@ def go():
 
     par['chuck'] = {}
     par['chuck']['simulator'] = {}
-    par['chuck']['simulator']['min spendtime'] = 1
-    par['chuck']['simulator']['runtime'] = 8
+    par['chuck']['simulator']['min spendtime'] = 5
+    par['chuck']['simulator']['runtime'] = 200
     par['chuck']['simulator']['filename'] = "../data/output.txt"
     # Index order: Alice is @ 0, 1, 2, ..., then Eve @ -2, then Bob @ -1
     par['chuck']['simulator']['stochastic matrix'] = [[0.0, 0.9, 0.1], [0.125, 0.75, 0.125], [0.75, 0.25, 0.0]]
@@ -223,21 +227,15 @@ def go():
     pe = 1/exp_eve_spendtime
 
     # Alice will always be the first few indices.
-    # Alice's spendtime has expectation 20 blocks and support
-    # on min_spendtime, min_spendtime + 1, ...
-    par['chuck']['simulator']['spendtimes'] += [lambda 
+    par['chuck']['simulator']['spendtimes'] += [lambda
         x: pa*((1.0-pa)**(x-par['chuck']['simulator']['min spendtime']))]
 
     # Eve will always be second-to-last-index.
-    # Eve's spenditme has expectation 100 blocks and support
-    # on min_spendtime, min_spendtime + 1, ...
-    par['chuck']['simulator']['spendtimes'] += [lambda 
+    par['chuck']['simulator']['spendtimes'] += [lambda
         x: pe*((1.0-pe)**(x-par['chuck']['simulator']['min spendtime']))]
 
     # Bob will be last index.
-    # Bob's (background) spendtime has expectation 40 blocks and support
-    # on min_spendtime, min_spendtime + 1, ...
-    par['chuck']['simulator']['spendtimes'] += [lambda 
+    par['chuck']['simulator']['spendtimes'] += [lambda
         x: pb*((1.0-pb)**(x-par['chuck']['simulator']['min spendtime']))]
         
     # Eve's hypotheses about Bob's behavior (wallet) and Alice's behavior (null)
@@ -247,13 +245,13 @@ def go():
     par['eve']['null'] = par['chuck']['simulator']['spendtimes'][0]
     par['eve']['wallet'] = par['chuck']['simulator']['spendtimes'][-1]
 
-    ss = 16
+    ss = 1
 
     ct = 0
     mcc_none = []
 
     for k in range(ss): 
-        par['chuck']['simulator']['ring size'] += 3
+        # par['chuck']['simulator']['ring size'] += 3
         ct = 0
 
         print("Calling tracing_game. Looking for a ledger")
@@ -269,7 +267,7 @@ def go():
         bl = len(bob_edges)
 
         while al == 0 or el == 0 or bl == 0:
-            # print("Degenerate ledger. Calling again.")
+            print("Degenerate ledger. Calling again.")
 
             with open("temp.txt", "a") as wf:
                 s = "\n\nAnother degenerate ledger found. Here are the deets.\n"
