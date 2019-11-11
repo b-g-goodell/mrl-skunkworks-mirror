@@ -14,20 +14,26 @@ class Player(object):
         self.data = par
         
     def respond(self, g, my_knowledge):
+        # print("Number of left nodes of inp g = " + str(len(g.left_nodes)))
+        # print("Number of right nodes = " + str(len(g.right_nodes)))
+        # print("Number of red edges = " + str(len(g.red_edges)))
+        # print("Number of blue edges = " + str(len(g.blue_edges)))
+
+        h = deepcopy(g)
         # print("Deleting known spurious ring members")
         to_del = [fid for fid in g.red_edges if any([eid[1] == fid[1] and fid != eid for eid in my_knowledge])]
-        g.del_edge(to_del)
+        h.del_edge(to_del)
         
         # print("Weighting graph")
         ct = 0
         dct = 0
-        for sig_node in g.right_nodes:
+        for sig_node in h.right_nodes:
             ct += 1
-            if ct/len(g.right_nodes) > (dct+1)*0.099999:
+            if ct/len(h.right_nodes) > (dct+1)*0.099999:
                 # print("We are " + str(round(100.0*float(ct/len(g.right_nodes)))) + "% done weighting.")
                 dct += 1
-            ring = [eid for eid in g.red_edges if eid[1] == sig_node]
-            ast = {} # alleged spendtimes
+            ring = [eid for eid in h.red_edges if eid[1] == sig_node]
+            ast = {}  # alleged spendtimes
             for eid in ring:
                 ast.update({eid: eid[2] - eid[0][1]})
                 
@@ -38,7 +44,7 @@ class Player(object):
                 g.red_edges[eid] = base_likelihood*self.data['null'](ast[eid])/self.data['wallet'](ast[eid])
                 
         # print("Done weighting. Beginning optimization.")
-        return g.optimize(1)
+        return h.optimize(1)
                 
                 
 class Challenger(object):
@@ -59,18 +65,23 @@ def tracing_game(par):
     eve = Player(par['eve'])
     chuck = Challenger(par['chuck'])
     u = len(par['chuck']['simulator']['stochastic matrix'])
+
     sally = chuck.generate()
-    print(" Number of left nodes after chuck generates = " + str(len(sally.g.left_nodes)))
-    print(" Number of right nodes after chuck generates = " + str(len(sally.g.right_nodes)))
-    print(" Number of red edges after chuck generates = " + str(len(sally.g.red_edges)))
-    print(" Number of blue edges after chuck generates = " + str(len(sally.g.blue_edges)))
-    eve_edges = [eid for eid in sally.g.red_edges if u-1 in [sally.ownership[eid[0]], sally.ownership[eid[1]]]]
+
+    # print(" Number of left nodes after chuck generates = " + str(len(sally.g.left_nodes)))
+    # print(" Number of right nodes after chuck generates = " + str(len(sally.g.right_nodes)))
+    # print(" Number of red edges after chuck generates = " + str(len(sally.g.red_edges)))
+    # print(" Number of blue edges after chuck generates = " + str(len(sally.g.blue_edges)))
+
+    eve_edges = [eid for eid in sally.g.red_edges if sally.ownership[eid[0]] == u - 2 or sally.ownership[eid[1]] == u - 2]
     eve_ownership = dict()
     for eid in eve_edges:
         eve_ownership[eid] = sally.ownership[eid]
         eve_ownership[eid[0]] = sally.ownership[eid[0]]
         eve_ownership[eid[1]] = sally.ownership[eid[1]]
+
     resp = eve.respond(sally.g, eve_ownership)  # response to the simulator (ownership dict)
+
     return sally, resp
 
 def interpret(par, sally, resp):
@@ -93,6 +104,13 @@ def interpret(par, sally, resp):
             negatives[eid] = eid
         else:
             positives[eid] = eid
+        assert eid in negatives or eid in positives
+
+    # print("Number of red edges = " + str(len(sally.g.red_edges)))
+    # print("Number of negatives = " + str(len(negatives)))
+    # print("Number of positives = " + str(len(positives)))
+
+    assert len(sally.g.red_edges) == len(negatives) + len(positives)
             
     for eid in positives:
         if eid in resp:
@@ -198,8 +216,8 @@ def go():
 
     par['chuck'] = {}
     par['chuck']['simulator'] = {}
-    par['chuck']['simulator']['min spendtime'] = 5
-    par['chuck']['simulator']['runtime'] = 200
+    par['chuck']['simulator']['min spendtime'] = 10
+    par['chuck']['simulator']['runtime'] = 4000
     par['chuck']['simulator']['filename'] = "../data/output.txt"
     # Index order: Alice is @ 0, 1, 2, ..., then Eve @ -2, then Bob @ -1
     par['chuck']['simulator']['stochastic matrix'] = [[0.0, 0.9, 0.1], [0.125, 0.75, 0.125], [0.75, 0.25, 0.0]]
@@ -267,7 +285,7 @@ def go():
         bl = len(bob_edges)
 
         while al == 0 or el == 0 or bl == 0:
-            print("Degenerate ledger. Calling again.")
+            print(".", end = '')
 
             with open("temp.txt", "a") as wf:
                 s = "\n\nAnother degenerate ledger found. Here are the deets.\n"

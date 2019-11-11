@@ -75,7 +75,7 @@ class Simulator(object):
     def halting_run(self):
         if self.t + 1 < self.runtime:
             if self.t % 100 == 0:
-                print(self.t)
+                print(".", end='')
             self.t += 1
             self.make_coinbase()
             self.spend_from_buffer()
@@ -83,7 +83,7 @@ class Simulator(object):
     def run(self):
         while self.t + 1 < self.runtime:
             if self.t % 100 == 0:
-                print(self.t)
+                print(".", end='')
             self.t += 1
             self.make_coinbase()
             self.spend_from_buffer()
