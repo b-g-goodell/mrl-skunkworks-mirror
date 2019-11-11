@@ -159,8 +159,11 @@ class TestSimulator(ut.TestCase):
         #                 num_blue_edges, buffer_len, txn_bundles]
         while n > 0:
             n -= 1
+
             # Make predictions
             right_nodes_to_be_added = old_stats[5]
+            num_mixins_available = old_stats[1]
+            mixins_to_be_used = min(num_mixins_available, sally.ringsize - 1)
             num_txn_bundles = sum([1 for k, grp in deepcopy(old_stats[6])])
             num_true_spenders = sum(
                 [1 for k, grp in deepcopy(old_stats[6]) for
@@ -168,7 +171,7 @@ class TestSimulator(ut.TestCase):
             self.assertEqual(num_true_spenders, right_nodes_to_be_added)
             blue_edges_to_be_added = 2 * num_true_spenders
             left_nodes_to_be_added = 2 * num_txn_bundles + 1
-            red_edges_per_sig = min(old_stats[1], sally.ringsize)
+            red_edges_per_sig = mixins_to_be_used + 1
             red_edges_to_be_added = red_edges_per_sig * num_true_spenders
             predictions = [dt, left_nodes_to_be_added, right_nodes_to_be_added,
                            red_edges_to_be_added, blue_edges_to_be_added]

@@ -183,8 +183,7 @@ class Simulator(object):
 
         blue_edges_to_be_added = 2 * right_nodes_to_be_added
         left_nodes_to_be_added = 2 * num_txn_bundles  # Coinbase elsewhere
-        available_ring_members = min(old_lnids, self.ringsize)
-        red_edges_per_sig = max(1, available_ring_members)
+        red_edges_per_sig = min(old_lnids, self.ringsize)
         red_edges_to_be_added = red_edges_per_sig * right_nodes_to_be_added
 
         ct = 0
@@ -200,6 +199,7 @@ class Simulator(object):
             tot_ring_membs = 0
             rings = dict()
             new_right_nodes = []
+            # TODO: FIX ORDER IN WHICH NODES AND EDGES ARE BEING ADDED
             for k, grp in bndl:
                 # Add new nodes in this loop.
 
@@ -225,14 +225,20 @@ class Simulator(object):
                 # print("Creating new right nodes for this grp.")
                 temp = deepcopy(grp)
                 for x in temp:
-                    # print("Picking rings for " + str(x) + " or rather " + str(x[2]))
-                    # Note: we can add a right node for each group, set ownership
+                    # Pick ring members.
+
+                    temp_ring = self.get_ring(x[2])
+                    assert len(temp_ring) == red_edges_per_sig
+                    rings[new_right_nodes[-1]] = temp_ring
+
+                temp = deepcopy(grp)
+                for x in temp:
+                    # Add new right nodes and set ownership.
                     new_right_nodes += [self.g.add_node(1, self.t)]
                     self.ownership[new_right_nodes[-1]] = (k[0], x[2])
 
                     # Select ring members for each key in the group
                     # print("Picking rings for " + str(x[2]))
-                    rings[new_right_nodes[-1]] = self.get_ring(x[2])
 
                     assert len(self.g.left_nodes) == new_lnids
                     assert len(self.g.right_nodes) == new_rnids + 1
@@ -427,10 +433,13 @@ class Simulator(object):
         ring = []
         avail = [x for x in list(self.g.left_nodes.keys()) if x != spender]
         if self.mode == "uniform":
+            # TODO: DO WE UPDATE LEFT NODES ITERATIVELY???
             k = min(len(self.g.left_nodes), self.ringsize) - 1
             ring = sample(avail, k)
+            assert len(ring) == k
             ring += [spender]
-        assert len(ring)
+            assert len(ring) == k + 1
+            print("ring = " + str(len(ring)) + " , " + str(ring))
         return ring
 
     @staticmethod
