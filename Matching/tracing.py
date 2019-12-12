@@ -23,10 +23,10 @@ from copy import deepcopy
 TRUE_STOCHASTIC_MATRIX = [[0.1, 0.1, 1.0 - 0.1 - 0.1], [0.04, 0.0, 1.0 - 0.04], [2**(-7), 0.1, 1.0 - 0.1 - 2**(-7)]]
 
 MIN_SPENDTIME = 10
-RUNTIME = 20
-RING_SIZES = [2**i for i in range(2, 5)]
-CHURN_LENGTHS = [i for i in range(1, 3)]
-EXP_SPENDTIMES = [10*i for i in range(1, 5)]
+RUNTIME = 400
+RING_SIZES = [2**i for i in range(2, 3)]
+CHURN_LENGTHS = [i for i in range(1, 2)]
+EXP_SPENDTIMES = [10*i for i in range(1, 3)] # Expected number of blocks after min_spendtime each player spends
 SPENDTIME_LAMBDAS = [lambda x: (1.0/ex)*((1.0 - (1.0/ex)**(x - MIN_SPENDTIME))) for ex in EXP_SPENDTIMES]
 # With N increments indexed 0, ..., N-1, then i/(N-1) partitions [0,1] uniformly
 # If N = 2, everything is trivial.
@@ -35,7 +35,7 @@ SPENDTIME_LAMBDAS = [lambda x: (1.0/ex)*((1.0 - (1.0/ex)**(x - MIN_SPENDTIME))) 
 # the HASHRATES vector is non-empty. However, Alice and Eve each have two possible hashrates: 0 and 1/3, so you can
 # think of this as a very extreme case where Eve is trying to track someone mining 1/3 of all Monero.
 # For N >= 5, we start getting some gradient in hashrates with less extreme cases.
-HASHRATE_INCREMENT = 9  # N >= 4 required, N >> 4 for wider exploration.
+HASHRATE_INCREMENT = 6  # N >= 4 required, N >> 4 for wider exploration.
 HASHRATES = [[float(x)/(HASHRATE_INCREMENT-1), float(y)/(HASHRATE_INCREMENT-1), float(1.0 - x/(HASHRATE_INCREMENT-1) - y/(HASHRATE_INCREMENT-1))] for x in range(HASHRATE_INCREMENT) for y in range(HASHRATE_INCREMENT) if float(x)/(HASHRATE_INCREMENT-1) < 1/2 and float(y)/(HASHRATE_INCREMENT-1) < 1/2]
 FILENAME = "output.csv"
 SIM_FILENAME = "simulator-output.csv"
@@ -238,7 +238,11 @@ def run_experiment(sim_par, r, l, a, e, b, hr, sm, label):
         for eid in ring:
             # eid = ((left_node_id, left_node_tag), (right_node_id, right_node_tag), edge_tag)
             # tags are ages
-            ast.update({eid: eid[2] - eid[0][1]})
+            age_of_ring_member = eid[2] - eid[0][1] + 1
+            assert age_of_ring_member >= sally.minspendtime
+            assert age_of_ring_member >= MIN_SPENDTIME
+            assert b(age_of_ring_member) > 0.0
+            ast.update({eid: age_of_ring_member})
 
         base_likelihood = 1.0
         for eid in ast:
@@ -317,5 +321,8 @@ for ring_size in RING_SIZES:
                                 wf.write(line)
 
                             ct += 1
-                            if ct%10 == 0:
-                                print(floor(float(ct)/float(tot)*100.0))
+                            print("\n" + str(floor(float(ct)/float(tot)*100.0)) + "% of parameter space explored.")
+                            # if ct % 100 == 0:
+                            #     print("\n" + str(floor(float(ct)/float(tot)*100.0)) + "% of parameter space explored.")
+                                
+                                

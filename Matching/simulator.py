@@ -117,7 +117,8 @@ class Simulator(object):
         if s < len(self.buffer):
             # at block s, owner will send new_node to recip
             self.buffer[s].append((owner, recip, node_to_spend))
-            assert s > self.t
+            assert node_to_spend[1] + self.minspendtime <= s
+            assert s >= self.t + self.minspendtime
         # assert node_to_spend in self.amounts 
         self.amounts[node_to_spend] = amt
         return node_to_spend, dt
@@ -146,7 +147,7 @@ class Simulator(object):
         summary = []
         s = None
 
-        ring_member_choices = [x for x in list(self.g.left_nodes.keys()) if x[1] < self.t - self.minspendtime]
+        ring_member_choices = [x for x in list(self.g.left_nodes.keys()) if x[1] <= self.t - self.minspendtime]
         num_rmc = len(ring_member_choices)
         old_lnids = len(self.g.left_nodes)
         old_rnids = len(self.g.right_nodes)
@@ -199,6 +200,7 @@ class Simulator(object):
 
                 temp = deepcopy(grp)
                 for x in temp:
+                    # x = (sender, receiver, node_id)
                     # Add new right nodes and set ownership.
                     new_right_nodes += [self.g.add_node(1, self.t)]
                     self.ownership[new_right_nodes[-1]] = (k[0], x[2])

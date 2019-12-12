@@ -345,12 +345,12 @@ class BipartiteGraph(object):
                 wt_dct = self.red_edges
             else:
                 wt_dct = self.blue_edges
-            #  #  print("Parsing (b, input_match):")
-            temp = self._parse(b, input_match)
-            (matched_lefts, matched_rights, unmatched_lefts, unmatched_rights, bb, non_match_edges) = temp
+            assert len(wt_dct) > 0
+            #  print("Parsing (b, input_match):")
+            (matched_lefts, matched_rights, unmatched_lefts, unmatched_rights, bb, non_match_edges) = self._parse(b, input_match)
+            assert len(input_match) + len(non_match_edges) == len(wt_dct)
 
-            q = deque(
-                [[eid] for eid in non_match_edges if eid[0] in unmatched_lefts])
+            q = deque([[eid] for eid in non_match_edges if eid[0] in unmatched_lefts])
             while len(q) > 0:
                 nxt_pth = q.popleft()
                 s = not found and lng == 0
@@ -375,13 +375,14 @@ class BipartiteGraph(object):
                         else:
                             assert 0 < len(nxt_pth) <= lng
                         soln_box += [(nxt_pth, gn)]
-                        #  #  print("soln box:")
-                        #  #  print(soln_box)
+                        #  print("soln box:")
+                        #  print(soln_box)
                     elif lst_nd not in unmatched_rights:
                         for eid in wt_dct:
                             if eid[p] == lst_nd and eid[1-p] not in tn:
                                 q.append(nxt_pth + [eid])
-            #  #  print("Sorting soln box")
+                                
+            #  print("Sorting soln box")
             soln_box = sorted(soln_box, key=lambda x: x[1], reverse=True)
             tn = []
             for path_gain_pair in soln_box:
@@ -560,11 +561,17 @@ class BipartiteGraph(object):
 
         # print("Beginning optimization.")
         assert b in [0, 1]
+        if b:
+            wt_dct = self.red_edges
+        else:
+            wt_dct = self.blue_edges
+            
 
         # print("Extending empty match.")
         next_match = self.extend(b)  # starts with empty match by default
+        
         assert next_match is not None
-        assert len(next_match) > 0
+        assert len(next_match) > 0 or len(wt_dct) == 0 
         lnm = len(next_match)
 
         # Extend again and again
@@ -576,11 +583,6 @@ class BipartiteGraph(object):
             assert len(next_match) >= len(temp)
             lnm = len(next_match)
 
-        if b:
-            wt_dct = self.red_edges
-        else:
-            wt_dct = self.blue_edges
-        assert next_match is not None and len(next_match) > 0
 
         # print("Boosting previous match")
         temp = next_match
