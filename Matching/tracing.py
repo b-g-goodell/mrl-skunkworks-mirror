@@ -23,7 +23,7 @@ from copy import deepcopy
 TRUE_STOCHASTIC_MATRIX = [[0.1, 0.1, 1.0 - 0.1 - 0.1], [0.04, 0.0, 1.0 - 0.04], [2**(-7), 0.1, 1.0 - 0.1 - 2**(-7)]]
 
 MIN_SPENDTIME = 10
-RUNTIME = 400
+RUNTIME = 35
 RING_SIZES = [2**i for i in range(2, 3)]
 CHURN_LENGTHS = [i for i in range(1, 2)]
 EXP_SPENDTIMES = [10*i for i in range(1, 3)] # Expected number of blocks after min_spendtime each player spends
