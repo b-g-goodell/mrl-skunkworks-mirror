@@ -1,6 +1,5 @@
 from simulator import Simulator
 from math import sqrt, floor
-from random import choice
 from copy import deepcopy
 
 # Presume we have the following:
@@ -23,8 +22,8 @@ from copy import deepcopy
 TRUE_STOCHASTIC_MATRIX = [[0.1, 0.1, 1.0 - 0.1 - 0.1], [0.04, 0.0, 1.0 - 0.04], [2**(-7), 0.1, 1.0 - 0.1 - 2**(-7)]]
 
 MIN_SPENDTIME = 10
-RUNTIME = 35
-RING_SIZES = [2**i for i in range(2, 3)]
+RUNTIME = 30
+RING_SIZES = [2**i for i in range(2, 4)]
 CHURN_LENGTHS = [i for i in range(1, 2)]
 EXP_SPENDTIMES = [10*i for i in range(1, 3)] # Expected number of blocks after min_spendtime each player spends
 SPENDTIME_LAMBDAS = [lambda x: (1.0/ex)*((1.0 - (1.0/ex)**(x - MIN_SPENDTIME))) for ex in EXP_SPENDTIMES]
@@ -167,6 +166,17 @@ def interpret(sally, resp):
     return [P, N, TP, TN, FP, FN, TPR, TNR, PPV, NPV, FNR, FPR, FDR, FOR, TS, ACC, F1, MCC, BM, MK]
 
 
+def is_sally_suitable(sally):
+    """ Check that all possible owners own at least one edge in sally.g """
+    owners = []
+    for eid in sally.g.red_edges:
+        if sally.ownership[eid] not in owners:
+            owners += [sally.ownership[eid]]
+        if len(owners) == 3:
+            break
+    return len(owners) == 3
+
+
 def run_experiment(sim_par, r, l, a, e, b, hr, sm, label):
     """ Actually run the experiment:
         sim_par = dictionary with input parameters for Simulator object
@@ -187,29 +197,18 @@ def run_experiment(sim_par, r, l, a, e, b, hr, sm, label):
 
     # Extract number of transacting parties.
     u = len(sm)
+
     # Initialize a simulator
     sally = Simulator(sim_par)
-    # Simulate a ledger
-    resp = sally.halting_run()
-    while resp:
-        # print("sally.t = " + str(sally.t))
-        # if sally.t % 10 == 0:
-        #      print("sally.t = " + str(sally.t))
-        resp = sally.halting_run()
-    while len(sally.g.red_edges) == 0 or len(sally.g.blue_edges) == 0:
-        # Initialize a simulator
-        sally = Simulator(sim_par)
-        # Simulate a ledger
-        resp = sally.halting_run()
-        while resp:
-            # print("sally.t = " + str(sally.t))
-            # if sally.t % 10 == 0:
-            #      print("sally.t = " + str(sally.t))
-            resp = sally.halting_run()
-    h = deepcopy(sally.g)
 
-    eid = choice(list(h.red_edges.keys()))
-    # print(eid)
+    # Simulate a ledger; do so until a ledger is found in which all parties own at least one edge.
+    while sally.halting_run():
+        pass
+    while not is_sally_suitable(sally):
+        sally = Simulator(sim_par)
+        while sally.halting_run():
+            pass
+    h = deepcopy(sally.g)
     # Send h to player (mock)
 
     # SECOND: Eve gains her own knowledge from running a KYC exchange and tries to find an estimate of ledger history.
@@ -251,15 +250,17 @@ def run_experiment(sim_par, r, l, a, e, b, hr, sm, label):
             h.red_edges[eid] = base_likelihood * a(ast[eid]) / b(ast[eid])
 
     # Eve finds optimal matching
-    try:
-        x = h.optimize(1)
-    except AssertionError:
-        print("Woops, tried to match with a degenerate graph!")
-        assert False
+    x = h.optimize(1)
+    # try:
+    #     x = h.optimize(1)
+    # except AssertionError:
+    #     print("Woops, tried to match with a degenerate graph!")
+    #     assert False
     # Send h to challenger (mock)
 
     # THIRD: Challenger judges success.
     results = interpret(sally, x)
+    # [P, N, TP, TN, FP, FN, TPR, TNR, PPV, NPV, FNR, FPR, FDR, FOR, TS, ACC, F1, MCC, BM, MK]
     line = ""
     for thing in results:
         line += "," + str(thing)
@@ -267,7 +268,7 @@ def run_experiment(sim_par, r, l, a, e, b, hr, sm, label):
     return line
 
 # PARAMETER SPACE EXPLORATION:
-line = "RING_SIZE,CHURN_LENGTH,ALICE_EXP_SPENDTIME,EVE_EXP_SPENDTIME,BOB_EXP_SPENDTIME,ALICE_HASHRATE,EVE_HASHRATE,BOB_HASHRATE,pAA,pAE,pAB,pEA,pEE,pEB,pBA,pBE,pBB,RUN,P,N,TP,TN,FP,FN,TPR,TNR,PPV,NPV,FNR,FPR,FDR,FOR,TS,ACC,F1,MCC,INF,MRK\n"
+line = "RING_SIZE,CHURN_LENGTH,ALICE_EXP_SPENDTIME,EVE_EXP_SPENDTIME,BOB_EXP_SPENDTIME,ALICE_HASHRATE,EVE_HASHRATE,BOB_HASHRATE,pAA,pAE,pAB,pEA,pEE,pEB,pBA,pBE,pBB,SAMPLE,RUN,P,N,TP,TN,FP,FN,TPR,TNR,PPV,NPV,FNR,FPR,FDR,FOR,TS,ACC,F1,MCC,INF,MRK\n"
 with open(FILENAME, "w+") as wf:
     wf.write(line)
 
@@ -302,10 +303,10 @@ for ring_size in RING_SIZES:
                                 alice_exp_spendtime) + "," + str(eve_exp_spendtime) + "," + str(
                                 bob_exp_spendtime) + "," + str(hashrate[0]) + "," + str(hashrate[1]) + "," + str(
                                 hashrate[2]) + "," + str(TRUE_STOCHASTIC_MATRIX[0][0]) + "," + str(
-                                TRUE_STOCHASTIC_MATRIX[1][0]) + "," + str(TRUE_STOCHASTIC_MATRIX[1][1]) + "," + str(
-                                TRUE_STOCHASTIC_MATRIX[1][2]) + "," + str(TRUE_STOCHASTIC_MATRIX[2][0]) + "," + str(
-                                TRUE_STOCHASTIC_MATRIX[2][1]) + "," + str(TRUE_STOCHASTIC_MATRIX[2][2]) + "," + str(
-                                c) + "," + str(ct) + ","
+                                TRUE_STOCHASTIC_MATRIX[0][1]) + "," + str(TRUE_STOCHASTIC_MATRIX[0][2]) + "," + str(TRUE_STOCHASTIC_MATRIX[1][0]) + "," + str(
+                                TRUE_STOCHASTIC_MATRIX[1][1]) + "," + str(TRUE_STOCHASTIC_MATRIX[1][2]) + "," + str(
+                                TRUE_STOCHASTIC_MATRIX[2][0]) + "," + str(TRUE_STOCHASTIC_MATRIX[2][1])+ "," + str(TRUE_STOCHASTIC_MATRIX[2][2]) + "," + str(
+                                c) + "," + str(ct)  # No comma at the end
 
                             label = str(hash(line))
                             label = label[-8:]

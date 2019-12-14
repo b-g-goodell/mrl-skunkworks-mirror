@@ -5,25 +5,24 @@ from copy import deepcopy
 
 
 def make_graph(num_left, num_right):
+    """ make_graph makes a new graph with num_left left_nodes and num_right right_nodes and no edges. """
     g = BipartiteGraph(None)
-
     for i in range(num_left):
         g.add_node(0)
     for i in range(num_right):
         g.add_node(1)
-
     return g
 
 
 def apply_deterministic_weight(g, n=1, m=5):
-    # Weight edges by starting with weight 0.0, iterating through all 25 edges
-    # up in increments of 4.0. Formulaically, we use edge ident
-    #         eid := ((i, t), (j, s), r)
-    # and color
-    #       color := (i*j)%2
-    # and weight
-    #    wt(i, j) := 20*(i-n) + 4*(j-m)
-    # Set n = 1 and m = 5 as default.
+    """
+    apply_deterministic_weight
+
+    Take as input a graph g, and a pair of integers n, m.
+
+    For left_node i and right_node j, the edge (i, j) is colored
+    with color (i*j) % 2 and weighted with 20*(i-n) + 4*(j-m).
+    """
     min_weight = 0
     for xid in sorted(list(g.left_nodes.keys())):
         for yid in sorted(list(g.right_nodes.keys())):
@@ -34,31 +33,37 @@ def apply_deterministic_weight(g, n=1, m=5):
 
 
 def make_deterministic_graph_for_integration_test():
+    """
+    make_deterministic_graph_for_integration_test
+
+    Produce a BipartiteGraph with 10 left_nodes and 10 right_nodes, then weight with apply_deterministic_weight.
+    """
     # This generates a graph deterministically.
     g = make_graph(10, 10)
     return apply_deterministic_weight(g, 1, 9)
 
 
 def make_r_graph():
+    """ make_r_graph produces a random graph. """
     num_left_nodes = random.randint(3, 5)
     num_right_nodes = random.randint(3, 5)
     g = make_graph(num_left_nodes, num_right_nodes)
-
     # We assign random edge weights
     for xid in g.left_nodes:
         for yid in g.right_nodes:
             g.add_edge(random.getrandbits(1), (xid, yid), random.random())
-
     return g
 
 
 def make_rr_graph():
+    """ make_r_graph produces a random graph. """
     g = make_graph(3, 3)
     g = apply_deterministic_weight(g, 1, 3)
     return g
 
 
 def helper():
+    """ helper is a helper function that outputs a random graph with make_rr_graph with some additional info. """
     g = make_rr_graph()
 
     reds_incident_with_one = [eid for eid in g.red_edges if
@@ -98,6 +103,7 @@ def helper():
 
 
 def helper_maximal_matchiness():
+    """ helper_maximal_matchiness generates random graphs until the result has edges of both colors. """
     [g, r, riwo, riwt, riwtt, b, biwo, biwt, biwtt] = helper()
 
     while len(r) == 0 or len(b) == 0:
@@ -107,84 +113,27 @@ def helper_maximal_matchiness():
 
 
 def make_d_graph():
+    """ Make a BipartiteGraph with 5 nodes on each side and with deterministic weighting. """
     # This generates a graph deterministically.
     g = make_graph(5, 5)
     g = apply_deterministic_weight(g, 1, 5)
-            
-    # assert len(g.left_nodes)==5
-    # assert len(g.right_nodes)==5
-    # assert len(g.red_edges)==6
-    # assert len(g.blue_edges)==19
-    #
-    # assert ((1, None), (6, None), None) in g.blue_edges
-    # assert g.blue_edges[((1, None), (6, None), None)] == 4.0
-    # assert ((1, None), (8, None), None) in g.blue_edges
-    # assert g.blue_edges[((1, None), (8, None), None)] == 12.0
-    # assert ((1, None), (10, None), None) in g.blue_edges
-    # assert g.blue_edges[((1, None), (10, None), None)] == 20.0
-    #
-    # assert ((2, None), (6, None), None) in g.blue_edges
-    # assert g.blue_edges[((2, None), (6, None), None)] == 24.0
-    # assert ((2, None), (7, None), None) in g.blue_edges
-    # assert g.blue_edges[((2, None), (7, None), None)] == 28.0
-    # assert ((2, None), (8, None), None) in g.blue_edges
-    # assert g.blue_edges[((2, None), (8, None), None)] == 32.0
-    # assert ((2, None), (9, None), None) in g.blue_edges
-    # assert g.blue_edges[((2, None), (9, None), None)] == 36.0
-    # assert ((2, None), (10, None), None) in g.blue_edges
-    # assert g.blue_edges[((2, None), (10, None), None)] == 40.0
-    #
-    # assert ((3, None), (6, None), None) in g.blue_edges
-    # assert g.blue_edges[((3, None), (6, None), None)] == 44.0
-    # assert ((3, None), (8, None), None) in g.blue_edges
-    # assert g.blue_edges[((3, None), (8, None), None)] == 52.0
-    # assert ((3, None), (10, None), None) in g.blue_edges
-    # assert g.blue_edges[((3, None), (10, None), None)] == 60.0
-    #
-    # assert ((4, None), (6, None), None) in g.blue_edges
-    # assert g.blue_edges[((4, None), (6, None), None)] == 64.0
-    # assert ((4, None), (7, None), None) in g.blue_edges
-    # assert g.blue_edges[((4, None), (7, None), None)] == 68.0
-    # assert ((4, None), (8, None), None) in g.blue_edges
-    # assert g.blue_edges[((4, None), (8, None), None)] == 72.0
-    # assert ((4, None), (9, None), None) in g.blue_edges
-    # assert g.blue_edges[((4, None), (9, None), None)] == 76.0
-    # assert ((4, None), (10, None), None) in g.blue_edges
-    # assert g.blue_edges[((4, None), (10, None), None)] == 80.0
-    #
-    # assert ((5, None), (6, None), None) in g.blue_edges
-    # assert g.blue_edges[((5, None), (6, None), None)] == 84.0
-    # assert ((5, None), (8, None), None) in g.blue_edges
-    # assert g.blue_edges[((5, None), (8, None), None)] == 92.0
-    # assert ((5, None), (10, None), None) in g.blue_edges
-    # assert g.blue_edges[((5, None), (10, None), None)] == 100.0
-    #
-    # assert ((1, None), (7, None), None) in g.red_edges
-    # assert g.red_edges[((1, None), (7, None), None)] == 8.0
-    # assert ((1, None), (9, None), None) in g.red_edges
-    # assert g.red_edges[((1, None), (9, None), None)] == 16.0
-    # assert ((3, None), (7, None), None) in g.red_edges
-    # assert g.red_edges[((3, None), (7, None), None)] == 48.0
-    # assert ((3, None), (9, None), None) in g.red_edges
-    # assert g.red_edges[((3, None), (9, None), None)] == 56.0
-    # assert ((5, None), (7, None), None) in g.red_edges
-    # assert g.red_edges[((5, None), (7, None), None)] == 88.0
-    # assert ((5, None), (9, None), None) in g.red_edges
-    # assert g.red_edges[((5, None), (9, None), None)] == 96.0
     
     return g
 
 
 def make_dd_graph():
+    """ Generates a deterministic graph with a slightly different weighting. """
     g = make_d_graph()
     g.red_edges[((1, None), (7, None), None)] -= 1.0
     g.red_edges[((1, None), (9, None), None)] += 1.0
     g.red_edges[((3, None), (7, None), None)] += 1.0
     g.red_edges[((3, None), (9, None), None)] -= 1.0
+
     return g
 
 
 def do_a_clean_thing(b, g, input_match, sp):
+    """ Tests the clean helper function. """
     assert b in [0, 1]
     # print("sp = " + str(sp))
     # print("input match = " + str(input_match))
@@ -220,6 +169,66 @@ class TestBipartiteGraph(ut.TestCase):
     def test_d_init(self):
         """ test_d_init deterministically tests initialization of a graph. """
         g = make_d_graph()
+        self.assertEqual(len(g.left_nodes), 5)
+        self.assertEqual(len(g.right_nodes), 5)
+        self.assertEqual(len(g.red_edges), 6)
+        self.assertEqual(len(g.blue_edges), 19)
+
+        self.assertIn(((1, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (6, None), None)], 4.0)
+        self.assertIn(((1, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (8, None), None)], 12.0)
+        self.assertIn(((1, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (10, None), None)], 20.0)
+        #
+        self.assertIn(((2, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (6, None), None)], 24.0)
+        self.assertIn(((2, None), (7, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (7, None), None)], 28.0)
+        self.assertIn(((2, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (8, None), None)], 32.0)
+        self.assertIn(((2, None), (9, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (9, None), None)], 36.0)
+        self.assertIn(((2, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (10, None), None)], 40.0)
+        #
+        self.assertIn(((3, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((3, None), (6, None), None)], 44.0)
+        self.assertIn(((3, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((3, None), (8, None), None)], 52.0)
+        self.assertIn(((3, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((3, None), (10, None), None)], 60.0)
+        #
+        self.assertIn(((4, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (6, None), None)], 64.0)
+        self.assertIn(((4, None), (7, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (7, None), None)], 68.0)
+        self.assertIn(((4, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (8, None), None)], 72.0)
+        self.assertIn(((4, None), (9, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (9, None), None)], 76.0)
+        self.assertIn(((4, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (10, None), None)], 80.0)
+        #
+        self.assertIn(((5, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((5, None), (6, None), None)], 84.0)
+        self.assertIn(((5, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((5, None), (8, None), None)], 92.0)
+        self.assertIn(((5, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((5, None), (10, None), None)], 100.0)
+        #
+        self.assertIn(((1, None), (7, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((1, None), (7, None), None)] , 8.0)
+        self.assertIn(((1, None), (9, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((1, None), (9, None), None)] , 16.0)
+        self.assertIn(((3, None), (7, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((3, None), (7, None), None)] , 48.0)
+        self.assertIn(((3, None), (9, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((3, None), (9, None), None)] , 56.0)
+        self.assertIn(((5, None), (7, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((5, None), (7, None), None)] , 88.0)
+        self.assertIn(((5, None), (9, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((5, None), (9, None), None)] , 96.0)
 
         self.assertTrue(isinstance(g, BipartiteGraph))
         self.assertEqual(len(g.left_nodes), 5)
@@ -339,6 +348,7 @@ class TestBipartiteGraph(ut.TestCase):
                 self.assertTrue((s or t) and not (s and t))
 
     def check_adding_nodes(self, b, g):
+        """ Checks that adding nodes works appropriately. """
         self.assertIn(b, [0, 1])
         n = deepcopy(g.count - 1)
         nn = deepcopy(len(g.red_edges) + len(g.blue_edges))
@@ -384,6 +394,67 @@ class TestBipartiteGraph(ut.TestCase):
     def test_d_add_edge(self):
         """ test_d_add_edge deterministically tests adding an edge."""
         g = make_d_graph()
+        self.assertEqual(len(g.left_nodes), 5)
+        self.assertEqual(len(g.right_nodes), 5)
+        self.assertEqual(len(g.red_edges), 6)
+        self.assertEqual(len(g.blue_edges), 19)
+
+        self.assertIn(((1, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (6, None), None)], 4.0)
+        self.assertIn(((1, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (8, None), None)], 12.0)
+        self.assertIn(((1, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (10, None), None)], 20.0)
+        #
+        self.assertIn(((2, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (6, None), None)], 24.0)
+        self.assertIn(((2, None), (7, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (7, None), None)], 28.0)
+        self.assertIn(((2, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (8, None), None)], 32.0)
+        self.assertIn(((2, None), (9, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (9, None), None)], 36.0)
+        self.assertIn(((2, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (10, None), None)], 40.0)
+        #
+        self.assertIn(((3, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((3, None), (6, None), None)], 44.0)
+        self.assertIn(((3, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((3, None), (8, None), None)], 52.0)
+        self.assertIn(((3, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((3, None), (10, None), None)], 60.0)
+        #
+        self.assertIn(((4, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (6, None), None)], 64.0)
+        self.assertIn(((4, None), (7, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (7, None), None)], 68.0)
+        self.assertIn(((4, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (8, None), None)], 72.0)
+        self.assertIn(((4, None), (9, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (9, None), None)], 76.0)
+        self.assertIn(((4, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (10, None), None)], 80.0)
+        #
+        self.assertIn(((5, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((5, None), (6, None), None)], 84.0)
+        self.assertIn(((5, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((5, None), (8, None), None)], 92.0)
+        self.assertIn(((5, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((5, None), (10, None), None)], 100.0)
+        #
+        self.assertIn(((1, None), (7, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((1, None), (7, None), None)], 8.0)
+        self.assertIn(((1, None), (9, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((1, None), (9, None), None)], 16.0)
+        self.assertIn(((3, None), (7, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((3, None), (7, None), None)], 48.0)
+        self.assertIn(((3, None), (9, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((3, None), (9, None), None)], 56.0)
+        self.assertIn(((5, None), (7, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((5, None), (7, None), None)], 88.0)
+        self.assertIn(((5, None), (9, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((5, None), (9, None), None)], 96.0)
+
         self.assertTrue(len(g.left_nodes), 5)
         self.assertTrue(len(g.right_nodes), 5)
         self.assertTrue(len(g.blue_edges), 18)
@@ -432,6 +503,7 @@ class TestBipartiteGraph(ut.TestCase):
         self.assertTrue(len(g.red_edges), 7)
 
     def check_adding_edges(self, b, g, eid, w):
+        """ Checks that adding a single edge does exactly what it's supposed to. """
         n = deepcopy(len(g.blue_edges))
         m = deepcopy(len(g.red_edges))
         a = deepcopy(len(g.left_nodes))
@@ -480,6 +552,66 @@ class TestBipartiteGraph(ut.TestCase):
         """ test_d_del_edge deterministically tests deletion of edges."""
         # we will delete edge (4, 9)
         g = make_d_graph()
+        self.assertEqual(len(g.left_nodes), 5)
+        self.assertEqual(len(g.right_nodes), 5)
+        self.assertEqual(len(g.red_edges), 6)
+        self.assertEqual(len(g.blue_edges), 19)
+
+        self.assertIn(((1, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (6, None), None)], 4.0)
+        self.assertIn(((1, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (8, None), None)], 12.0)
+        self.assertIn(((1, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (10, None), None)], 20.0)
+        #
+        self.assertIn(((2, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (6, None), None)], 24.0)
+        self.assertIn(((2, None), (7, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (7, None), None)], 28.0)
+        self.assertIn(((2, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (8, None), None)], 32.0)
+        self.assertIn(((2, None), (9, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (9, None), None)], 36.0)
+        self.assertIn(((2, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (10, None), None)], 40.0)
+        #
+        self.assertIn(((3, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((3, None), (6, None), None)], 44.0)
+        self.assertIn(((3, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((3, None), (8, None), None)], 52.0)
+        self.assertIn(((3, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((3, None), (10, None), None)], 60.0)
+        #
+        self.assertIn(((4, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (6, None), None)], 64.0)
+        self.assertIn(((4, None), (7, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (7, None), None)], 68.0)
+        self.assertIn(((4, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (8, None), None)], 72.0)
+        self.assertIn(((4, None), (9, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (9, None), None)], 76.0)
+        self.assertIn(((4, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (10, None), None)], 80.0)
+        #
+        self.assertIn(((5, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((5, None), (6, None), None)], 84.0)
+        self.assertIn(((5, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((5, None), (8, None), None)], 92.0)
+        self.assertIn(((5, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((5, None), (10, None), None)], 100.0)
+        #
+        self.assertIn(((1, None), (7, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((1, None), (7, None), None)], 8.0)
+        self.assertIn(((1, None), (9, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((1, None), (9, None), None)], 16.0)
+        self.assertIn(((3, None), (7, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((3, None), (7, None), None)], 48.0)
+        self.assertIn(((3, None), (9, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((3, None), (9, None), None)], 56.0)
+        self.assertIn(((5, None), (7, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((5, None), (7, None), None)], 88.0)
+        self.assertIn(((5, None), (9, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((5, None), (9, None), None)], 96.0)
 
         # p = (4*9) % 2
         self.assertTrue(((4, None), (9, None), None) in g.blue_edges)
@@ -547,6 +679,66 @@ class TestBipartiteGraph(ut.TestCase):
     def test_d_del_node(self):
         """ test_d_del_node determinsitically tests deletion of nodes."""
         g = make_d_graph()
+        self.assertEqual(len(g.left_nodes), 5)
+        self.assertEqual(len(g.right_nodes), 5)
+        self.assertEqual(len(g.red_edges), 6)
+        self.assertEqual(len(g.blue_edges), 19)
+
+        self.assertIn(((1, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (6, None), None)], 4.0)
+        self.assertIn(((1, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (8, None), None)], 12.0)
+        self.assertIn(((1, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (10, None), None)], 20.0)
+        #
+        self.assertIn(((2, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (6, None), None)], 24.0)
+        self.assertIn(((2, None), (7, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (7, None), None)], 28.0)
+        self.assertIn(((2, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (8, None), None)], 32.0)
+        self.assertIn(((2, None), (9, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (9, None), None)], 36.0)
+        self.assertIn(((2, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (10, None), None)], 40.0)
+        #
+        self.assertIn(((3, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((3, None), (6, None), None)], 44.0)
+        self.assertIn(((3, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((3, None), (8, None), None)], 52.0)
+        self.assertIn(((3, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((3, None), (10, None), None)], 60.0)
+        #
+        self.assertIn(((4, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (6, None), None)], 64.0)
+        self.assertIn(((4, None), (7, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (7, None), None)], 68.0)
+        self.assertIn(((4, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (8, None), None)], 72.0)
+        self.assertIn(((4, None), (9, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (9, None), None)], 76.0)
+        self.assertIn(((4, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (10, None), None)], 80.0)
+        #
+        self.assertIn(((5, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((5, None), (6, None), None)], 84.0)
+        self.assertIn(((5, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((5, None), (8, None), None)], 92.0)
+        self.assertIn(((5, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((5, None), (10, None), None)], 100.0)
+        #
+        self.assertIn(((1, None), (7, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((1, None), (7, None), None)], 8.0)
+        self.assertIn(((1, None), (9, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((1, None), (9, None), None)], 16.0)
+        self.assertIn(((3, None), (7, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((3, None), (7, None), None)], 48.0)
+        self.assertIn(((3, None), (9, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((3, None), (9, None), None)], 56.0)
+        self.assertIn(((5, None), (7, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((5, None), (7, None), None)], 88.0)
+        self.assertIn(((5, None), (9, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((5, None), (9, None), None)], 96.0)
 
         a = deepcopy(len(g.left_nodes))
         c = deepcopy(len(g.right_nodes))
@@ -630,6 +822,66 @@ class TestBipartiteGraph(ut.TestCase):
     def test_d_chk_colored_match(self):
         """ test_d_chk_colored_match tests chk_colored_match dtrmnstcly"""
         g = make_d_graph()
+        self.assertEqual(len(g.left_nodes), 5)
+        self.assertEqual(len(g.right_nodes), 5)
+        self.assertEqual(len(g.red_edges), 6)
+        self.assertEqual(len(g.blue_edges), 19)
+
+        self.assertIn(((1, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (6, None), None)], 4.0)
+        self.assertIn(((1, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (8, None), None)], 12.0)
+        self.assertIn(((1, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (10, None), None)], 20.0)
+        #
+        self.assertIn(((2, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (6, None), None)], 24.0)
+        self.assertIn(((2, None), (7, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (7, None), None)], 28.0)
+        self.assertIn(((2, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (8, None), None)], 32.0)
+        self.assertIn(((2, None), (9, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (9, None), None)], 36.0)
+        self.assertIn(((2, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (10, None), None)], 40.0)
+        #
+        self.assertIn(((3, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((3, None), (6, None), None)], 44.0)
+        self.assertIn(((3, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((3, None), (8, None), None)], 52.0)
+        self.assertIn(((3, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((3, None), (10, None), None)], 60.0)
+        #
+        self.assertIn(((4, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (6, None), None)], 64.0)
+        self.assertIn(((4, None), (7, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (7, None), None)], 68.0)
+        self.assertIn(((4, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (8, None), None)], 72.0)
+        self.assertIn(((4, None), (9, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (9, None), None)], 76.0)
+        self.assertIn(((4, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (10, None), None)], 80.0)
+        #
+        self.assertIn(((5, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((5, None), (6, None), None)], 84.0)
+        self.assertIn(((5, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((5, None), (8, None), None)], 92.0)
+        self.assertIn(((5, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((5, None), (10, None), None)], 100.0)
+        #
+        self.assertIn(((1, None), (7, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((1, None), (7, None), None)], 8.0)
+        self.assertIn(((1, None), (9, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((1, None), (9, None), None)], 16.0)
+        self.assertIn(((3, None), (7, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((3, None), (7, None), None)], 48.0)
+        self.assertIn(((3, None), (9, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((3, None), (9, None), None)], 56.0)
+        self.assertIn(((5, None), (7, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((5, None), (7, None), None)], 88.0)
+        self.assertIn(((5, None), (9, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((5, None), (9, None), None)], 96.0)
 
         # a maximal red matching. there are 9 of these in total.
         b = 1
@@ -726,6 +978,66 @@ class TestBipartiteGraph(ut.TestCase):
         """ test_d_chk_colored_maximal_match tests chk_colored_maximal_match """
         # print("\n\nEntering test_d_chk_colored_maximal_match\n")
         g = make_d_graph()
+        self.assertEqual(len(g.left_nodes), 5)
+        self.assertEqual(len(g.right_nodes), 5)
+        self.assertEqual(len(g.red_edges), 6)
+        self.assertEqual(len(g.blue_edges), 19)
+
+        self.assertIn(((1, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (6, None), None)], 4.0)
+        self.assertIn(((1, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (8, None), None)], 12.0)
+        self.assertIn(((1, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (10, None), None)], 20.0)
+        #
+        self.assertIn(((2, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (6, None), None)], 24.0)
+        self.assertIn(((2, None), (7, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (7, None), None)], 28.0)
+        self.assertIn(((2, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (8, None), None)], 32.0)
+        self.assertIn(((2, None), (9, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (9, None), None)], 36.0)
+        self.assertIn(((2, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (10, None), None)], 40.0)
+        #
+        self.assertIn(((3, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((3, None), (6, None), None)], 44.0)
+        self.assertIn(((3, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((3, None), (8, None), None)], 52.0)
+        self.assertIn(((3, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((3, None), (10, None), None)], 60.0)
+        #
+        self.assertIn(((4, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (6, None), None)], 64.0)
+        self.assertIn(((4, None), (7, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (7, None), None)], 68.0)
+        self.assertIn(((4, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (8, None), None)], 72.0)
+        self.assertIn(((4, None), (9, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (9, None), None)], 76.0)
+        self.assertIn(((4, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (10, None), None)], 80.0)
+        #
+        self.assertIn(((5, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((5, None), (6, None), None)], 84.0)
+        self.assertIn(((5, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((5, None), (8, None), None)], 92.0)
+        self.assertIn(((5, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((5, None), (10, None), None)], 100.0)
+        #
+        self.assertIn(((1, None), (7, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((1, None), (7, None), None)], 8.0)
+        self.assertIn(((1, None), (9, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((1, None), (9, None), None)], 16.0)
+        self.assertIn(((3, None), (7, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((3, None), (7, None), None)], 48.0)
+        self.assertIn(((3, None), (9, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((3, None), (9, None), None)], 56.0)
+        self.assertIn(((5, None), (7, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((5, None), (7, None), None)], 88.0)
+        self.assertIn(((5, None), (9, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((5, None), (9, None), None)], 96.0)
 
         b = 1
         # A maximal match of red edges
@@ -903,6 +1215,66 @@ class TestBipartiteGraph(ut.TestCase):
     def test_d_parse(self):
         """ test_d_parse deterministically tests the _parse function. """
         g = make_d_graph()
+        self.assertEqual(len(g.left_nodes), 5)
+        self.assertEqual(len(g.right_nodes), 5)
+        self.assertEqual(len(g.red_edges), 6)
+        self.assertEqual(len(g.blue_edges), 19)
+
+        self.assertIn(((1, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (6, None), None)], 4.0)
+        self.assertIn(((1, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (8, None), None)], 12.0)
+        self.assertIn(((1, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (10, None), None)], 20.0)
+        #
+        self.assertIn(((2, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (6, None), None)], 24.0)
+        self.assertIn(((2, None), (7, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (7, None), None)], 28.0)
+        self.assertIn(((2, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (8, None), None)], 32.0)
+        self.assertIn(((2, None), (9, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (9, None), None)], 36.0)
+        self.assertIn(((2, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (10, None), None)], 40.0)
+        #
+        self.assertIn(((3, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((3, None), (6, None), None)], 44.0)
+        self.assertIn(((3, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((3, None), (8, None), None)], 52.0)
+        self.assertIn(((3, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((3, None), (10, None), None)], 60.0)
+        #
+        self.assertIn(((4, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (6, None), None)], 64.0)
+        self.assertIn(((4, None), (7, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (7, None), None)], 68.0)
+        self.assertIn(((4, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (8, None), None)], 72.0)
+        self.assertIn(((4, None), (9, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (9, None), None)], 76.0)
+        self.assertIn(((4, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (10, None), None)], 80.0)
+        #
+        self.assertIn(((5, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((5, None), (6, None), None)], 84.0)
+        self.assertIn(((5, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((5, None), (8, None), None)], 92.0)
+        self.assertIn(((5, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((5, None), (10, None), None)], 100.0)
+        #
+        self.assertIn(((1, None), (7, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((1, None), (7, None), None)], 8.0)
+        self.assertIn(((1, None), (9, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((1, None), (9, None), None)], 16.0)
+        self.assertIn(((3, None), (7, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((3, None), (7, None), None)], 48.0)
+        self.assertIn(((3, None), (9, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((3, None), (9, None), None)], 56.0)
+        self.assertIn(((5, None), (7, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((5, None), (7, None), None)], 88.0)
+        self.assertIn(((5, None), (9, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((5, None), (9, None), None)], 96.0)
 
         b = 1
         input_match = [((5, None), (9, None), None)]
@@ -955,6 +1327,66 @@ class TestBipartiteGraph(ut.TestCase):
         # Test one: deterministic graph with edges (i, j) for i = 1, 2, ..., 5
         # and j = 6, 7, ..., 10 and color (i*j) % 2 and wt 20*(i-1) + 4*(j-5)
         g = make_d_graph()
+        self.assertEqual(len(g.left_nodes), 5)
+        self.assertEqual(len(g.right_nodes), 5)
+        self.assertEqual(len(g.red_edges), 6)
+        self.assertEqual(len(g.blue_edges), 19)
+
+        self.assertIn(((1, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (6, None), None)], 4.0)
+        self.assertIn(((1, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (8, None), None)], 12.0)
+        self.assertIn(((1, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (10, None), None)], 20.0)
+        #
+        self.assertIn(((2, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (6, None), None)], 24.0)
+        self.assertIn(((2, None), (7, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (7, None), None)], 28.0)
+        self.assertIn(((2, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (8, None), None)], 32.0)
+        self.assertIn(((2, None), (9, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (9, None), None)], 36.0)
+        self.assertIn(((2, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (10, None), None)], 40.0)
+        #
+        self.assertIn(((3, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((3, None), (6, None), None)], 44.0)
+        self.assertIn(((3, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((3, None), (8, None), None)], 52.0)
+        self.assertIn(((3, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((3, None), (10, None), None)], 60.0)
+        #
+        self.assertIn(((4, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (6, None), None)], 64.0)
+        self.assertIn(((4, None), (7, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (7, None), None)], 68.0)
+        self.assertIn(((4, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (8, None), None)], 72.0)
+        self.assertIn(((4, None), (9, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (9, None), None)], 76.0)
+        self.assertIn(((4, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (10, None), None)], 80.0)
+        #
+        self.assertIn(((5, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((5, None), (6, None), None)], 84.0)
+        self.assertIn(((5, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((5, None), (8, None), None)], 92.0)
+        self.assertIn(((5, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((5, None), (10, None), None)], 100.0)
+        #
+        self.assertIn(((1, None), (7, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((1, None), (7, None), None)], 8.0)
+        self.assertIn(((1, None), (9, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((1, None), (9, None), None)], 16.0)
+        self.assertIn(((3, None), (7, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((3, None), (7, None), None)], 48.0)
+        self.assertIn(((3, None), (9, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((3, None), (9, None), None)], 56.0)
+        self.assertIn(((5, None), (7, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((5, None), (7, None), None)], 88.0)
+        self.assertIn(((5, None), (9, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((5, None), (9, None), None)], 96.0)
 
         # Using the following:
         input_match = [((3, None), (7, None), None)]
@@ -973,6 +1405,66 @@ class TestBipartiteGraph(ut.TestCase):
 
         # Test two: Let's go again with a different first match
         g = make_d_graph()
+        self.assertEqual(len(g.left_nodes), 5)
+        self.assertEqual(len(g.right_nodes), 5)
+        self.assertEqual(len(g.red_edges), 6)
+        self.assertEqual(len(g.blue_edges), 19)
+
+        self.assertIn(((1, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (6, None), None)], 4.0)
+        self.assertIn(((1, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (8, None), None)], 12.0)
+        self.assertIn(((1, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (10, None), None)], 20.0)
+        #
+        self.assertIn(((2, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (6, None), None)], 24.0)
+        self.assertIn(((2, None), (7, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (7, None), None)], 28.0)
+        self.assertIn(((2, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (8, None), None)], 32.0)
+        self.assertIn(((2, None), (9, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (9, None), None)], 36.0)
+        self.assertIn(((2, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (10, None), None)], 40.0)
+        #
+        self.assertIn(((3, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((3, None), (6, None), None)], 44.0)
+        self.assertIn(((3, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((3, None), (8, None), None)], 52.0)
+        self.assertIn(((3, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((3, None), (10, None), None)], 60.0)
+        #
+        self.assertIn(((4, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (6, None), None)], 64.0)
+        self.assertIn(((4, None), (7, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (7, None), None)], 68.0)
+        self.assertIn(((4, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (8, None), None)], 72.0)
+        self.assertIn(((4, None), (9, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (9, None), None)], 76.0)
+        self.assertIn(((4, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (10, None), None)], 80.0)
+        #
+        self.assertIn(((5, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((5, None), (6, None), None)], 84.0)
+        self.assertIn(((5, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((5, None), (8, None), None)], 92.0)
+        self.assertIn(((5, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((5, None), (10, None), None)], 100.0)
+        #
+        self.assertIn(((1, None), (7, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((1, None), (7, None), None)], 8.0)
+        self.assertIn(((1, None), (9, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((1, None), (9, None), None)], 16.0)
+        self.assertIn(((3, None), (7, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((3, None), (7, None), None)], 48.0)
+        self.assertIn(((3, None), (9, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((3, None), (9, None), None)], 56.0)
+        self.assertIn(((5, None), (7, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((5, None), (7, None), None)], 88.0)
+        self.assertIn(((5, None), (9, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((5, None), (9, None), None)], 96.0)
         input_match = [((5, None), (9, None), None)]
         sp = [[((1, None), (7, None), None)], [((3, None), (7, None), None)]]
         result = do_a_clean_thing(b, g, input_match, sp)
@@ -989,6 +1481,66 @@ class TestBipartiteGraph(ut.TestCase):
 
         # Test three: Let's go again with a different first match
         g = make_d_graph()
+        self.assertEqual(len(g.left_nodes), 5)
+        self.assertEqual(len(g.right_nodes), 5)
+        self.assertEqual(len(g.red_edges), 6)
+        self.assertEqual(len(g.blue_edges), 19)
+
+        self.assertIn(((1, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (6, None), None)], 4.0)
+        self.assertIn(((1, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (8, None), None)], 12.0)
+        self.assertIn(((1, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (10, None), None)], 20.0)
+        #
+        self.assertIn(((2, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (6, None), None)], 24.0)
+        self.assertIn(((2, None), (7, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (7, None), None)], 28.0)
+        self.assertIn(((2, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (8, None), None)], 32.0)
+        self.assertIn(((2, None), (9, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (9, None), None)], 36.0)
+        self.assertIn(((2, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (10, None), None)], 40.0)
+        #
+        self.assertIn(((3, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((3, None), (6, None), None)], 44.0)
+        self.assertIn(((3, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((3, None), (8, None), None)], 52.0)
+        self.assertIn(((3, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((3, None), (10, None), None)], 60.0)
+        #
+        self.assertIn(((4, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (6, None), None)], 64.0)
+        self.assertIn(((4, None), (7, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (7, None), None)], 68.0)
+        self.assertIn(((4, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (8, None), None)], 72.0)
+        self.assertIn(((4, None), (9, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (9, None), None)], 76.0)
+        self.assertIn(((4, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (10, None), None)], 80.0)
+        #
+        self.assertIn(((5, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((5, None), (6, None), None)], 84.0)
+        self.assertIn(((5, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((5, None), (8, None), None)], 92.0)
+        self.assertIn(((5, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((5, None), (10, None), None)], 100.0)
+        #
+        self.assertIn(((1, None), (7, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((1, None), (7, None), None)], 8.0)
+        self.assertIn(((1, None), (9, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((1, None), (9, None), None)], 16.0)
+        self.assertIn(((3, None), (7, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((3, None), (7, None), None)], 48.0)
+        self.assertIn(((3, None), (9, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((3, None), (9, None), None)], 56.0)
+        self.assertIn(((5, None), (7, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((5, None), (7, None), None)], 88.0)
+        self.assertIn(((5, None), (9, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((5, None), (9, None), None)], 96.0)
         input_match = [((1, None), (7, None), None)]
         sp = [[((3, None), (9, None), None)], [((5, None), (9, None), None)]]
         result = do_a_clean_thing(b, g, input_match, sp)
@@ -1002,30 +1554,68 @@ class TestBipartiteGraph(ut.TestCase):
         sp = None
         result = None
 
-        # shortest_paths = []
-        # if b:
-        #     wt_dict = g.red_edges
-        # else:
-        #     wt_dict = g.blue_edges
-        # assert len(wt_dict) != 0
-        # print("wt dict we are working with = ")
-        # for key in list(wt_dict.keys()):
-        #     print("\t" + str(key) + "\t\t" + str(wt_dict[key]))
-        # for eid in input_match:
-        #     print("eid in input match = " + str(eid))
-        #     assert eid in wt_dict
-        # for nxt_pth in sp:
-        #     for eid in nxt_pth:
-        #         print("eid in nxt_pth = " + str(eid))
-        #         assert eid in wt_dict
-        #     sd = [eid for eid in nxt_pth if eid not in input_match]
-        #     sd += [eid for eid in input_match if eid not in nxt_pth]
-        #     gain = sum(wt_dict[eid] for eid in sd)
-        #     gain = gain - sum(wt_dict[eid] for eid in input_match)
-        #     shortest_paths += [(nxt_pth, gain)]
-
         # Test four: Let's go again with a different first match
         g = make_d_graph()
+        self.assertEqual(len(g.left_nodes), 5)
+        self.assertEqual(len(g.right_nodes), 5)
+        self.assertEqual(len(g.red_edges), 6)
+        self.assertEqual(len(g.blue_edges), 19)
+
+        self.assertIn(((1, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (6, None), None)], 4.0)
+        self.assertIn(((1, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (8, None), None)], 12.0)
+        self.assertIn(((1, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (10, None), None)], 20.0)
+        #
+        self.assertIn(((2, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (6, None), None)], 24.0)
+        self.assertIn(((2, None), (7, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (7, None), None)], 28.0)
+        self.assertIn(((2, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (8, None), None)], 32.0)
+        self.assertIn(((2, None), (9, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (9, None), None)], 36.0)
+        self.assertIn(((2, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (10, None), None)], 40.0)
+        #
+        self.assertIn(((3, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((3, None), (6, None), None)], 44.0)
+        self.assertIn(((3, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((3, None), (8, None), None)], 52.0)
+        self.assertIn(((3, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((3, None), (10, None), None)], 60.0)
+        #
+        self.assertIn(((4, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (6, None), None)], 64.0)
+        self.assertIn(((4, None), (7, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (7, None), None)], 68.0)
+        self.assertIn(((4, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (8, None), None)], 72.0)
+        self.assertIn(((4, None), (9, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (9, None), None)], 76.0)
+        self.assertIn(((4, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (10, None), None)], 80.0)
+        #
+        self.assertIn(((5, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((5, None), (6, None), None)], 84.0)
+        self.assertIn(((5, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((5, None), (8, None), None)], 92.0)
+        self.assertIn(((5, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((5, None), (10, None), None)], 100.0)
+        #
+        self.assertIn(((1, None), (7, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((1, None), (7, None), None)], 8.0)
+        self.assertIn(((1, None), (9, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((1, None), (9, None), None)], 16.0)
+        self.assertIn(((3, None), (7, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((3, None), (7, None), None)], 48.0)
+        self.assertIn(((3, None), (9, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((3, None), (9, None), None)], 56.0)
+        self.assertIn(((5, None), (7, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((5, None), (7, None), None)], 88.0)
+        self.assertIn(((5, None), (9, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((5, None), (9, None), None)], 96.0)
         if b:
             wt_dict = g.red_edges
         else:
@@ -1048,6 +1638,66 @@ class TestBipartiteGraph(ut.TestCase):
 
         # Test four: Let's go again with a maximal first match
         g = make_d_graph()
+        self.assertEqual(len(g.left_nodes), 5)
+        self.assertEqual(len(g.right_nodes), 5)
+        self.assertEqual(len(g.red_edges), 6)
+        self.assertEqual(len(g.blue_edges), 19)
+
+        self.assertIn(((1, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (6, None), None)], 4.0)
+        self.assertIn(((1, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (8, None), None)], 12.0)
+        self.assertIn(((1, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (10, None), None)], 20.0)
+        #
+        self.assertIn(((2, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (6, None), None)], 24.0)
+        self.assertIn(((2, None), (7, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (7, None), None)], 28.0)
+        self.assertIn(((2, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (8, None), None)], 32.0)
+        self.assertIn(((2, None), (9, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (9, None), None)], 36.0)
+        self.assertIn(((2, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (10, None), None)], 40.0)
+        #
+        self.assertIn(((3, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((3, None), (6, None), None)], 44.0)
+        self.assertIn(((3, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((3, None), (8, None), None)], 52.0)
+        self.assertIn(((3, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((3, None), (10, None), None)], 60.0)
+        #
+        self.assertIn(((4, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (6, None), None)], 64.0)
+        self.assertIn(((4, None), (7, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (7, None), None)], 68.0)
+        self.assertIn(((4, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (8, None), None)], 72.0)
+        self.assertIn(((4, None), (9, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (9, None), None)], 76.0)
+        self.assertIn(((4, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (10, None), None)], 80.0)
+        #
+        self.assertIn(((5, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((5, None), (6, None), None)], 84.0)
+        self.assertIn(((5, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((5, None), (8, None), None)], 92.0)
+        self.assertIn(((5, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((5, None), (10, None), None)], 100.0)
+        #
+        self.assertIn(((1, None), (7, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((1, None), (7, None), None)], 8.0)
+        self.assertIn(((1, None), (9, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((1, None), (9, None), None)], 16.0)
+        self.assertIn(((3, None), (7, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((3, None), (7, None), None)], 48.0)
+        self.assertIn(((3, None), (9, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((3, None), (9, None), None)], 56.0)
+        self.assertIn(((5, None), (7, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((5, None), (7, None), None)], 88.0)
+        self.assertIn(((5, None), (9, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((5, None), (9, None), None)], 96.0)
         input_match = [((1, None), (7, None), None),
                        ((5, None), (9, None), None)]
         sp = [[((3, None), (7, None), None), ((1, None), (7, None), None),
@@ -1066,6 +1716,66 @@ class TestBipartiteGraph(ut.TestCase):
         b = 0  # color
 
         g = make_d_graph()
+        self.assertEqual(len(g.left_nodes), 5)
+        self.assertEqual(len(g.right_nodes), 5)
+        self.assertEqual(len(g.red_edges), 6)
+        self.assertEqual(len(g.blue_edges), 19)
+
+        self.assertIn(((1, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (6, None), None)], 4.0)
+        self.assertIn(((1, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (8, None), None)], 12.0)
+        self.assertIn(((1, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (10, None), None)], 20.0)
+        #
+        self.assertIn(((2, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (6, None), None)], 24.0)
+        self.assertIn(((2, None), (7, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (7, None), None)], 28.0)
+        self.assertIn(((2, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (8, None), None)], 32.0)
+        self.assertIn(((2, None), (9, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (9, None), None)], 36.0)
+        self.assertIn(((2, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (10, None), None)], 40.0)
+        #
+        self.assertIn(((3, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((3, None), (6, None), None)], 44.0)
+        self.assertIn(((3, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((3, None), (8, None), None)], 52.0)
+        self.assertIn(((3, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((3, None), (10, None), None)], 60.0)
+        #
+        self.assertIn(((4, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (6, None), None)], 64.0)
+        self.assertIn(((4, None), (7, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (7, None), None)], 68.0)
+        self.assertIn(((4, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (8, None), None)], 72.0)
+        self.assertIn(((4, None), (9, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (9, None), None)], 76.0)
+        self.assertIn(((4, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (10, None), None)], 80.0)
+        #
+        self.assertIn(((5, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((5, None), (6, None), None)], 84.0)
+        self.assertIn(((5, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((5, None), (8, None), None)], 92.0)
+        self.assertIn(((5, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((5, None), (10, None), None)], 100.0)
+        #
+        self.assertIn(((1, None), (7, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((1, None), (7, None), None)], 8.0)
+        self.assertIn(((1, None), (9, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((1, None), (9, None), None)], 16.0)
+        self.assertIn(((3, None), (7, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((3, None), (7, None), None)], 48.0)
+        self.assertIn(((3, None), (9, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((3, None), (9, None), None)], 56.0)
+        self.assertIn(((5, None), (7, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((5, None), (7, None), None)], 88.0)
+        self.assertIn(((5, None), (9, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((5, None), (9, None), None)], 96.0)
         input_match = [((2, None), (8, None), None)]
         sp = [[((1, None), (6, None), None)], [((1, None), (10, None), None)],
               [((3, None), (6, None), None)], [((3, None), (10, None), None)],
@@ -1089,6 +1799,7 @@ class TestBipartiteGraph(ut.TestCase):
         self.assertTrue(len(result) == 4)
 
     def is_truth(self, result, result_test, grnd_trth):
+        """ Helper function that asserts that result, result_test, and ground_truth are all consistent. """
         self.assertEqual(len(set(result)), len(result))
         self.assertEqual(len(set(result_test)), len(result_test))
         self.assertEqual(len(set(grnd_trth)), len(grnd_trth))
@@ -1104,6 +1815,66 @@ class TestBipartiteGraph(ut.TestCase):
         # matching without breaking the matching property... but we say a max-
         # imal matching is OPTIMAL if it has the heaviest weight.
         g = make_d_graph()
+        self.assertEqual(len(g.left_nodes), 5)
+        self.assertEqual(len(g.right_nodes), 5)
+        self.assertEqual(len(g.red_edges), 6)
+        self.assertEqual(len(g.blue_edges), 19)
+
+        self.assertIn(((1, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (6, None), None)], 4.0)
+        self.assertIn(((1, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (8, None), None)], 12.0)
+        self.assertIn(((1, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (10, None), None)], 20.0)
+        #
+        self.assertIn(((2, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (6, None), None)], 24.0)
+        self.assertIn(((2, None), (7, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (7, None), None)], 28.0)
+        self.assertIn(((2, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (8, None), None)], 32.0)
+        self.assertIn(((2, None), (9, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (9, None), None)], 36.0)
+        self.assertIn(((2, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (10, None), None)], 40.0)
+        #
+        self.assertIn(((3, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((3, None), (6, None), None)], 44.0)
+        self.assertIn(((3, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((3, None), (8, None), None)], 52.0)
+        self.assertIn(((3, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((3, None), (10, None), None)], 60.0)
+        #
+        self.assertIn(((4, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (6, None), None)], 64.0)
+        self.assertIn(((4, None), (7, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (7, None), None)], 68.0)
+        self.assertIn(((4, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (8, None), None)], 72.0)
+        self.assertIn(((4, None), (9, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (9, None), None)], 76.0)
+        self.assertIn(((4, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (10, None), None)], 80.0)
+        #
+        self.assertIn(((5, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((5, None), (6, None), None)], 84.0)
+        self.assertIn(((5, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((5, None), (8, None), None)], 92.0)
+        self.assertIn(((5, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((5, None), (10, None), None)], 100.0)
+        #
+        self.assertIn(((1, None), (7, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((1, None), (7, None), None)], 8.0)
+        self.assertIn(((1, None), (9, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((1, None), (9, None), None)], 16.0)
+        self.assertIn(((3, None), (7, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((3, None), (7, None), None)], 48.0)
+        self.assertIn(((3, None), (9, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((3, None), (9, None), None)], 56.0)
+        self.assertIn(((5, None), (7, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((5, None), (7, None), None)], 88.0)
+        self.assertIn(((5, None), (9, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((5, None), (9, None), None)], 96.0)
         self.assertTrue(len(g.red_edges) > 0)
 
         b = 1
@@ -1212,6 +1983,66 @@ class TestBipartiteGraph(ut.TestCase):
         # matching without breaking the matching property... but we say a max-
         # imal matching is OPTIMAL if it has the heaviest weight.
         g = make_d_graph()
+        self.assertEqual(len(g.left_nodes), 5)
+        self.assertEqual(len(g.right_nodes), 5)
+        self.assertEqual(len(g.red_edges), 6)
+        self.assertEqual(len(g.blue_edges), 19)
+
+        self.assertIn(((1, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (6, None), None)], 4.0)
+        self.assertIn(((1, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (8, None), None)], 12.0)
+        self.assertIn(((1, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (10, None), None)], 20.0)
+        #
+        self.assertIn(((2, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (6, None), None)], 24.0)
+        self.assertIn(((2, None), (7, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (7, None), None)], 28.0)
+        self.assertIn(((2, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (8, None), None)], 32.0)
+        self.assertIn(((2, None), (9, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (9, None), None)], 36.0)
+        self.assertIn(((2, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (10, None), None)], 40.0)
+        #
+        self.assertIn(((3, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((3, None), (6, None), None)], 44.0)
+        self.assertIn(((3, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((3, None), (8, None), None)], 52.0)
+        self.assertIn(((3, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((3, None), (10, None), None)], 60.0)
+        #
+        self.assertIn(((4, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (6, None), None)], 64.0)
+        self.assertIn(((4, None), (7, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (7, None), None)], 68.0)
+        self.assertIn(((4, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (8, None), None)], 72.0)
+        self.assertIn(((4, None), (9, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (9, None), None)], 76.0)
+        self.assertIn(((4, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (10, None), None)], 80.0)
+        #
+        self.assertIn(((5, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((5, None), (6, None), None)], 84.0)
+        self.assertIn(((5, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((5, None), (8, None), None)], 92.0)
+        self.assertIn(((5, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((5, None), (10, None), None)], 100.0)
+        #
+        self.assertIn(((1, None), (7, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((1, None), (7, None), None)], 8.0)
+        self.assertIn(((1, None), (9, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((1, None), (9, None), None)], 16.0)
+        self.assertIn(((3, None), (7, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((3, None), (7, None), None)], 48.0)
+        self.assertIn(((3, None), (9, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((3, None), (9, None), None)], 56.0)
+        self.assertIn(((5, None), (7, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((5, None), (7, None), None)], 88.0)
+        self.assertIn(((5, None), (9, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((5, None), (9, None), None)], 96.0)
 
         b = 1
 
@@ -1332,6 +2163,67 @@ class TestBipartiteGraph(ut.TestCase):
         self.assertEqual(g.blue_edges[((1, None), (8, None), None)], 12.0)
         self.assertIn(((1, None), (10, None), None), g.blue_edges)
         self.assertEqual(g.blue_edges[((1, None), (10, None), None)], 20.0)
+        #
+        self.assertIn(((2, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (6, None), None)], 24.0)
+        self.assertIn(((2, None), (7, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (7, None), None)], 28.0)
+        self.assertIn(((2, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (8, None), None)], 32.0)
+        self.assertIn(((2, None), (9, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (9, None), None)], 36.0)
+        self.assertIn(((2, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (10, None), None)], 40.0)
+        #
+        self.assertIn(((3, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((3, None), (6, None), None)], 44.0)
+        self.assertIn(((3, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((3, None), (8, None), None)], 52.0)
+        self.assertIn(((3, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((3, None), (10, None), None)], 60.0)
+        #
+        self.assertIn(((4, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (6, None), None)], 64.0)
+        self.assertIn(((4, None), (7, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (7, None), None)], 68.0)
+        self.assertIn(((4, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (8, None), None)], 72.0)
+        self.assertIn(((4, None), (9, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (9, None), None)], 76.0)
+        self.assertIn(((4, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (10, None), None)], 80.0)
+        #
+        self.assertIn(((5, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((5, None), (6, None), None)], 84.0)
+        self.assertIn(((5, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((5, None), (8, None), None)], 92.0)
+        self.assertIn(((5, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((5, None), (10, None), None)], 100.0)
+        #
+        self.assertIn(((1, None), (7, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((1, None), (7, None), None)], 7.0)
+        self.assertIn(((1, None), (9, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((1, None), (9, None), None)], 17.0)
+        self.assertIn(((3, None), (7, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((3, None), (7, None), None)], 49.0)
+        self.assertIn(((3, None), (9, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((3, None), (9, None), None)], 55.0)
+        self.assertIn(((5, None), (7, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((5, None), (7, None), None)], 88.0)
+        self.assertIn(((5, None), (9, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((5, None), (9, None), None)], 96.0)
+
+        self.assertEqual(len(g.left_nodes), 5)
+        self.assertEqual(len(g.right_nodes), 5)
+        self.assertEqual(len(g.red_edges), 6)
+        self.assertEqual(len(g.blue_edges), 19)
+
+        self.assertIn(((1, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (6, None), None)], 4.0)
+        self.assertIn(((1, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (8, None), None)], 12.0)
+        self.assertIn(((1, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (10, None), None)], 20.0)
 
         self.assertIn(((2, None), (6, None), None), g.blue_edges)
         self.assertEqual(g.blue_edges[((2, None), (6, None), None)],  24.0)
@@ -1400,6 +2292,66 @@ class TestBipartiteGraph(ut.TestCase):
     def test_d_optimize(self):
         """ test_d_optimize deterministically tests the optimize function. """
         g = make_d_graph()
+        self.assertEqual(len(g.left_nodes), 5)
+        self.assertEqual(len(g.right_nodes), 5)
+        self.assertEqual(len(g.red_edges), 6)
+        self.assertEqual(len(g.blue_edges), 19)
+
+        self.assertIn(((1, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (6, None), None)], 4.0)
+        self.assertIn(((1, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (8, None), None)], 12.0)
+        self.assertIn(((1, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((1, None), (10, None), None)], 20.0)
+        #
+        self.assertIn(((2, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (6, None), None)], 24.0)
+        self.assertIn(((2, None), (7, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (7, None), None)], 28.0)
+        self.assertIn(((2, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (8, None), None)], 32.0)
+        self.assertIn(((2, None), (9, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (9, None), None)], 36.0)
+        self.assertIn(((2, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((2, None), (10, None), None)], 40.0)
+        #
+        self.assertIn(((3, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((3, None), (6, None), None)], 44.0)
+        self.assertIn(((3, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((3, None), (8, None), None)], 52.0)
+        self.assertIn(((3, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((3, None), (10, None), None)], 60.0)
+        #
+        self.assertIn(((4, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (6, None), None)], 64.0)
+        self.assertIn(((4, None), (7, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (7, None), None)], 68.0)
+        self.assertIn(((4, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (8, None), None)], 72.0)
+        self.assertIn(((4, None), (9, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (9, None), None)], 76.0)
+        self.assertIn(((4, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((4, None), (10, None), None)], 80.0)
+        #
+        self.assertIn(((5, None), (6, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((5, None), (6, None), None)], 84.0)
+        self.assertIn(((5, None), (8, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((5, None), (8, None), None)], 92.0)
+        self.assertIn(((5, None), (10, None), None), g.blue_edges)
+        self.assertEqual(g.blue_edges[((5, None), (10, None), None)], 100.0)
+        #
+        self.assertIn(((1, None), (7, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((1, None), (7, None), None)], 8.0)
+        self.assertIn(((1, None), (9, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((1, None), (9, None), None)], 16.0)
+        self.assertIn(((3, None), (7, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((3, None), (7, None), None)], 48.0)
+        self.assertIn(((3, None), (9, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((3, None), (9, None), None)], 56.0)
+        self.assertIn(((5, None), (7, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((5, None), (7, None), None)], 88.0)
+        self.assertIn(((5, None), (9, None), None), g.red_edges)
+        self.assertEqual(g.red_edges[((5, None), (9, None), None)], 96.0)
         b = 1
         final_answer = g.optimize(b)
         self.assertTrue(((5, None), (9, None), None) in final_answer)

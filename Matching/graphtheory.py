@@ -8,19 +8,28 @@ if sys.version_info[0] != 3:
 
 
 class BipartiteGraph(object):
-    """ Graph object representing a graph
+    """
+    Graph object representing a graph.
 
     Attributes:
         data        : arbitrary
         count       : integer index
         left_nodes  : dict, nodes side 0, keys = vals = (int, arbitrary) pairs
         right_nodes : dict, nodes side 1, keys = vals = (int, arbitrary) pairs
-        blue_edges  : dict, edges color 0, keys are tuples of the form 
-            (node_ident, node_ident, arbitrary)
-        red_edges   : dict, edges color 1, keys are tuples of the form 
-            (node_ident, node_ident, arbitrary)
+        blue_edges  : dict, edges color 0, keys are tuples of the form
+            (node_ident, node_ident, arbitrary), vals are edge weights
+        red_edges   : dict, edges color 1, keys are tuples of the form
+            (node_ident, node_ident, arbitrary), vals are edge weights
 
-    Functions (see below for comments)
+    Initialization: Input dictionary par has the following key-value pairs:
+                'data'       : arbitrary
+               'count'       : non-negative integer index
+               'left_nodes'  : dict()
+               'right_nodes' : dict()
+               'red_edges'   : dict()
+               'blue_edges'  : dict()
+
+    Methods:
         add_node
         add_edge
         del_edge
@@ -30,9 +39,19 @@ class BipartiteGraph(object):
         extend
         boost
 
+    Usage:
+        g = BipartiteGraph({'data': 'han-tyumi', 'count': 0, 'left_nodes': dict(), 'right_nodes': dict(), 'red_edges': dict(), 'blue_edges': dict()})
+        x = g.add_node(0, block_height_one)  # Add left node
+        y = g.add_node(1, block_height_two)  # Add right node
+        z = g.add_edge(1, (x, y), edge_weight, block_height_three)  # Add red edge
+        m = g.optimize(1)  # Get an optimal red match of length len(m).
+        for edge_ident in m:
+            assert edge_ident in g.red_edges
+
     """
 
     def __init__(self, par=None):
+        """ See help(BipartiteGraph). """
         if par is None:
             par = dict()
             par['data'] = 'han-tyumi'
@@ -69,7 +88,10 @@ class BipartiteGraph(object):
         self.blue_edges.update(par['blue_edges'])
 
     def add_node(self, b, tag=None):
-        """ Take a bit b indicating side as input (b = 0 are left nodes, b = 1 
+        """
+        add_node adds a new node to the graph.
+
+        Take a bit b indicating side as input (b = 0 are left nodes, b = 1
         are right nodes) and a tag. Check that b is a bit and return None if it
         isn't. Otherwise, create a new node on side b, outputting the 
         node_ident = (self.count, tag)
@@ -88,7 +110,10 @@ class BipartiteGraph(object):
         return result
 
     def add_edge(self, b, pair, w, tag=None):
-        """ Take (b, pair, w, tag) as input (a bit b indicating color, edge 
+        """
+        add_edge adds a new weighted edge to the graph.
+
+        Take (b, pair, w, tag) as input (a bit b indicating color, edge
         ident pair, float w indicating weight). Fail (output False) if :
           pair[0] not in left_nodes  or
           pair[1] not in right_nodes
@@ -116,17 +141,15 @@ class BipartiteGraph(object):
         return result
 
     def del_edge(self, input_eids):
-        """ Take eid = (x, y, tag) as input (an edge_ident). If both of these 
-        are nodes on the proper sides, then we set edge weights in both edge 
-        dictionaries to 0.0. If either node does not exist or is on the wrong 
-        side, then the edge entry is deleted from the dictionary. This always 
+        """
+        del_edge deletes an edge from the graph.
+
+        Take eid = (x, y, tag) as input (an edge_ident) to be deleted from any edge dict containing it. This always
         succeeds so we return True.
         """
         if not isinstance(input_eids, list) and (
                 input_eids in self.red_edges or input_eids in self.blue_edges):
-            x = []
-            x += [input_eids]
-            input_eids = x
+            input_eids = [input_eids]
             
         if isinstance(input_eids, list) and len(input_eids) > 0:
             for eid in input_eids:
@@ -136,13 +159,15 @@ class BipartiteGraph(object):
                     del self.blue_edges[eid]
 
     def del_node(self, nid):
-        """  Take node identity nid as input (a node ident).
+        """
+        del_node deletes a node from the graph.
+
+        Take node identity nid as input (a node ident).
         Fail (output False) if:
           x is not in left_nodes and
           x is not in right_nodes
-        Otherwise remove x from all node dictionaries and delete both color 
-        edge identities like (x, y) and (y, x). This always succeeds so we 
-        return True.
+        Otherwise remove x from all node dictionaries containing it, and delete any edges incident with x.
+        This always succeeds so we return True.
         """
         if nid in self.left_nodes:
             del self.left_nodes[nid]
@@ -157,8 +182,7 @@ class BipartiteGraph(object):
             self.del_edge(eid)
             
     def chk_colored_match(self, b, input_match):
-        """ chk_colored_match takes a color, b, and an alleged match, 
-        input_match. Produces as output a boolean.
+        """ chk_colored_match checks if input_match is a unicolor match with color b.
         """
         assert b in [0, 1]
         if len(input_match) == 0:
@@ -190,6 +214,7 @@ class BipartiteGraph(object):
         return result
 
     def chk_colored_maximal_match(self, b, input_match):
+        """ chk_colored_maximal_match checks whether input_match is a unicolor maximal match with color b. """
         assert b in [0, 1]
         result = self.chk_colored_match(b, input_match)
         if result:
@@ -209,8 +234,12 @@ class BipartiteGraph(object):
         return result
 
     def _parse(self, b, input_match):
-        """ parse takes a color b and input_match and either crashes because 
-        input_match isn't a match with color b or returns the following lists 
+        """
+        parse returns some convenient data about input_match (allegedly a unicolor match of color b).
+
+        parse takes a color b and input_match as input.
+
+        parse either crashes because input_match isn't a unicolor match with color b or returns the following lists
         for convenient usage in methods extend and boost.
             matched_lefts    :  left_nodes adj with an edge in input_match
             matched_rights   :  right_nodes adj with an edge in input_match
@@ -252,7 +281,7 @@ class BipartiteGraph(object):
 
     @staticmethod
     def _get_nodes_on_path(nxt_pth):
-        """ Returns a list of node identities on the input path. """
+        """ _get_nodes_on_path takes a list of edges and outputs all nodes incident with some edge on the path. """
         temp = []
         if len(nxt_pth) >= 1:
             idx_p = None
@@ -264,7 +293,10 @@ class BipartiteGraph(object):
         return temp
 
     def clean(self, b, shortest_paths_with_gains, input_match):
-        """ Returns the input_match (when input shortest_paths is empty) or the
+        """
+        clean is a processing/helper function that XORs the input paths with the input_match.
+
+        Returns the input_match (when input shortest_paths is empty) or the
         iterative symdif of input_match with a greedily-constructed vtx-disj
         subset of the shortest_paths_with_gains """
         # TODO: Should chk input match is a match.
@@ -315,14 +347,25 @@ class BipartiteGraph(object):
         return result
 
     def extend(self, b, input_match=None):
-        """ Find all shortest paths P satisfying the following constraints and 
-        call cleanup with them.
+        """
+        extend takes an input match, looks for augmenting paths, and calls cleanup.
+
+        Find all shortest paths P satisfying the following constraints and
+        call cleanup with them (these are augmenting paths):
               (i)   all edges in P share the same color with input_match and
               (ii)  edges in P alternate with respect to input_match and
               (iii) the initial endpoint of P is an unmatched node and
               (iv)  P cannot be extended by any correctly colored edges alt-
                     ernating with respect to input_match without self-
                     intersecting.
+
+        Note that if P terminates in an unmatched node, then P is an augmenting path
+        so the symmetric difference between P and the input_match will be a match of
+        greater length than the input_match.
+
+        TODO: extend() finds maximal matchings not maximum matchings, which may be a feature or a drawback.
+        TODO: extend() may be parallelized by seeking shortest paths across more than one core.
+        TODO: Many small optimizations can make extend() faster.
         """
         if input_match is None:
             input_match = []
@@ -403,14 +446,21 @@ class BipartiteGraph(object):
         return result
 
     def boost(self, b, input_match):
-        """ Note : maximality of input_match implies no *augmenting* paths 
-        exist, i.e. alternating and beginning and ending with unmatched nodes 
-        (this is a theorem, that augmenting paths exist IFF the match is max-
-        imal).  However, there exist alternating cycles, and the optimal match 
-        can be written as the symmetric difference between the input match and 
-        a sequence of vertex-disjoint alternating cycles with positive gain.
         """
-        # TODO: MAKE MUCH FASTER BY ONLY SEARCHING NODES WITH >= 2 NEIGHBORS?
+        boost takes a maximal unicolor input match with color, looks for augmenting cycles, and calls clean.
+
+        Boost ooperates similarly to extend, but looks for cycles that alternate with respect to the input_match
+        and with a positive gain.
+
+        Note : maximality of input_match implies no *augmenting* paths
+        exist (a fun-to-prove theorem)....  However, there exists alternating cycles, if not paths.
+
+        The optimal match can be written as the symmetric difference between the input match and
+        a sequence of vertex-disjoint alternating cycles with positive gain.
+
+        TODO: This can be parallelized by searching for augmenting cycles with more than one core.
+        TODO: Many small optimizations can make boost() faster.
+        """
         # Still requires touching each neighbor, but this would be a "prune
         # then process" approach...
         # print("\tBeginning boost.")
@@ -550,11 +600,14 @@ class BipartiteGraph(object):
         return self.clean(b, shrt_cyc_pos, input_match)
 
     def optimize(self, b):
-        """ Finds a maximal (but not maximum) matching and then optimizes it.
-        These are sub-optimal matchings unless the match is not only maximal 
-        but maximum.
         """
-        # TODO: Fix so as to only result in *maximum* matchings.
+        optimize uses extend to get a maximal matching and then uses boost to maximize its weight.
+
+        In general, a maximum match used in iterative boost() will result in a greater weight than a maximal match,
+        since more edges means more weight. However, the heaviest possible match may not be a maximum match.
+
+        TODO: Run optimize with a maximal match of each length, find heaviest among these.
+        """
         # Maximal matchings leave no edges available with two untouched end-
         # points, whereas maximum matchings are maximal and also have the prop-
         # erty that no other maximal matchings have more edges.

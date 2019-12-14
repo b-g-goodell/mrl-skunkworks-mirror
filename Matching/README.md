@@ -1,6 +1,8 @@
  # Matching
  
-The Matching project is intended to study the traceability of output-based blockchains like that of Monero and Zcash. The core functionality of our approach utilizes graph theoretic algorithms to compute choices of self-consistent ledger histories, and uses this functionality to find a maximum-likelihood estimate of the "ground truth" ledger. Previous traceability approaches had some drawbacks in the validation of their approaches, or made unsupportable conclusions. We aim to generalize and improve those traceability analyses, as well as to provide a framework for assessing the quality of such analyses.
+The Matching project studies the traceability of output-based blockchains like that of Monero and Zcash. The core functionality of our approach utilizes graph theoretic algorithms to compute choices of self-consistent ledger histories, and uses this functionality to find a maximum-likelihood estimate of the "ground truth" ledger. 
+
+Previous traceability approaches had some drawbacks in the validation of their approaches, or made unsupportable conclusions. We aim to generalize and improve those traceability analyses, as well as to provide a framework for assessing the quality of such analyses.
 
 Right now, check out the matching-buttercup branch for the Matching folder.
 

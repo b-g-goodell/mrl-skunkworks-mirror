@@ -22,6 +22,7 @@ REPORTING_MODULUS = 7  # lol whatever
 
 
 def make_sally():
+    """ Create a standard Sally the Simulator. """
     par = dict()
     par['runtime'] = RUNTIME
     par['filename'] = FILENAME
@@ -34,18 +35,11 @@ def make_sally():
     sally = Simulator(par)
     return sally
 
-
-class TestSimulation(ut.TestCase):
-    # @ut.skip("Skipping test_simulation")
-    def test_simulation(self):
-        sally = make_sally()
-        sally.run()
-
-
 class TestSimulator(ut.TestCase):
     """ TestSimulator tests our simulator """
     # @ut.skip("Skipping test_init")
     def test_init(self):
+        """ test_init verifies that a standard simulator has all the corresponding correct data """
         sally = make_sally()
         self.assertEqual(sally.runtime, RUNTIME)
         self.assertEqual(sally.fn, FILENAME)
@@ -70,6 +64,7 @@ class TestSimulator(ut.TestCase):
 
     @staticmethod
     def gather_stats(sally):
+        """ Helper function that extracts some helpful statistics from the input simulator. """
         t = sally.t
         num_left_nodes = len(sally.g.left_nodes)
         num_right_nodes = len(sally.g.right_nodes)
@@ -89,22 +84,7 @@ class TestSimulator(ut.TestCase):
                    new_num_red_edges, old_num_red_edges, red_edges_to_be_added,
                    new_num_blue_edges, old_num_blue_edges,
                    blue_edges_to_be_added):
-        # print("CALLING NEW_VS_OLD WITH\n")
-        # print("new_t = " + str(new_t))
-        # print("old_t = " + str(old_t))
-        # print("dt = " + str(dt))
-        # print("new_num_left_nodes = " + str(new_num_left_nodes))
-        # print("old_num_left_nodes = " + str(old_num_left_nodes))
-        # print("left nodes to be added = " + str(left_nodes_to_be_added))
-        # print("new_num_right_nodes = " + str(new_num_right_nodes))
-        # print("old_num_right_nodes = " + str(old_num_right_nodes))
-        # print("right nodes to be added = " + str(right_nodes_to_be_added))
-        # print("new_num_red_edges = " + str(new_num_red_edges))
-        # print("old_num_red_edges = " + str(old_num_red_edges))
-        # print("red edges to be added = " + str(red_edges_to_be_added))
-        # print("new_num_blue_edges = " + str(new_num_blue_edges))
-        # print("old_num_blue_edges = " + str(old_num_blue_edges))
-        # print("blue edges to be added = " + str(blue_edges_to_be_added))
+        """ Takes some new data, some old data, and some predictions, and verifies consistency. """
         self.assertEqual(new_t, old_t + dt)
         self.assertEqual(new_num_left_nodes, old_num_left_nodes +
                          left_nodes_to_be_added)
@@ -117,8 +97,7 @@ class TestSimulator(ut.TestCase):
         return True
 
     def next_timestep(self, dt, old_stats, predictions, sally):
-        """ next_timestep(self.gather_stats(sally), predictions, sally)
-        """
+        """ Simulate the next timestep by executing halting_run"""
         # Process old stats
         [old_t, old_num_left_nodes, old_num_right_nodes, old_num_red_edges,
          old_num_blue_edges, old_buffer_len, old_txn_bundles] = old_stats
@@ -153,6 +132,9 @@ class TestSimulator(ut.TestCase):
         return result
 
     def stepwise_predict_and_verify(self, dt, sally, n, old_stats = None):
+        """ Stepwise predict-and-verify the simulation. That is: run the simulation step-by-step,
+        checking each step of the way that the prescriped predictions come true. In particular: we must
+        verify that the correct number of nodes and edges are added to the graph. """
         if old_stats is None:
             old_stats = self.gather_stats(sally)
         # Recall: gather_stats returns
@@ -177,12 +159,6 @@ class TestSimulator(ut.TestCase):
             predictions = [dt, left_nodes_to_be_added, right_nodes_to_be_added,
                            red_edges_to_be_added, blue_edges_to_be_added]
 
-            # print("State of buffer = " + str(sally.buffer[sally.t]))
-            # print("List left nodes = " + str(list(sally.g.left_nodes.keys())))
-            # print("List right nodes = " + str(list(sally.g.right_nodes.keys())))
-            # print("List red edges = " + str(list(sally.g.red_edges.keys())))
-            # print("List blue edges = " + str(list(sally.g.blue_edges.keys())))
-
             # Verify predictions and get next stats
             old_stats = self.next_timestep(dt, old_stats, predictions, sally)
         return sally, old_stats
@@ -195,6 +171,7 @@ class TestSimulator(ut.TestCase):
         see test_halting_run."""
         # Initialize simulator
         dt = 1
+        num_blocks = 12
         sally = None  # clear sally
         sally = make_sally()
         old_stats = self.gather_stats(sally)
@@ -216,7 +193,7 @@ class TestSimulator(ut.TestCase):
             self.assertTrue(len(entry) == 0 or (
                         len(entry) == 1 and genesis_block == entry[0][2]))
 
-        sally, old_stats = self.stepwise_predict_and_verify(dt, sally, 12, old_stats)
+        sally, old_stats = self.stepwise_predict_and_verify(dt, sally, num_blocks, old_stats)
 
         # Manually mess with the buffer. Swap next
         # block of planned spends with the first non-empty one we come across.
@@ -228,10 +205,12 @@ class TestSimulator(ut.TestCase):
         self.assertTrue(sally.t + offset < len(sally.buffer))  # True w high prob
         self.assertTrue(len(sally.buffer[sally.t]) > 0)  # True w high prob
 
-        sally, old_stats = self.stepwise_predict_and_verify(dt, sally, 12)
+        sally, old_stats = self.stepwise_predict_and_verify(dt, sally, num_blocks)
         
     # @ut.skip("Skipping test_run")
     def test_run(self):
+        """ Tests the whole run() function. Not much to test, since the outcomes are random.
+        TODO: Improve test_run by checking that the correct number of blocks have been accounted for, etc."""
         sally = make_sally()  
         sally.run()
         self.assertTrue(len(sally.g.left_nodes) >= sally.runtime)  
@@ -241,7 +220,8 @@ class TestSimulator(ut.TestCase):
 
     # @ut.skip("Skipping test_make_coinbase")
     def test_make_coinbase(self):
-        """ test_make_coinbase tests making a coinbase output. TODO: should include a test that the buffer contains no repeats."""
+        """ test_make_coinbase tests making a coinbase output.
+        TODO: should include a test that the buffer contains no repeats."""
         # print("Beginning test_make_coinbase")
         sally = make_sally()
         self.assertEqual(len(sally.g.left_nodes), 0)
@@ -365,13 +345,6 @@ class TestSimulator(ut.TestCase):
          new_txn_bundles] = self.gather_stats(sally)
 
         # Test new stats against predictions based on old stats
-        # new_t, old_t, dt, new_num_left_nodes, old_num_left_nodes,
-        #                    left_nodes_to_be_added, new_num_right_nodes,
-        #                    old_num_right_nodes, right_nodes_to_be_added,
-        #                    new_num_red_edges, old_num_red_edges,
-        #                    red_edges_to_be_added,
-        #                    new_num_blue_edges, old_num_blue_edges,
-        #                    blue_edges_to_be_added
         self.new_vs_old(new_t, old_t, dt, new_num_left_nodes,
                         old_num_left_nodes, left_nodes_to_be_added,
                         new_num_right_nodes, old_num_right_nodes,
@@ -501,6 +474,6 @@ class TestSimulator(ut.TestCase):
         """ test_get_ring_dist : Check that ring selection is drawing ring members from the appropriate distribution. Requires statistical testing. TODO: TEST INCOMPLETE."""
         pass
 
-tests = [TestSimulator, TestSimulation]
+tests = [TestSimulator]
 for test in tests:
     ut.TextTestRunner(verbosity=2, failfast=True).run(ut.TestLoader().loadTestsFromTestCase(test))
