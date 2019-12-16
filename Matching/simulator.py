@@ -147,16 +147,20 @@ class Simulator(object):
             self.t += 1
             self.make_coinbase()
             self.spend_from_buffer()
+            # Temporary fix:
+            for i in range(self.t, len(self.buffer)):
+                buff = self.buffer[i]
+                to_push = [x for x in buff if x[1] + self.minspendtime > i]
+                self.buffer[i] = [x for x in buff if x not in to_push]
+                if i + 1 < len(self.buffer):
+                    self.buffer[i+1] += to_push
         return self.t+1 < self.runtime
 
     def run(self):
         """ run iteratively execute all timesteps, returning nothing. """
-        while self.t + 1 < self.runtime:
-            if self.t % 100 == 0:
-                print(".", end='')
-            self.t += 1
-            self.make_coinbase()
-            self.spend_from_buffer()
+        keep_going = self.halting_run()
+        while keep_going:
+            keep_going = self.halting_run()
 
     def make_coinbase(self):
         """ make_coinbase creates a new coinbase with reward based on the time. """
@@ -178,7 +182,8 @@ class Simulator(object):
         s = self.t + dt
         if s < len(self.buffer):
             # at block s, owner will send new_node to recip
-            self.buffer[s].append((owner, recip, node_to_spend))
+            assert (owner, recip, node_to_spend) not in self.buffer[s]
+            self.buffer[s] += [(owner, recip, node_to_spend)]
             assert node_to_spend[1] + self.minspendtime <= s
             assert s >= self.t + self.minspendtime
         # assert node_to_spend in self.amounts 
@@ -205,7 +210,7 @@ class Simulator(object):
         summary = []
         s = None
 
-        ring_member_choices = [x for x in list(self.g.left_nodes.keys()) if x[1] + self.minspendtime <= self.t]
+        ring_member_choices = [x for x in self.g.left_nodes if x[1] + self.minspendtime <= self.t]
         num_rmc = len(ring_member_choices)
         red_edges_per_sig = min(num_rmc, self.ringsize)
         # subset = all([any([y[2] == x for y in ring_member_choices]) for x in self.buffer[self.t]])
@@ -295,7 +300,6 @@ class Simulator(object):
                             assert new_reids == old_reids
                             assert new_beids == old_beids
 
-
                     summary[-1] += [new_right_nodes]
                     summary[-1] += [rings]
 
@@ -305,12 +309,33 @@ class Simulator(object):
                     old_beids = new_beids
 
                     # Create two new left nodes
-                    # print("Creating two new left nodes for this group")
+                    # Pick spendtimes and recipients and amounts for these new left nodes
+
                     change_node = self.g.add_node(0, self.t)
                     self.ownership[change_node] = k[0]
-                    recipient_node = self.g.add_node(0, self.t)
-                    self.ownership[recipient_node] = k[1]
+                    change_dt = self.pick_spend_time(k[0])
+                    change_next_recip = self.pick_next_recip(k[0])
+                    change_s = self.t + change_dt
+                    if change_s < len(self.buffer):
+                        assert not any([(k[0], change_next_recip, change_node) in buff for buff in self.buffer])
+                        self.buffer[change_s] += [(k[0], change_next_recip, change_node)]
 
+                    recip_node = self.g.add_node(0, self.t)
+                    self.ownership[recip_node] = k[1]
+                    recip_dt = self.pick_spend_time(k[1])
+                    recip_next_recip = self.pick_next_recip(k[1])
+                    recip_s = self.t + recip_dt
+                    if recip_s < len(self.buffer):
+                        assert not any([(k[1], recip_next_recip, recip_node) in buff for buff in self.buffer])
+                        self.buffer[recip_s] += [(k[1], recip_next_recip, recip_node)]
+
+                    u = random()
+                    self.amounts[change_node] = u*tot_amt
+                    self.amounts[recip_node] = tot_amt - self.amounts[change_node]
+                    summary[-1] += [(change_node, self.amounts[change_node])]
+                    summary[-1] += [(recip_node, self.amounts[recip_node])]
+
+                    # Update stats
                     new_lnids = len(self.g.left_nodes)
                     new_rnids = len(self.g.right_nodes)
                     new_reids = len(self.g.red_edges)
@@ -332,7 +357,7 @@ class Simulator(object):
                 for rnode in new_right_nodes:
                     # Add blue edges from each new right node to each new left node
                     # print("Adding blue edge for recipient")
-                    pair = (recipient_node, rnode)
+                    pair = (recip_node, rnode)
                     blue_eid = self.g.add_edge(0, pair, 1.0, self.t)
                     self.ownership[blue_eid] = self.ownership[blue_eid[0]]
 
@@ -392,13 +417,7 @@ class Simulator(object):
                         self.ownership[new_eid] = self.ownership[new_eid[1]]
                         ct += 1
 
-                    # Determine amounts.
-                    change = random()*tot_amt
-                    self.amounts[change_node] = change
-                    summary[-1] += [(change_node, change)]
-                    txn_amt = tot_amt - change
-                    self.amounts[recipient_node] = txn_amt
-                    summary[-1] += [(recipient_node, txn_amt)]
+
 
             new_lnids = len(self.g.left_nodes)
             new_rnids = len(self.g.right_nodes)
@@ -417,7 +436,7 @@ class Simulator(object):
                 print(s)
                 assert False
             assert new_beids == init_beids + blue_edges_to_be_added
-        else:
+        elif len(self.buffer[self.t]) > 0:
             # In this case, there are not enough ring members to construct full ring signatures; we assume
             # spenders decide to wait till the next block.
             self.buffer[self.t + 1] += self.buffer[self.t]

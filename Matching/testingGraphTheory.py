@@ -2408,6 +2408,7 @@ class TestBipartiteGraph(ut.TestCase):
 
 
 tests = [TestBipartiteGraph]
+# TODO: Better/more formal tests
 for test in tests:
     ttr = ut.TextTestRunner(verbosity=2, failfast=True)
     ttr.run(ut.TestLoader().loadTestsFromTestCase(test))

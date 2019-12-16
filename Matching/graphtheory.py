@@ -118,7 +118,9 @@ class BipartiteGraph(object):
           pair[0] not in left_nodes  or
           pair[1] not in right_nodes
         Otherwise update edge with color b and edge id (pair[0], pair[1], tag) 
-        to have weight w. Note: OVER-WRITES any previous edge weight of color b
+        to have weight w.
+
+        Note: OVER-WRITES any previous edge weight of color b
         with weight w and over-writes the weight of color 1-b with weight 0.0.
         """
         # print(pair)
@@ -249,6 +251,8 @@ class BipartiteGraph(object):
                 match the input color b)
             non_match_edges  :  edges with color b that are not in input_match 
                 excluding zero-weight edges
+
+        TODO: Re-evaluate this one for usefulness
         """
         # Check input_match is a match of color b
         try:
@@ -300,6 +304,7 @@ class BipartiteGraph(object):
         iterative symdif of input_match with a greedily-constructed vtx-disj
         subset of the shortest_paths_with_gains """
         # TODO: Should chk input match is a match.
+        # TODO: Rename
         assert b in [0, 1]
         result = input_match
         # s = "Starting clean with input_match = "
