@@ -568,7 +568,7 @@ class Simulator(object):
 
         elif red_edges_per_sig == self.ringsize:
             right_nodes_to_be_pushed = [x for x in self.buffer[self.t] if x[2] not in ring_member_choices]
-            if self.t + 1 < self.runtime:
+            if self.t + 1 < self.runtime and len(right_nodes_to_be_pushed) > 0:
                 self.buffer[self.t + 1] += right_nodes_to_be_pushed
             right_nodes_remaining = [x for x in self.buffer[self.t] if x not in right_nodes_to_be_pushed]
             self.buffer[self.t] = right_nodes_remaining
@@ -629,7 +629,7 @@ class Simulator(object):
                         self.ownership[new_red_edges[-1]] = self.ownership[new_red_edges[-1][1]]
 
                 self.look_for_dupes()
-        return [new_right_nodes, new_left_nodes, new_blue_edges, new_red_edges]
+        return [len(new_left_nodes), len(new_right_nodes), len(new_red_edges), len(new_blue_edges)]
 
     def halting_run(self):
         """ halting_run executes a single timestep and returns t+1 < runtime. """
@@ -688,18 +688,20 @@ class Simulator(object):
             assert new_stats[4] == old_stats[4] + new_predictions[3]
             self.look_for_dupes()
 
-            ring_member_choices = [x for x in self.g.left_nodes if x[1] + self.minspendtime <= self.t]
-            pending_nodes_remaining = [x for x in self.buffer[self.t] if x[2] in ring_member_choices]
-            bndl = groupby(pending_nodes_remaining, key=lambda x: (x[0], x[1]))
-            num_txns = sum(1 for k, grp in deepcopy(bndl))
-
             # Make predictions
             # predictions = [new_left, new_right, new_red, new_blue]
             # NOTE: These are in the order they occur in graphtheory but not the order that is returned from spend.
-            if len(new_rmc) <= self.ringsize:
+            if len(new_rmc) < self.ringsize:
                 new_predictions = [0, 0, 0, 0]
             else:
-                new_predictions = [2 * num_txns, len(pending_nodes_remaining), self.ringsize * len(pending_nodes_remaining), 2 * len(pending_nodes_remaining)]
+                pending_nodes_remaining = [x for x in self.buffer[self.t] if x[2] in new_rmc]
+                num_new_rights = len(pending_nodes_remaining)
+                num_new_reds = self.ringsize * num_new_rights
+                bndl = groupby(pending_nodes_remaining, key=lambda x: (x[0], x[1]))
+                num_txns = sum(1 for k, grp in deepcopy(bndl))
+                num_new_lefts = 2 * num_txns
+                num_new_blues = 2 * num_new_rights
+                new_predictions = [num_new_lefts, num_new_rights, num_new_reds, num_new_blues]
 
             # Reset old stats
             old_stats = new_stats
@@ -707,10 +709,10 @@ class Simulator(object):
             # Do a thing
             new_stuff = self.sspend_from_buffer()
 
-            assert len(new_stuff[0]) == 2 * num_txns  # left
-            assert len(new_stuff[1]) == len(pending_nodes_remaining)  # right
-            assert len(new_stuff[2]) == 2 * len(pending_nodes_remaining)  # blue
-            assert len(new_stuff[3]) == self.ringsize * len(pending_nodes_remaining)  # red
+            assert new_stuff[0] == new_predictions[0]  # left
+            assert new_stuff[1] == new_predictions[1]  # right
+            assert new_stuff[2] == new_predictions[2]  # red
+            assert new_stuff[3] == new_predictions[3]  # blue
 
             # Take new stats
             new_rmc = [x for x in self.g.left_nodes if x[1] + self.minspendtime <= self.t]
