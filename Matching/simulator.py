@@ -286,8 +286,6 @@ class Simulator(object):
                     (i)   New red edges from each ring member to each corresponding new right node
                     (ii)  2 new blue edges from each new right node to each corresponding pair of new output left nodes
 
-
-
         WARNING: We assume if a buffer keys has not yet entered the ring_member_choices set, then the key owner
         delays until the next block. This should not occur, but if it does it should not cause more than a single
         block delay.
@@ -307,7 +305,6 @@ class Simulator(object):
             self.buffer[self.t + 1] += self.buffer[self.t]
             self.buffer[self.t] = list()
         elif red_edges_per_sig == self.ringsize:
-
             init_lnids = len(self.g.left_nodes)
             init_rnids = len(self.g.right_nodes)
             init_reids = len(self.g.red_edges)
@@ -321,10 +318,10 @@ class Simulator(object):
             # Ensure buffer elements are spent after minspendtime and before runtime
             # TODO: Buffer elements are appearing before they should be legally spent, or the checks for this are wrong
             right_nodes_to_be_pushed = [x for x in self.buffer[self.t] if x[2] not in ring_member_choices]
-            right_nodes_remaining = [x for x in self.buffer[self.t] if x not in right_nodes_to_be_pushed]
             if self.t + 1 < self.runtime:
                 self.buffer[self.t + 1] += right_nodes_to_be_pushed
-                self.buffer[self.t] = right_nodes_remaining
+            right_nodes_remaining = [x for x in self.buffer[self.t] if x not in right_nodes_to_be_pushed]
+            self.buffer[self.t] = right_nodes_remaining
 
             self.look_for_dupes()
 
@@ -336,7 +333,7 @@ class Simulator(object):
 
             if len(right_nodes_remaining) > 0:
                 bndl = groupby(right_nodes_remaining, key=lambda x: (x[0], x[1]))
-                num_txn_bundles = len([1 for _ in deepcopy(bndl)])
+                num_txn_bundles = sum([1 for _ in deepcopy(bndl)])
                 left_nodes_to_be_added = 2 * num_txn_bundles  # Coinbase elsewhere
 
                 old_lnids = new_lnids
@@ -352,20 +349,12 @@ class Simulator(object):
                 for k, grp in bndl:
                     # Collect keys to be spent in this group.
                     temp = deepcopy(grp)
-                    keys_to_spend = [x[2] for x in temp if x[2] in ring_member_choices]
-
+                    keys_to_spend = [x[2] for x in temp]
                     assert all([x in ring_member_choices for x in keys_to_spend])
-
-                    # summary += [[keys_to_spend]]
-
-                    # Compute amount for those keys.
-                    # print("Computing amounts")
                     tot_amt = sum([self.amounts[x] for x in keys_to_spend])
-                    # summary[-1] += [tot_amt]
 
                     # Create new right node for each key being spent and generate a
                     # ring for that node.
-
                     temp = deepcopy(grp)
                     for x in keys_to_spend:
                         # x = (sender, receiver, node_id)
@@ -562,23 +551,188 @@ class Simulator(object):
 
         return s
 
+    def sspend_from_buffer(self):
+        ring_member_choices = [x for x in self.g.left_nodes if x[1] + self.minspendtime <= self.t]
+        num_rmc = len(ring_member_choices)
+        red_edges_per_sig = min(num_rmc, self.ringsize)
+
+        # We will return new_left, new_right, new_blue, new_red
+        new_right_nodes = []
+        new_left_nodes = []
+        new_blue_edges = []
+        new_red_edges = []
+
+        if len(self.buffer[self.t]) > 0 and red_edges_per_sig != self.ringsize and self.t + 1 < len(self.buffer):
+            self.buffer[self.t + 1] += self.buffer[self.t]
+            self.buffer[self.t] = list()
+
+        elif red_edges_per_sig == self.ringsize:
+            right_nodes_to_be_pushed = [x for x in self.buffer[self.t] if x[2] not in ring_member_choices]
+            if self.t + 1 < self.runtime:
+                self.buffer[self.t + 1] += right_nodes_to_be_pushed
+            right_nodes_remaining = [x for x in self.buffer[self.t] if x not in right_nodes_to_be_pushed]
+            self.buffer[self.t] = right_nodes_remaining
+
+            if len(right_nodes_remaining) > 0:
+                bndl = groupby(right_nodes_remaining, key=lambda x: (x[0], x[1]))
+                rings = dict()
+
+                for k, grp in deepcopy(bndl):
+                    temp = deepcopy(grp)
+                    keys_to_spend = [x[2] for x in temp]
+                    tot_amt = sum([self.amounts[x] for x in keys_to_spend])
+
+                    # New right nodes
+                    for x in keys_to_spend:
+                        new_right_nodes += [self.g.add_node(1, self.t)]
+                        self.ownership.update({new_right_nodes[-1]: k[0]})
+                        rings[new_right_nodes[-1]] = self.get_ring(x, ring_member_choices)
+
+                    u = random()
+
+                    # New left nodes
+                    new_left_nodes += [self.g.add_node(0, self.t)]
+                    recip_node = new_left_nodes[-1]
+                    self.ownership[recip_node] = k[1]
+                    recip_dt = self.pick_spend_time(k[1])
+                    recip_next_recip = self.pick_next_recip(k[1])
+                    recip_s = self.t + recip_dt
+                    if recip_s < len(self.buffer):
+                        assert not any([(k[1], recip_next_recip, recip_node) in buff for buff in self.buffer])
+                        self.buffer[recip_s] += [(k[1], recip_next_recip, recip_node)]
+                    self.amounts[recip_node] = u * tot_amt
+
+                    new_left_nodes += [self.g.add_node(0, self.t)]
+                    change_node = new_left_nodes[-1]
+                    change_node = self.g.add_node(0, self.t)
+                    self.ownership[change_node] = k[0]
+                    change_dt = self.pick_spend_time(k[0])
+                    change_next_recip = self.pick_next_recip(k[0])
+                    change_s = self.t + change_dt
+                    if change_s < len(self.buffer):
+                        assert not any([(k[0], change_next_recip, change_node) in buff for buff in self.buffer])
+                        self.buffer[change_s] += [(k[0], change_next_recip, change_node)]
+                    self.amounts[change_node] = tot_amt - self.amounts[recip_node]
+
+                for rnode in new_right_nodes:
+                    recip_pair = (recip_node, rnode)
+                    new_blue_edges += [self.g.add_edge(0, recip_pair, 1.0, self.t)]
+                    self.ownership[new_blue_edges[-1]] = self.ownership[new_blue_edges[-1][0]]
+
+                    change_pair = (change_node, rnode)
+                    new_blue_edges += [self.g.add_edge(0, change_pair, 1.0, self.t)]
+                    self.ownership[new_blue_edges[-1]] = self.ownership[new_blue_edges[-1][0]]
+
+                    for ring_member in rings[rnode]:
+                        ring_member_pair = (ring_member, rnode)
+                        new_red_edges += [self.g.add_edge(1, ring_member_pair, 1.0, self.t)]
+                        self.ownership[new_red_edges[-1]] = self.ownership[new_red_edges[-1][1]]
+
+                self.look_for_dupes()
+        return [new_right_nodes, new_left_nodes, new_blue_edges, new_red_edges]
+
     def halting_run(self):
         """ halting_run executes a single timestep and returns t+1 < runtime. """
         if self.t + 1 < self.runtime:
+            # Make predictions
+            old_predictions = [0, 0, 0, 0]
+
+            # Take old stats
+            old_bndl = groupby(self.buffer[self.t + 1], key=lambda x: (x[0], x[1]))
+            old_r = len(self.buffer[self.t + 1])
+            old_l = sum([1 for _ in deepcopy(old_bndl)])
+            old_rmc = [x for x in self.g.left_nodes if x[1] + self.minspendtime <= self.t]
+            old_stats = [self.t, len(self.g.left_nodes), len(self.g.right_nodes), len(self.g.red_edges),
+                         len(self.g.blue_edges), len(old_rmc)]
+
+            # Look: old_r = len(self.buffer[self.t + 1]) = number of new right nodes to be added in the next block
+            # Also: old_l = number of txn bundles, each producing two output (new left nodes) in the next block
+
+            # Do a thing
             if self.t % 100 == 0:
                 print(".", end='')
             self.t += 1
-            self.make_coinbase()
+
+            # Take new stats
+            new_rmc = [x for x in self.g.left_nodes if x[1] + self.minspendtime <= self.t]
+            new_stats = [self.t, len(self.g.left_nodes), len(self.g.right_nodes), len(self.g.red_edges),
+                         len(self.g.blue_edges), new_rmc]
+
+            # Check predictions
+            assert new_stats[0] == old_stats[0] + 1
+            assert new_stats[1] == old_stats[1] + old_predictions[0]
+            assert new_stats[2] == old_stats[2] + old_predictions[1]
+            assert new_stats[3] == old_stats[3] + old_predictions[2]
+            assert new_stats[4] == old_stats[4] + old_predictions[3]
             self.look_for_dupes()
-            self.spend_from_buffer()
+
+            # Make predictions
+            new_predictions = [1, 0, 0, 0]
+
+            # Reset old stats
+            old_stats = new_stats
+
+            # Do a thing
+            self.make_coinbase()
+
+            # Take new stats
+            new_rmc = [x for x in self.g.left_nodes if x[1] + self.minspendtime <= self.t]
+            new_stats = [self.t, len(self.g.left_nodes), len(self.g.right_nodes), len(self.g.red_edges),
+                         len(self.g.blue_edges), len(new_rmc)]
+
+            # Check predictions
+            assert new_stats[0] == old_stats[0]
+            assert new_stats[1] == old_stats[1] + new_predictions[0]
+            assert new_stats[2] == old_stats[2] + new_predictions[1]
+            assert new_stats[3] == old_stats[3] + new_predictions[2]
+            assert new_stats[4] == old_stats[4] + new_predictions[3]
+            self.look_for_dupes()
+
+            ring_member_choices = [x for x in self.g.left_nodes if x[1] + self.minspendtime <= self.t]
+            pending_nodes_remaining = [x for x in self.buffer[self.t] if x[2] in ring_member_choices]
+            bndl = groupby(pending_nodes_remaining, key=lambda x: (x[0], x[1]))
+            num_txns = sum(1 for k, grp in deepcopy(bndl))
+
+            # Make predictions
+            # predictions = [new_left, new_right, new_red, new_blue]
+            # NOTE: These are in the order they occur in graphtheory but not the order that is returned from spend.
+            if len(new_rmc) <= self.ringsize:
+                new_predictions = [0, 0, 0, 0]
+            else:
+                new_predictions = [2 * num_txns, len(pending_nodes_remaining), self.ringsize * len(pending_nodes_remaining), 2 * len(pending_nodes_remaining)]
+
+            # Reset old stats
+            old_stats = new_stats
+
+            # Do a thing
+            new_stuff = self.sspend_from_buffer()
+
+            assert len(new_stuff[0]) == 2 * num_txns  # left
+            assert len(new_stuff[1]) == len(pending_nodes_remaining)  # right
+            assert len(new_stuff[2]) == 2 * len(pending_nodes_remaining)  # blue
+            assert len(new_stuff[3]) == self.ringsize * len(pending_nodes_remaining)  # red
+
+            # Take new stats
+            new_rmc = [x for x in self.g.left_nodes if x[1] + self.minspendtime <= self.t]
+            new_stats = [self.t, len(self.g.left_nodes), len(self.g.right_nodes), len(self.g.red_edges),
+                         len(self.g.blue_edges), new_rmc]
+
+            # Check predictions
+            assert new_stats[0] == old_stats[0]
+            assert new_stats[1] == old_stats[1] + new_predictions[0]
+            assert new_stats[2] == old_stats[2] + new_predictions[1]
+            assert new_stats[3] == old_stats[3] + new_predictions[2]
+            assert new_stats[4] == old_stats[4] + new_predictions[3]
             self.look_for_dupes()
 
         return self.t+1 < self.runtime
 
     def run(self):
         """ run iteratively execute all timesteps, returning nothing. """
+        alpha = 0
         keep_going = self.halting_run()
         while keep_going:
+            alpha += 1
             keep_going = self.halting_run()
 
     def report(self):

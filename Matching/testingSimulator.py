@@ -35,6 +35,7 @@ def make_sally():
     sally = Simulator(par)
     return sally
 
+
 class TestSimulator(ut.TestCase):
     """ TestSimulator tests our simulator """
     # @ut.skip("Skipping test_init")
@@ -70,31 +71,10 @@ class TestSimulator(ut.TestCase):
         l = 0
         if sally.t + 1 < len(sally.buffer):
             bndl = groupby(sally.buffer[sally.t + 1], key = lambda x: (x[0], x[1]))
-            l = sum([1 for k, grp in deepcopy(bndl) for _ in grp])
+            l = sum([1 for _ in deepcopy(bndl)])
         rmc = [x for x in sally.g.left_nodes if x[1] + sally.minspendtime <= sally.t]
         return [sally.t, len(sally.g.left_nodes), len(sally.g.right_nodes), len(sally.g.red_edges),
                 len(sally.g.blue_edges), l, bndl, rmc]
-    # @staticmethod
-    # def gather_stats(sally):
-    #     """ Helper function that extracts some helpful statistics from the input simulator for use in the next
-    #     block. Note the index shift when computing ring member choices... """
-    #     t = sally.t
-    #     num_left_nodes = len(sally.g.left_nodes)
-    #     num_right_nodes = len(sally.g.right_nodes)
-    #     num_red_edges = len(sally.g.red_edges)
-    #     num_blue_edges = len(sally.g.blue_edges)
-    #
-    #     right_nodes_to_be_added = []
-    #     temp_to_spend = []
-    #     if t + 1 < len(sally.buffer):  # equivalently, sally.runtime instead of len(sally.buffer)
-    #         right_nodes_to_be_added = [x for x in sally.buffer[t+1] if x[1] + sally.minspendtime <= t+1]
-    #         temp_to_spend = sally.buffer[t + 1]
-    #     buffer_len = len(temp_to_spend)
-    #     txn_bundles = groupby(temp_to_spend, key=lambda x: (x[0], x[1]))
-    #     ring_member_choices = [x for x in sally.g.left_nodes if x[1] + sally.minspendtime <= sally.t]
-    #     return [t, num_left_nodes, num_right_nodes, num_red_edges,
-    #             num_blue_edges, buffer_len, txn_bundles, ring_member_choices]
-    #     # return [sally.t, len(sally.g.left_nodes), len(sally.g.right_nodes), len(sally.g.red_edges), len(sally.g.blue_edges), len(sally.buffer), groupby(sally.buffer[sally.t+1], key = lambda x: (x[0], x[1])), [x for x in sally.g.left_nodes if x[1] + sally.minspendtime <= sally.t]]
 
     def new_vs_old(self, new_t, old_t, new_num_left_nodes, old_num_left_nodes,
                    left_nodes_to_be_added, new_num_right_nodes,
@@ -178,33 +158,32 @@ class TestSimulator(ut.TestCase):
 
         old_stats = new_stats
 
-        # Proceed similarly until the next buffer element is non-empty and the number of ring_member_choices exceeds
-        # the ring size
+        # Proceed block by block until the next buffer element is non-empty, the num ring_member_choices sufficient
+        # or until runtime elapses
         keep_going = True
-        while len(sally.buffer[sally.t]) == 0 and len(new_ring_member_choices) < sally.ringsize and keep_going:
+        while len(sally.buffer[sally.t + 1]) == 0 and len(new_ring_member_choices) <= sally.ringsize and keep_going:
             keep_going = self.next_timestep(predictions, sally)
             new_stats = self.gather_stats(sally)
             new_ring_member_choices = new_stats[-1]
 
+        # Repeat all the above until a simulator is found with a non-empty next buffer element before runtime elapses
+        while sally.t >= sally.runtime:
+            sally = make_sally()
+            self.next_timestep(predictions, sally)
+            keep_going = True
+            while len(sally.buffer[sally.t + 1]) == 0 and len(new_ring_member_choices) <= sally.ringsize and keep_going:
+                keep_going = self.next_timestep(predictions, sally)
+                new_stats = self.gather_stats(sally)
+                new_ring_member_choices = new_stats[-1]
 
-        self.assertTrue(sally.t < sally.runtime or not keep_going)
 
-        # Manually mess with the buffer. Swap next
-        # block of planned spends with the first non-empty one we come across.
-        offset = 1
-        found = False
-        while sally.t + offset < len(sally.buffer) and len(sally.buffer[sally.t]) == 0 and not found:
-            if len(sally.buffer[sally.t + offset]) > 0:
-                temp = sally.buffer[sally.t]
-                sally.buffer[sally.t] = sally.buffer[sally.t + offset]
-                sally.buffer[sally.t + offset] = temp
-                found = True
-                break
-            offset += 1
-        self.assertTrue(sally.t + offset < len(sally.buffer) or not found)
 
         # Ensure only a single output is in the next buffer element
-        sally.buffer[sally.t] = [sally.buffer[sally.t][0]]
+        sally.buffer[sally.t + 1] = [sally.buffer[sally.t + 1][0]]
+        self.assertEqual(len(sally.buffer[sally.t + 1]), 1)
+
+        ring_member_choices = [x for x in self.g.left_nodes if x[1] + self.minspendtime <= self.t]
+        pending_nodes_remaining = [x for x in self.buffer[self.t] if x[2] in ring_member_choices]
 
         left_nodes_to_be_added = 3
         right_nodes_to_be_added = 1
@@ -334,7 +313,7 @@ class TestSimulator(ut.TestCase):
         # Spend from the buffer - since we reset the buffer index, this should add exactly one new right node,
         # two new left nodes, eff_rs new red edges, and 2 new blue edges.
 
-        sally.spend_from_buffer()
+        new_stuff = sally.sspend_from_buffer()
 
         new_stats = self.gather_stats(sally)
         [new_t, new_num_left_nodes, new_num_right_nodes, new_num_red_edges, new_num_blue_edges, new_buffer_len,
@@ -365,18 +344,15 @@ class TestSimulator(ut.TestCase):
         # Make some predictions
         right_nodes_to_be_added = old_buffer_len
         num_txn_bundles = sum([1 for k, grp in deepcopy(old_txn_bundles)])
-        num_true_spenders = sum([1 for k, grp in deepcopy(old_txn_bundles) for entry in deepcopy(grp)])
 
-        self.assertEqual(num_true_spenders, right_nodes_to_be_added)
-
-        blue_edges_to_be_added = 2 * num_true_spenders
+        blue_edges_to_be_added = 2 * right_nodes_to_be_added
         left_nodes_to_be_added = 2 * num_txn_bundles
         red_edges_per_sig = max(1, min(len(old_ring_member_choices), sally.ringsize))
-        red_edges_to_be_added = red_edges_per_sig * num_true_spenders
+        red_edges_to_be_added = red_edges_per_sig * right_nodes_to_be_added
 
         # Spend from dat buffer tho
         sally.t += 1
-        sally.spend_from_buffer()
+        new_stuff = sally.sspend_from_buffer()
 
         # Gather some "new" stats
         [new_t, new_num_left_nodes, new_num_right_nodes,
@@ -412,7 +388,7 @@ class TestSimulator(ut.TestCase):
             red_edges_to_be_added = red_edges_per_sig * num_true_spenders
 
             sally.t += 1
-            sally.spend_from_buffer()
+            new_stuff = sally.sspend_from_buffer()
 
             # Gather some "new" stats
             [new_t, new_num_left_nodes, new_num_right_nodes,
