@@ -320,7 +320,7 @@ class Simulator(object):
             right_nodes_to_be_pushed = [x for x in self.buffer[self.t] if x[2] not in ring_member_choices]
             if self.t + 1 < self.runtime:
                 self.buffer[self.t + 1] += right_nodes_to_be_pushed
-            right_nodes_remaining = [x for x in self.buffer[self.t] if x not in right_nodes_to_be_pushed]
+            right_nodes_remaining = tuple([x for x in self.buffer[self.t] if x not in right_nodes_to_be_pushed])
             self.buffer[self.t] = right_nodes_remaining
 
             self.look_for_dupes()
@@ -336,10 +336,10 @@ class Simulator(object):
                 num_txn_bundles = sum([1 for _ in deepcopy(bndl)])
                 left_nodes_to_be_added = 2 * num_txn_bundles  # Coinbase elsewhere
 
-                old_lnids = new_lnids
-                old_rnids = new_rnids
-                old_reids = new_reids
-                old_beids = new_beids
+                old_lnids = deepcopy(new_lnids)
+                old_rnids = deepcopy(new_rnids)
+                old_reids = deepcopy(new_reids)
+                old_beids = deepcopy(new_beids)
 
                 tot_ring_membs = 0
                 rings = dict()
@@ -364,16 +364,16 @@ class Simulator(object):
                         # Add new right nodes and set ownership.
                         new_right_nodes += [self.g.add_node(1, self.t)]
                         # print("Key k, thing x = " + str((k, x)))
-                        self.ownership.update({new_right_nodes[-1]: k[0]})
+                        self.ownership.update({deepcopy(new_right_nodes[-1]): k[0]})
 
                         temp_ring = self.get_ring(x, ring_member_choices)
                         assert len(temp_ring) == red_edges_per_sig
                         rings[new_right_nodes[-1]] = temp_ring
 
-                        old_lnids = new_lnids
-                        old_rnids = new_rnids
-                        old_reids = new_reids
-                        old_beids = new_beids
+                        old_lnids = deepcopy(new_lnids)
+                        old_rnids = deepcopy(new_rnids)
+                        old_reids = deepcopy(new_reids)
+                        old_beids = deepcopy(new_beids)
 
                         new_lnids = len(self.g.left_nodes)
                         new_rnids = len(self.g.right_nodes)
@@ -390,10 +390,10 @@ class Simulator(object):
                     # summary[-1] += [new_right_nodes]
                     # summary[-1] += [rings]
 
-                    old_lnids = new_lnids
-                    old_rnids = new_rnids
-                    old_reids = new_reids
-                    old_beids = new_beids
+                    old_lnids = deepcopy(new_lnids)
+                    old_rnids = deepcopy(new_rnids)
+                    old_reids = deepcopy(new_reids)
+                    old_beids = deepcopy(new_beids)
 
                     # Create two new left nodes
 
@@ -449,10 +449,10 @@ class Simulator(object):
                     assert new_reids == old_reids
                     assert new_beids == old_beids
 
-                    old_lnids = new_lnids
-                    old_rnids = new_rnids
-                    old_reids = new_reids
-                    old_beids = new_beids
+                    old_lnids = deepcopy(new_lnids)
+                    old_rnids = deepcopy(new_rnids)
+                    old_reids = deepcopy(new_reids)
+                    old_beids = deepcopy(new_beids)
 
                 self.look_for_dupes()
                 assert len(list(set(new_right_nodes))) == len(new_right_nodes)
@@ -485,10 +485,10 @@ class Simulator(object):
                     assert new_beids == old_beids + 2
                     assert len(rings[rnode]) == len(list(set(rings[rnode])))
 
-                    old_lnids = new_lnids
-                    old_rnids = new_rnids
-                    old_reids = new_reids
-                    old_beids = new_beids
+                    old_lnids = deepcopy(new_lnids)
+                    old_rnids = deepcopy(new_rnids)
+                    old_reids = deepcopy(new_reids)
+                    old_beids = deepcopy(new_beids)
 
                     # Add red edges to each ring member.
                     # print("Adding red edges to ring members")
@@ -519,10 +519,10 @@ class Simulator(object):
                             assert new_reids == old_reids
                             assert new_beids == old_beids
 
-                        old_lnids = new_lnids
-                        old_rnids = new_rnids
-                        old_reids = new_reids
-                        old_beids = new_beids
+                        old_lnids = deepcopy(new_lnids)
+                        old_rnids = deepcopy(new_rnids)
+                        old_reids = deepcopy(new_reids)
+                        old_beids = deepcopy(new_beids)
 
                         self.ownership[new_eid] = self.ownership[new_eid[1]]
                         ct += 1
@@ -563,16 +563,20 @@ class Simulator(object):
         new_red_edges = []
 
         if len(self.buffer[self.t]) > 0 and red_edges_per_sig != self.ringsize and self.t + 1 < len(self.buffer):
+            print("~~~> -1 self.buffer[self.t] " + str(self.buffer[self.t]))
             self.buffer[self.t + 1] += self.buffer[self.t]
+            print("~~~> 0 self.buffer[self.t] " + str(self.buffer[self.t]))
+            print("~~~> 0 self.buffer[self.t + 1] " + str(self.buffer[self.t + 1]))
+
             self.buffer[self.t] = list()
+            
+            print("~~~> 1 self.buffer[self.t] " + str(self.buffer[self.t]))
+            
 
         elif red_edges_per_sig == self.ringsize:
-            right_nodes_to_be_pushed = [x for x in self.buffer[self.t] if x[2] not in ring_member_choices]
-            if self.t + 1 < self.runtime and len(right_nodes_to_be_pushed) > 0:
-                self.buffer[self.t + 1] += right_nodes_to_be_pushed
-            right_nodes_remaining = [x for x in self.buffer[self.t] if x not in right_nodes_to_be_pushed]
-            self.buffer[self.t] = right_nodes_remaining
+            right_nodes_remaining = self.buffer[self.t]
 
+            print("~~~~~> right_nodes_remaining " + str(right_nodes_remaining))
             if len(right_nodes_remaining) > 0:
                 bndl = groupby(right_nodes_remaining, key=lambda x: (x[0], x[1]))
                 rings = dict()
@@ -583,7 +587,9 @@ class Simulator(object):
                     tot_amt = sum([self.amounts[x] for x in keys_to_spend])
 
                     # New right nodes
+                    print("keys_to_spend " + str(keys_to_spend))
                     for x in keys_to_spend:
+                        print("about to add a right node")
                         new_right_nodes += [self.g.add_node(1, self.t)]
                         self.ownership.update({new_right_nodes[-1]: k[0]})
                         rings[new_right_nodes[-1]] = self.get_ring(x, ring_member_choices)
@@ -604,7 +610,6 @@ class Simulator(object):
 
                     new_left_nodes += [self.g.add_node(0, self.t)]
                     change_node = new_left_nodes[-1]
-                    change_node = self.g.add_node(0, self.t)
                     self.ownership[change_node] = k[0]
                     change_dt = self.pick_spend_time(k[0])
                     change_next_recip = self.pick_next_recip(k[0])
@@ -629,6 +634,7 @@ class Simulator(object):
                         self.ownership[new_red_edges[-1]] = self.ownership[new_red_edges[-1][1]]
 
                 self.look_for_dupes()
+            
         return [len(new_left_nodes), len(new_right_nodes), len(new_red_edges), len(new_blue_edges)]
 
     def halting_run(self):
@@ -703,12 +709,23 @@ class Simulator(object):
                 num_new_blues = 2 * num_new_rights
                 new_predictions = [num_new_lefts, num_new_rights, num_new_reds, num_new_blues]
 
+            print("HR Predictions = " + str(new_predictions))
+            print("HR Current num left nodes = " + str(len(self.g.left_nodes)))
+            print("HR Current num right nodes = " + str(len(self.g.right_nodes)))
+            print("HR Current num red edges = " + str(len(self.g.red_edges)))
+            print("HR Current num blue edges = " + str(len(self.g.blue_edges)))
+            print("HR Predicted num left nodes = " + str(len(self.g.left_nodes) + new_predictions[0]))
+            print("HR Predicted num right nodes = " + str(len(self.g.right_nodes) + new_predictions[1]))
+            print("HR Predicted num red edges = " + str(len(self.g.red_edges) + new_predictions[2]))
+            print("HR Predicted num blue edges = " + str(len(self.g.blue_edges) + new_predictions[3]))
+            
             # Reset old stats
             old_stats = new_stats
 
             # Do a thing
             new_stuff = self.sspend_from_buffer()
-
+            print("New stuff = " + str(new_stuff))
+            
             assert new_stuff[0] == new_predictions[0]  # left
             assert new_stuff[1] == new_predictions[1]  # right
             assert new_stuff[2] == new_predictions[2]  # red
@@ -721,6 +738,10 @@ class Simulator(object):
 
             # Check predictions
             assert new_stats[0] == old_stats[0]
+            print("HR Observed num left nodes = " + str(new_stats[1]))
+            print("HR Observed num right nodes = " + str(new_stats[2]))
+            print("HR Observed num red edges = " + str(new_stats[3]))
+            print("HR Observed num blue edges = " + str(new_stats[4]))
             assert new_stats[1] == old_stats[1] + new_predictions[0]
             assert new_stats[2] == old_stats[2] + new_predictions[1]
             assert new_stats[3] == old_stats[3] + new_predictions[2]
