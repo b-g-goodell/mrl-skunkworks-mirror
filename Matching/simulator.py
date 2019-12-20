@@ -563,20 +563,19 @@ class Simulator(object):
         new_red_edges = []
 
         if len(self.buffer[self.t]) > 0 and red_edges_per_sig != self.ringsize and self.t + 1 < len(self.buffer):
-            print("~~~> -1 self.buffer[self.t] " + str(self.buffer[self.t]))
+            # print("~~~> -1 self.buffer[self.t] " + str(self.buffer[self.t]))
             self.buffer[self.t + 1] += self.buffer[self.t]
-            print("~~~> 0 self.buffer[self.t] " + str(self.buffer[self.t]))
-            print("~~~> 0 self.buffer[self.t + 1] " + str(self.buffer[self.t + 1]))
+            # print("~~~> 0 self.buffer[self.t] " + str(self.buffer[self.t]))
+            # print("~~~> 0 self.buffer[self.t + 1] " + str(self.buffer[self.t + 1]))
 
             self.buffer[self.t] = list()
             
-            print("~~~> 1 self.buffer[self.t] " + str(self.buffer[self.t]))
-            
+            # print("~~~> 1 self.buffer[self.t] " + str(self.buffer[self.t]))
 
         elif red_edges_per_sig == self.ringsize:
-            right_nodes_remaining = self.buffer[self.t]
+            right_nodes_remaining = [x for x in self.buffer[self.t] if x[2] in ring_member_choices]
 
-            print("~~~~~> right_nodes_remaining " + str(right_nodes_remaining))
+            # print("~~~~~> right_nodes_remaining " + str(right_nodes_remaining))
             if len(right_nodes_remaining) > 0:
                 bndl = groupby(right_nodes_remaining, key=lambda x: (x[0], x[1]))
                 rings = dict()
@@ -587,9 +586,9 @@ class Simulator(object):
                     tot_amt = sum([self.amounts[x] for x in keys_to_spend])
 
                     # New right nodes
-                    print("keys_to_spend " + str(keys_to_spend))
+                    # print("keys_to_spend " + str(keys_to_spend))
                     for x in keys_to_spend:
-                        print("about to add a right node")
+                        # print("about to add a right node")
                         new_right_nodes += [self.g.add_node(1, self.t)]
                         self.ownership.update({new_right_nodes[-1]: k[0]})
                         rings[new_right_nodes[-1]] = self.get_ring(x, ring_member_choices)
@@ -655,8 +654,8 @@ class Simulator(object):
             # Also: old_l = number of txn bundles, each producing two output (new left nodes) in the next block
 
             # Do a thing
-            if self.t % 100 == 0:
-                print(".", end='')
+            # if self.t % 100 == 0:
+            #     print(".", end='')
             self.t += 1
 
             # Take new stats
@@ -694,37 +693,34 @@ class Simulator(object):
             assert new_stats[4] == old_stats[4] + new_predictions[3]
             self.look_for_dupes()
 
-            # Make predictions
-            # predictions = [new_left, new_right, new_red, new_blue]
-            # NOTE: These are in the order they occur in graphtheory but not the order that is returned from spend.
-            if len(new_rmc) < self.ringsize:
-                new_predictions = [0, 0, 0, 0]
-            else:
-                pending_nodes_remaining = [x for x in self.buffer[self.t] if x[2] in new_rmc]
-                num_new_rights = len(pending_nodes_remaining)
-                num_new_reds = self.ringsize * num_new_rights
-                bndl = groupby(pending_nodes_remaining, key=lambda x: (x[0], x[1]))
-                num_txns = sum(1 for k, grp in deepcopy(bndl))
-                num_new_lefts = 2 * num_txns
-                num_new_blues = 2 * num_new_rights
-                new_predictions = [num_new_lefts, num_new_rights, num_new_reds, num_new_blues]
+            new_predictions = [0, 0, 0, 0]
+            num_rmc = len(new_rmc)
+            red_edges_per_sig = min(num_rmc, self.ringsize)
 
-            print("HR Predictions = " + str(new_predictions))
-            print("HR Current num left nodes = " + str(len(self.g.left_nodes)))
-            print("HR Current num right nodes = " + str(len(self.g.right_nodes)))
-            print("HR Current num red edges = " + str(len(self.g.red_edges)))
-            print("HR Current num blue edges = " + str(len(self.g.blue_edges)))
-            print("HR Predicted num left nodes = " + str(len(self.g.left_nodes) + new_predictions[0]))
-            print("HR Predicted num right nodes = " + str(len(self.g.right_nodes) + new_predictions[1]))
-            print("HR Predicted num red edges = " + str(len(self.g.red_edges) + new_predictions[2]))
-            print("HR Predicted num blue edges = " + str(len(self.g.blue_edges) + new_predictions[3]))
+            if red_edges_per_sig == self.ringsize:
+                right_nodes_remaining = [x for x in self.buffer[self.t] if x[2] in new_rmc]
+                if len(right_nodes_remaining) > 0:
+                    bndl = groupby(right_nodes_remaining, key=lambda x: (x[0], x[1]))
+                    num_txns = sum([1 for k, grp in bndl])
+                    num_new_rights = len(right_nodes_remaining)
+                    new_predictions = [2 * num_txns, num_new_rights, self.ringsize * num_new_rights, 2 * num_new_rights]
+
+            # print("HR Predictions = " + str(new_predictions))
+            # print("HR Current num left nodes = " + str(len(self.g.left_nodes)))
+            # print("HR Current num right nodes = " + str(len(self.g.right_nodes)))
+            # print("HR Current num red edges = " + str(len(self.g.red_edges)))
+            # print("HR Current num blue edges = " + str(len(self.g.blue_edges)))
+            # print("HR Predicted num left nodes = " + str(len(self.g.left_nodes) + new_predictions[0]))
+            # print("HR Predicted num right nodes = " + str(len(self.g.right_nodes) + new_predictions[1]))
+            # print("HR Predicted num red edges = " + str(len(self.g.red_edges) + new_predictions[2]))
+            # print("HR Predicted num blue edges = " + str(len(self.g.blue_edges) + new_predictions[3]))
             
             # Reset old stats
             old_stats = new_stats
 
             # Do a thing
             new_stuff = self.sspend_from_buffer()
-            print("New stuff = " + str(new_stuff))
+            # print("New stuff = " + str(new_stuff))
             
             assert new_stuff[0] == new_predictions[0]  # left
             assert new_stuff[1] == new_predictions[1]  # right
@@ -738,10 +734,10 @@ class Simulator(object):
 
             # Check predictions
             assert new_stats[0] == old_stats[0]
-            print("HR Observed num left nodes = " + str(new_stats[1]))
-            print("HR Observed num right nodes = " + str(new_stats[2]))
-            print("HR Observed num red edges = " + str(new_stats[3]))
-            print("HR Observed num blue edges = " + str(new_stats[4]))
+            # print("HR Observed num left nodes = " + str(new_stats[1]))
+            # print("HR Observed num right nodes = " + str(new_stats[2]))
+            # print("HR Observed num red edges = " + str(new_stats[3]))
+            # print("HR Observed num blue edges = " + str(new_stats[4]))
             assert new_stats[1] == old_stats[1] + new_predictions[0]
             assert new_stats[2] == old_stats[2] + new_predictions[1]
             assert new_stats[3] == old_stats[3] + new_predictions[2]

@@ -632,17 +632,17 @@ class BipartiteGraph(object):
         assert len(next_match) > 0 or len(wt_dct) == 0 
         lnm = len(next_match)
 
-        # Extend again and again
+        print("Extending match.")
         temp = None
         while next_match != temp and next_match is not None:
             temp = next_match
-            # print("Extending previous match.")
+            print(".", end='')
             next_match = self.extend(b, temp)
             assert len(next_match) >= len(temp)
             lnm = len(next_match)
 
 
-        # print("Boosting previous match")
+        print("\nBoosting previous match")
         temp = next_match
         w = sum([wt_dct[eid] for eid in temp])
         next_match = self.boost(b, temp)
@@ -650,11 +650,14 @@ class BipartiteGraph(object):
         v = sum([wt_dct[eid] for eid in next_match])
         assert len(temp) == len(next_match)
         while v - w > 0.0:
+            print(".", end='')
             temp = next_match
             # print("Boosting previous match")
             w = v
             next_match = self.boost(b, temp)
             v = sum([wt_dct[eid] for eid in next_match])
             assert len(temp) == len(next_match)
+
+        print("\n")
             
         return next_match

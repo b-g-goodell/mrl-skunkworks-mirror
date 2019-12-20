@@ -1,5 +1,5 @@
 import unittest as ut
-import itertools
+from itertools import groupby
 from graphtheory import *
 from simulator import *
 from copy import deepcopy
@@ -95,9 +95,10 @@ class TestSimulator(ut.TestCase):
         self.assertEqual(new_num_blue_edges, old_num_blue_edges +
                          blue_edges_to_be_added)
         return True
-        
+
     def next_timestep(self, predictions, sally):      
-        print("\nTimestep\n")      
+        # print("\nNT: Timestep\n")
+
         # Process old stats
         old_bndl = groupby(sally.buffer[sally.t], key=lambda x: (x[0], x[1]))
         old_r = len(sally.buffer[sally.t + 1])
@@ -106,60 +107,58 @@ class TestSimulator(ut.TestCase):
         old_stats = self.gather_stats(sally)
         [old_t, old_num_left_nodes, old_num_right_nodes, old_num_red_edges,
          old_num_blue_edges, old_buffer_len, old_txn_bundles, old_ring_member_choices] = old_stats
-         
-        print("old num left nodes = " + str(old_stats[1]))
-        print("old num right nodes = " + str(old_stats[2]))
-        print("old num red edges = " + str(old_stats[3]))
-        print("old num blue edges = " + str(old_stats[4]))
 
-        # Process prediction
-        predictions = [None, None, None, None]
-                
-        pending_nodes_remaining = [x for x in sally.buffer[sally.t] if x[2] in old_rmc]
-        
-        num_new_rights = len(pending_nodes_remaining)
-        num_new_reds = sally.ringsize * num_new_rights
-        bndl = groupby(pending_nodes_remaining, key=lambda x: (x[0], x[1]))
-        num_txns = sum(1 for k, grp in deepcopy(bndl))
-        num_new_lefts = 2 * num_txns + 1
-        num_new_blues = 2 * num_new_rights
-        
-        num_new_rights_prime = sum([1 for k, grp in deepcopy(bndl) for _ in keys_to_spend])
-        self.assertEqual(num_new_rights, num_new_rights_prime)
-        
-        predictions[0] = num_new_lefts
-        predictions[1] = num_new_rights
-        predictions[2] = num_new_reds
-        predictions[3] = num_new_blues
-       
-        print("Predicted num left nodes = " + str(old_stats[1] + predictions[0]))
-        print("Predicted num right nodes = " + str(old_stats[2] + predictions[1]))
-        print("Predicted num red edges = " + str(old_stats[3] + predictions[2]))
-        print("Predicted num blue edges = " + str(old_stats[4] + predictions[3]))
-        
-        # Simulate the next timestemp
-        result = sally.halting_run()
+        # print("NT: old num left nodes = " + str(old_stats[1]))
+        # print("NT: old num right nodes = " + str(old_stats[2]))
+        # print("NT: old num red edges = " + str(old_stats[3]))
+        # print("NT: old num blue edges = " + str(old_stats[4]))
+
+        # Generate prediction
+
+        predictions = [1, 0, 0, 0]
+        ring_member_choices = [x for x in sally.g.left_nodes if x[1] + sally.minspendtime <= sally.t + 1]
+        num_rmc = len(ring_member_choices)
+        red_edges_per_sig = min(num_rmc, sally.ringsize)
+
+        if red_edges_per_sig == sally.ringsize:
+            right_nodes_remaining = [x for x in sally.buffer[sally.t + 1] if x[2] in ring_member_choices]
+            if len(right_nodes_remaining) > 0:
+                bndl = groupby(right_nodes_remaining, key=lambda x: (x[0], x[1]))
+                num_txns = sum([1 for k, grp in bndl])
+                num_new_rights = len(right_nodes_remaining)
+                predictions = [1 + 2 * num_txns, num_new_rights, sally.ringsize * num_new_rights, 2 * num_new_rights]
+
+        # print("NT: Predicted num left nodes = " + str(old_stats[1] + predictions[0]))
+        # print("NT: Predicted num right nodes = " + str(old_stats[2] + predictions[1]))
+        # print("NT: Predicted num red edges = " + str(old_stats[3] + predictions[2]))
+        # print("NT: Predicted num blue edges = " + str(old_stats[4] + predictions[3]))
+
+        # Simulate the next timestep; this includes making coinbases.
+        sally.halting_run()
 
         # Gather some "new" stats
         new_stats = self.gather_stats(sally)
         [new_t, new_num_left_nodes, new_num_right_nodes,
          new_num_red_edges, new_num_blue_edges, new_buffer_len,
          new_txn_bundles, new_ring_member_choices] = new_stats
+
+        result = [new_stats[i] - old_stats[i] for i in range(len(new_stats) - 3)]
                   
         # Check predictions
         assert new_stats[0] == old_stats[0] + 1
         
-        print("Predictions = " + str(predictions))
-        
-        print("Observed num left nodes = " + str(new_stats[1]))
-        print("Observed num right nodes = " + str(new_stats[2]))
-        print("Observed num red edges = " + str(new_stats[3]))
-        print("Observed num blue edges = " + str(new_stats[4]))
+        # print("NT: Predictions = " + str(predictions))
+        #
+        # print("NT: Observed num left nodes = " + str(new_stats[1]))
+        # print("NT: Observed num right nodes = " + str(new_stats[2]))
+        # print("NT: Observed num red edges = " + str(new_stats[3]))
+        # print("NT: Observed num blue edges = " + str(new_stats[4]))
+        #
+        # print("new_stats " + str(new_stats))
+        # print("old stats " + str(old_stats))
+        # print("predictions " + str(predictions))
+        # print("delta (new - old) " + str(result))
 
-        print("new_stats " + str(new_stats))
-        print("old stats " + str(old_stats))
-        print("predictions " + str(predictions))
-        
         assert new_stats[1] == old_stats[1] + predictions[0]
         assert new_stats[2] == old_stats[2] + predictions[1]
         assert new_stats[3] == old_stats[3] + predictions[2]
@@ -216,18 +215,18 @@ class TestSimulator(ut.TestCase):
         # or until runtime elapses
         keep_going = True
         while len(sally.buffer[sally.t + 1]) == 0 and len(new_ring_member_choices) <= sally.ringsize and keep_going:
-            print("  Left nodes before next timestep " + str(list(sally.g.left_nodes.keys())))
-            print("  Right nodes before next timestep " + str(list(sally.g.right_nodes.keys())))
+            # print("  Left nodes before next timestep " + str(list(sally.g.left_nodes.keys())))
+            # print("  Right nodes before next timestep " + str(list(sally.g.right_nodes.keys())))
             old_stats = deepcopy(new_stats)
             [old_t, old_num_left_nodes, old_num_right_nodes, old_num_red_edges, old_num_blue_edges, old_buffer_len,
              old_txn_bundles, old_ring_member_choices] = old_stats
              
             keep_going = self.next_timestep(predictions, sally)
             
-            print("  Left nodes after next timestep " + str(list(sally.g.left_nodes.keys())))
-            print("  Right nodes after next timestep " + str(list(sally.g.right_nodes.keys())))
-            
-            print("  Predictions = " + str(predictions))
+            # print("  Left nodes after next timestep " + str(list(sally.g.left_nodes.keys())))
+            # print("  Right nodes after next timestep " + str(list(sally.g.right_nodes.keys())))
+            #
+            # print("  Predictions = " + str(predictions))
             new_stats = self.gather_stats(sally)
             [new_t, new_num_left_nodes, new_num_right_nodes, new_num_red_edges, new_num_blue_edges, new_buffer_len, new_txn_bundles, new_ring_member_choices] = new_stats
             self.assertEqual(new_num_left_nodes, old_num_left_nodes + predictions[0])
@@ -416,30 +415,29 @@ class TestSimulator(ut.TestCase):
         eff_rs = min(len(old_ring_member_choices), sally.ringsize)
 
         self.assertEqual(len(sally.buffer[sally.t]), 1)
+
+        # Make predictions
         
-        predictions = [None, None, None, None]
-        rmc = [x for x in sally.g.left_nodes if x[1] + sally.minspendtime <= sally.t]
-        pending_nodes_remaining = [x for x in sally.buffer[sally.t] if x[2] in rmc]
-        num_new_rights = len(pending_nodes_remaining)
-        num_new_reds = sally.ringsize * num_new_rights
-        bndl = groupby(pending_nodes_remaining, key=lambda x: (x[0], x[1]))
-        num_txns = sum(1 for k, grp in deepcopy(bndl))
-        num_new_lefts = 2 * num_txns
-        num_new_blues = 2 * num_new_rights
-        
-        num_new_rights_prime = sum([1 for k, grp in deepcopy(bndl) for _ in sally.buffer[sally.t]])
-        self.assertEqual(num_new_rights, num_new_rights_prime)
-        
-        predictions[0] = num_new_lefts
-        predictions[1] = num_new_rights
-        predictions[2] = num_new_reds
-        predictions[3] = num_new_blues
+        predictions = [0, 0, 0, 0]
+
+        ring_member_choices = [x for x in sally.g.left_nodes if x[1] + sally.minspendtime <= sally.t]
+        num_rmc = len(ring_member_choices)
+        red_edges_per_sig = min(num_rmc, sally.ringsize)
+
+        if red_edges_per_sig == sally.ringsize:
+            right_nodes_remaining = [x for x in sally.buffer[sally.t] if x[2] in ring_member_choices]
+            if len(right_nodes_remaining) > 0:
+                bndl = groupby(right_nodes_remaining, key=lambda x: (x[0], x[1]))
+                num_txns = sum([1 for k, grp in bndl])
+                num_new_rights = len(right_nodes_remaining)
+                predictions = [2 * num_txns, num_new_rights, sally.ringsize * num_new_rights, 2 * num_new_rights]
 
         # THIRD =====
         # Spend from the buffer - since we reset the buffer index, this should add exactly one new right node,
         # two new left nodes, eff_rs new red edges, and 2 new blue edges.
 
-        sally.sspend_from_buffer()
+        next_result = sally.sspend_from_buffer()
+        self.assertEqual(next_result, predictions)
 
         # We've now created the genesis block with the first coinbase output and nothing else.
 
@@ -624,6 +622,4 @@ class TestSimulator(ut.TestCase):
         """ test_get_ring_dist : Check that ring selection is drawing ring members from the appropriate distribution. Requires statistical testing. TODO: TEST INCOMPLETE."""
         pass
 
-tests = [TestSimulator]
-for test in tests:
-    ut.TextTestRunner(verbosity=2, failfast=True).run(ut.TestLoader().loadTestsFromTestCase(test))
+ut.TextTestRunner(verbosity=2, failfast=True).run(ut.TestLoader().loadTestsFromTestCase(TestSimulator))
