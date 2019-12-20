@@ -22,13 +22,13 @@ from copy import deepcopy
 TRUE_STOCHASTIC_MATRIX = [[0.1, 0.1, 1.0 - 0.1 - 0.1], [0.04, 0.0, 1.0 - 0.04], [2**(-7), 0.1, 1.0 - 0.1 - 2**(-7)]]
 
 MIN_SPENDTIME = 10
-RUNTIME = 10000
+RUNTIME = 400
 # RING_SIZES = [2**i for i in range(2, 4)]
-RING_SIZES = [11]
+RING_SIZES = [11, 22, 44, 88]
 # CHURN_LENGTHS = [i for i in range(1, 4)]
 CHURN_LENGTHS = [0]
 # EXP_SPENDTIMES = [10*i for i in range(1, 5)] # Expected number of blocks after min_spendtime each player spends
-EXP_SPENDTIMES = [540, 1080]  # 1080 = day and a half = around the median spendtime in Berfcoin
+EXP_SPENDTIMES = [54, 108]  # 1080 = day and a half = around the median spendtime in Berfcoin
 SPENDTIME_LAMBDAS = [lambda x: (1.0/ex)*((1.0 - (1.0/ex)**(x - MIN_SPENDTIME))) for ex in EXP_SPENDTIMES]
 # With N increments indexed 0, ..., N-1, then i/(N-1) partitions [0,1] uniformly
 # If N = 2, everything is trivial.
@@ -203,20 +203,27 @@ def run_experiment(sim_par, r, l, a, e, b, hr, sm, label):
 
     # Initialize a simulator
     sally = Simulator(sim_par)
+    ct = 0
 
     print("Constructing ledger.")
     # Simulate a ledger; do so until a ledger is found in which all parties own at least one edge.
     while sally.halting_run():
-        # print(".", end='')
+        ct += 1
+        if ct % 100 == 0:
+            print(".", end='')
         pass
     while not is_sally_suitable(sally):
-        # print()
+        print()
         sally = Simulator(sim_par)
         while sally.halting_run():
-            # print(".", end='')
+            ct += 1
+            if ct % 100 == 0:
+                print(".", end='')
             pass
     h = deepcopy(sally.g)
     # Send h to player (mock)
+
+    print("Setting ownership")
 
     # SECOND: Eve gains her own knowledge from running a KYC exchange and tries to find an estimate of ledger history.
     # Edges known by Eve and associated ownership info
@@ -228,6 +235,7 @@ def run_experiment(sim_par, r, l, a, e, b, hr, sm, label):
         eve_ownership[eid[1]] = sally.ownership[eid[1]]
 
     # Eve deletes known spurious ring members
+    print("Deleting known spurious ring members")
     to_del = [fid for fid in h.red_edges if any([eid[1] == fid[1] and fid != eid for eid in eve_ownership])]
     h.del_edge(to_del)
 
