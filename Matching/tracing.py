@@ -1,6 +1,10 @@
 from simulator import Simulator
 from math import sqrt, floor
 from copy import deepcopy
+import os
+
+if not os.path.exists('data'):
+    os.makedirs('data')
 
 # Presume we have the following:
 
@@ -22,9 +26,9 @@ from copy import deepcopy
 TRUE_STOCHASTIC_MATRIX = [[0.1, 0.1, 1.0 - 0.1 - 0.1], [0.04, 0.0, 1.0 - 0.04], [2**(-7), 0.1, 1.0 - 0.1 - 2**(-7)]]
 
 MIN_SPENDTIME = 10
-RUNTIME = 400
+RUNTIME = 100
 # RING_SIZES = [2**i for i in range(2, 4)]
-RING_SIZES = [11, 22, 44, 88]
+RING_SIZES = [11]
 # CHURN_LENGTHS = [i for i in range(1, 4)]
 CHURN_LENGTHS = [0]
 # EXP_SPENDTIMES = [10*i for i in range(1, 5)] # Expected number of blocks after min_spendtime each player spends
@@ -39,8 +43,9 @@ SPENDTIME_LAMBDAS = [lambda x: (1.0/ex)*((1.0 - (1.0/ex)**(x - MIN_SPENDTIME))) 
 # For N >= 5, we start getting some gradient in hashrates with less extreme cases.
 HASHRATE_INCREMENT = 4  # N >= 4 required, N >> 4 for wider exploration.
 HASHRATES = [[float(x)/(HASHRATE_INCREMENT-1), float(y)/(HASHRATE_INCREMENT-1), float(1.0 - x/(HASHRATE_INCREMENT-1) - y/(HASHRATE_INCREMENT-1))] for x in range(1, HASHRATE_INCREMENT) for y in range(1, HASHRATE_INCREMENT) if float(x)/(HASHRATE_INCREMENT-1) < 1/2 and float(y)/(HASHRATE_INCREMENT-1) < 1/2]
-FILENAME = "output.csv"
-SIM_FILENAME = "simulator-output.csv"
+FILENAME = "data/output.csv"
+SIM_FILENAME = "data/simulator-output-.csv"
+GRAPH_FILENAME = "data/graph-output-.csv"
 SAMPLE_SIZE = 1
 
 input_parameters = {}
@@ -180,7 +185,7 @@ def is_sally_suitable(sally):
     return len(owners) == 3
 
 
-def run_experiment(sim_par, r, l, a, e, b, hr, sm, label):
+def run_experiment(inp_sim_par, sm, label, verbosity):
     """ Actually run the experiment:
         sim_par = dictionary with input parameters for Simulator object
         r = ring_size
@@ -202,7 +207,7 @@ def run_experiment(sim_par, r, l, a, e, b, hr, sm, label):
     u = len(sm)
 
     # Initialize a simulator
-    sally = Simulator(sim_par)
+    sally = Simulator(inp_sim_par, verbosity)
     ct = 0
 
     print("Constructing ledger.")
@@ -214,12 +219,13 @@ def run_experiment(sim_par, r, l, a, e, b, hr, sm, label):
         pass
     while not is_sally_suitable(sally):
         print()
-        sally = Simulator(sim_par)
+        sally = Simulator(inp_sim_par)
         while sally.halting_run():
             ct += 1
             if ct % 100 == 0:
                 print(".", end='')
             pass
+
     h = deepcopy(sally.g)
     # Send h to player (mock)
 
@@ -256,18 +262,42 @@ def run_experiment(sim_par, r, l, a, e, b, hr, sm, label):
             age_of_ring_member = eid[2] - eid[0][1] + 1
             assert age_of_ring_member >= sally.minspendtime
             assert age_of_ring_member >= MIN_SPENDTIME
-            assert b(age_of_ring_member) > 0.0
+            assert inp_sim_par['spendtimes'][-1](age_of_ring_member) > 0.0  # Bob's spendtime
             ast.update({eid: age_of_ring_member})
+
+        if any([eid in eve_ownership for eid in ring]):
+            for eid in ring:
+                if eid in eve_ownership:
+                    h.red_edges[eid] = 1.0
+                    for fid in ring:
+                        if fid != eid:
+                            h.red_edges[fid] = 0.0
 
         base_likelihood = 1.0
         for eid in ast:
-            base_likelihood = base_likelihood * b(ast[eid])
+            base_likelihood = base_likelihood * inp_sim_par['spendtimes'][-1](ast[eid])
         for eid in ring:
-            h.red_edges[eid] = base_likelihood * a(ast[eid]) / b(ast[eid])
+            h.red_edges[eid] = base_likelihood * inp_sim_par['spendtimes'][0](ast[eid]) / inp_sim_par['spendtimes'][-1](ast[eid])
 
     # Eve finds optimal matching
     print("Eve finds optimal match.")
     x = h.optimize(1)
+    print(x, len(h.left_nodes))
+    fn = GRAPH_FILENAME[:-4] + str(label) + GRAPH_FILENAME[-4:]
+    with open(fn, "a") as wf:
+        line = ""
+        for edge_ident in x:
+            line += "Output "
+            line += str(edge_ident[0])
+            line += " owned by "
+            line += str(sally.ownership[edge_ident[0]])
+            line += " is thought by Eve to have created ring signature "
+            line += str(edge_ident[1])
+            line += ". This is actually owned by "
+            line += str(sally.ownership[edge_ident[1]])
+            line += ".\n"
+        wf.write(line)
+
 
     # Send h to challenger (mock)
 
@@ -281,10 +311,25 @@ def run_experiment(sim_par, r, l, a, e, b, hr, sm, label):
     line += "\n"
     return line
 
+
 # PARAMETER SPACE EXPLORATION:
-line = "RING_SIZE,CHURN_LENGTH,ALICE_EXP_SPENDTIME,EVE_EXP_SPENDTIME,BOB_EXP_SPENDTIME,ALICE_HASHRATE,EVE_HASHRATE,BOB_HASHRATE,pAA,pAE,pAB,pEA,pEE,pEB,pBA,pBE,pBB,SAMPLE,RUN,P,N,TP,TN,FP,FN,TPR,TNR,PPV,NPV,FNR,FPR,FDR,FOR,TS,ACC,F1,MCC,INF,MRK\n"
+line = "RUN"
+line += ",SAMPLE"
+line += ",SIM LABEL"
+line += ",RING_SIZE"
+line += ",CHURN_LENGTH"
+line += ",ALICE_EXP_SPENDTIME"
+line += ",EVE_EXP_SPENDTIME"
+line += ",BOB_EXP_SPENDTIME"
+line += ",ALICE_HASHRATE"
+line += ",EVE_HASHRATE"
+line += ",BOB_HASHRATE"
+line += ",pAA,pAE,pAB,pEA,pEE,pEB,pBA,pBE,pBB"
+line += ",P,N,TP,TN,FP,FN,TPR,TNR,PPV,NPV,FNR,FPR,FDR,FOR,TS,ACC,F1,MCC,INF,MRK\n"
 with open(FILENAME, "w+") as wf:
     wf.write(line)
+
+verbosity = True
 
 tot = len(RING_SIZES)*len(CHURN_LENGTHS)*(len(SPENDTIME_LAMBDAS)**3)*len(HASHRATES)*SAMPLE_SIZE
 ct = 0
@@ -298,6 +343,8 @@ for ring_size in RING_SIZES:
                 eve_spendtime = SPENDTIME_LAMBDAS[ie]
                 eve_exp_spendtime = EXP_SPENDTIMES[ie]
                 for ib in range(len(SPENDTIME_LAMBDAS)):
+                    # If alice and bob have the same dist, they are indistinguishable.
+                    # Cases when ia = ib can be used as Alice's best-case anonymity.
                     bob_spendtime = SPENDTIME_LAMBDAS[ib]
                     bob_exp_spendtime = EXP_SPENDTIMES[ib]
                     sim_spendtimes = [deepcopy(alice_spendtime) for i in range(churn_length+1)]
@@ -313,26 +360,32 @@ for ring_size in RING_SIZES:
                             print("Woops, tried to use a hashrate vector " + str(sim_hashrate) + " that doesn't sum to 1.0!")
                             assert False
                         for c in range(SAMPLE_SIZE):
-                            line = str(ring_size) + "," + str(churn_length) + "," + str(
-                                alice_exp_spendtime) + "," + str(eve_exp_spendtime) + "," + str(
-                                bob_exp_spendtime) + "," + str(hashrate[0]) + "," + str(hashrate[1]) + "," + str(
-                                hashrate[2]) + "," + str(TRUE_STOCHASTIC_MATRIX[0][0]) + "," + str(
-                                TRUE_STOCHASTIC_MATRIX[0][1]) + "," + str(TRUE_STOCHASTIC_MATRIX[0][2]) + "," + str(TRUE_STOCHASTIC_MATRIX[1][0]) + "," + str(
-                                TRUE_STOCHASTIC_MATRIX[1][1]) + "," + str(TRUE_STOCHASTIC_MATRIX[1][2]) + "," + str(
-                                TRUE_STOCHASTIC_MATRIX[2][0]) + "," + str(TRUE_STOCHASTIC_MATRIX[2][1])+ "," + str(TRUE_STOCHASTIC_MATRIX[2][2]) + "," + str(
-                                c) + "," + str(ct)  # No comma at the end
+                            line = "RUN"
+                            line += ",SAMPLE"
+                            line += ",SIM LABEL"
+                            line += ",RING_SIZE"
+                            line += ",CHURN_LENGTH"
+                            line += ",ALICE_EXP_SPENDTIME"
+                            line += ",EVE_EXP_SPENDTIME"
+                            line += ",BOB_EXP_SPENDTIME"
+                            line += ",ALICE_HASHRATE"
+                            line += ",EVE_HASHRATE"
+                            line += ",BOB_HASHRATE"
+                            line += ",pAA,pAE,pAB,pEA,pEE,pEB,pBA,pBE,pBB"
+                            line += ",P,N,TP,TN,FP,FN,TPR,TNR,PPV,NPV,FNR,FPR,FDR,FOR,TS,ACC,F1,MCC,INF,MRK\n"
 
-                            label = str(hash(line))
+                            label_msg = (ct, c, ring_size, churn_length, alice_exp_spendtime, eve_exp_spendtime, bob_exp_spendtime, hashrate[0], hashrate[1], hashrate[2], TRUE_STOCHASTIC_MATRIX[0][0],  TRUE_STOCHASTIC_MATRIX[0][1],  TRUE_STOCHASTIC_MATRIX[0][2],  TRUE_STOCHASTIC_MATRIX[1][0],  TRUE_STOCHASTIC_MATRIX[1][1],  TRUE_STOCHASTIC_MATRIX[1][2],  TRUE_STOCHASTIC_MATRIX[2][0],  TRUE_STOCHASTIC_MATRIX[2][1],  TRUE_STOCHASTIC_MATRIX[2][2])
+                            label = str(hash(label_msg))
                             label = label[-8:]
 
+                            line = str(ct) + "," + str(c) + "," + str(label) + "," + str(ring_size) + "," + str(churn_length) + "," + str(alice_exp_spendtime) + "," + str(eve_exp_spendtime) + "," + str(bob_exp_spendtime) + "," + str(hashrate[0]) + "," + str(hashrate[1]) + "," + str(hashrate[2]) + "," + str(TRUE_STOCHASTIC_MATRIX[0][0]) + "," + str(TRUE_STOCHASTIC_MATRIX[0][1]) + "," + str(TRUE_STOCHASTIC_MATRIX[0][2]) + "," + str(TRUE_STOCHASTIC_MATRIX[1][0]) + "," + str(TRUE_STOCHASTIC_MATRIX[1][1]) + "," + str(TRUE_STOCHASTIC_MATRIX[1][2]) + "," + str(TRUE_STOCHASTIC_MATRIX[2][0]) + "," + str(TRUE_STOCHASTIC_MATRIX[2][1])+ "," + str(TRUE_STOCHASTIC_MATRIX[2][2])   # No comma at the end
+
                             sim_par = dict()
-                            sim_par.update({'runtime': RUNTIME, 'filename': SIM_FILENAME,
-                                                'stochastic matrix': stoch_mat, 'hashrate': sim_hashrate,
-                                                'min spendtime': MIN_SPENDTIME, 'spendtimes': sim_spendtimes,
-                                                'ring size': ring_size, 'reporting modulus': 1})
+                            fn = SIM_FILENAME[:-4] + str(label) + SIM_FILENAME[-4:]
+                            sim_par.update({'runtime': RUNTIME, 'filename': fn, 'stochastic matrix': stoch_mat, 'hashrate': sim_hashrate, 'min spendtime': MIN_SPENDTIME, 'spendtimes': sim_spendtimes, 'ring size': ring_size, 'reporting modulus': 1})
 
                             print("Beginning run_experiment.")
-                            line += run_experiment(sim_par, ring_size, churn_length, alice_spendtime, eve_spendtime, bob_spendtime, hashrate, stoch_mat, label)
+                            line += run_experiment(sim_par, stoch_mat, label, verbosity)
                             with open(FILENAME, "a+") as wf:
                                 wf.write(line)
 

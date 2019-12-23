@@ -67,7 +67,7 @@ class Simulator(object):
         sally.run()
 
     """
-    def __init__(self, par=None):
+    def __init__(self, par=None, verbosity=False):
         """ See help(Simulator) """
         assert par is not None
         assert isinstance(par, dict)
@@ -112,6 +112,8 @@ class Simulator(object):
 
         self.runtime = par['runtime']  # int, positive
         self.fn = par['filename']  # str
+        with open(self.fn, "w+") as wf:
+            pass
         self.stoch_matrix = par['stochastic matrix']  # list
         self.hashrate = par['hashrate']  # list
         self.minspendtime = par['min spendtime']
@@ -136,6 +138,8 @@ class Simulator(object):
         self.next_mining_reward = EMISSION_RATIO*MAX_MONERO_ATOMIC_UNITS
         # Write to file each time these many blocks have been added
         self.reporting_modulus = par['reporting modulus']
+
+        self.verbosity = verbosity
 
     def pick_coinbase_owner(self):
         """ pick_coinbase_owner uses the hashrate vector to determine the owner of the next coinbase output."""
@@ -290,269 +294,9 @@ class Simulator(object):
         delays until the next block. This should not occur, but if it does it should not cause more than a single
         block delay.
         """
-        s = ""
 
         ring_member_choices = [x for x in self.g.left_nodes if x[1] + self.minspendtime <= self.t]
-        num_rmc = len(ring_member_choices)
-        red_edges_per_sig = min(num_rmc, self.ringsize)
-
-        self.look_for_dupes()
-
-        # FIRST ======
-        if len(self.buffer[self.t]) > 0 and red_edges_per_sig != self.ringsize and self.t + 1 < len(self.buffer):
-            # In this case, there are not enough ring members to construct full ring signatures; we assume
-            # spenders decide to wait till the next block.
-            self.buffer[self.t + 1] += self.buffer[self.t]
-            self.buffer[self.t] = list()
-        elif red_edges_per_sig == self.ringsize:
-            init_lnids = len(self.g.left_nodes)
-            init_rnids = len(self.g.right_nodes)
-            init_reids = len(self.g.red_edges)
-            init_beids = len(self.g.blue_edges)
-
-            new_lnids = len(self.g.left_nodes)
-            new_rnids = len(self.g.right_nodes)
-            new_reids = len(self.g.red_edges)
-            new_beids = len(self.g.blue_edges)
-
-            # Ensure buffer elements are spent after minspendtime and before runtime
-            # TODO: Buffer elements are appearing before they should be legally spent, or the checks for this are wrong
-            right_nodes_to_be_pushed = [x for x in self.buffer[self.t] if x[2] not in ring_member_choices]
-            if self.t + 1 < self.runtime:
-                self.buffer[self.t + 1] += right_nodes_to_be_pushed
-            right_nodes_remaining = tuple([x for x in self.buffer[self.t] if x not in right_nodes_to_be_pushed])
-            self.buffer[self.t] = right_nodes_remaining
-
-            self.look_for_dupes()
-
-            # SECOND ======
-            ct = 0
-            right_nodes_to_be_added = len(right_nodes_remaining)
-            blue_edges_to_be_added = 2 * len(right_nodes_remaining)
-            red_edges_to_be_added = red_edges_per_sig * len(right_nodes_remaining)
-
-            if len(right_nodes_remaining) > 0:
-                bndl = groupby(right_nodes_remaining, key=lambda x: (x[0], x[1]))
-                num_txn_bundles = sum([1 for _ in deepcopy(bndl)])
-                left_nodes_to_be_added = 2 * num_txn_bundles  # Coinbase elsewhere
-
-                old_lnids = deepcopy(new_lnids)
-                old_rnids = deepcopy(new_rnids)
-                old_reids = deepcopy(new_reids)
-                old_beids = deepcopy(new_beids)
-
-                tot_ring_membs = 0
-                rings = dict()
-                new_right_nodes = []
-
-                # THIRD ======
-                for k, grp in bndl:
-                    # Collect keys to be spent in this group.
-                    temp = deepcopy(grp)
-                    keys_to_spend = [x[2] for x in temp]
-                    assert all([x in ring_member_choices for x in keys_to_spend])
-                    tot_amt = sum([self.amounts[x] for x in keys_to_spend])
-
-                    # Create new right node for each key being spent and generate a
-                    # ring for that node.
-                    temp = deepcopy(grp)
-                    for x in keys_to_spend:
-                        # x = (sender, receiver, node_id)
-
-                        self.look_for_dupes()
-
-                        # Add new right nodes and set ownership.
-                        new_right_nodes += [self.g.add_node(1, self.t)]
-                        # print("Key k, thing x = " + str((k, x)))
-                        self.ownership.update({deepcopy(new_right_nodes[-1]): k[0]})
-
-                        temp_ring = self.get_ring(x, ring_member_choices)
-                        assert len(temp_ring) == red_edges_per_sig
-                        rings[new_right_nodes[-1]] = temp_ring
-
-                        old_lnids = deepcopy(new_lnids)
-                        old_rnids = deepcopy(new_rnids)
-                        old_reids = deepcopy(new_reids)
-                        old_beids = deepcopy(new_beids)
-
-                        new_lnids = len(self.g.left_nodes)
-                        new_rnids = len(self.g.right_nodes)
-                        new_reids = len(self.g.red_edges)
-                        new_beids = len(self.g.blue_edges)
-
-                        assert new_lnids == old_lnids
-                        assert new_rnids == old_rnids + 1
-                        assert new_reids == old_reids
-                        assert new_beids == old_beids
-
-                    self.look_for_dupes()
-
-                    # summary[-1] += [new_right_nodes]
-                    # summary[-1] += [rings]
-
-                    old_lnids = deepcopy(new_lnids)
-                    old_rnids = deepcopy(new_rnids)
-                    old_reids = deepcopy(new_reids)
-                    old_beids = deepcopy(new_beids)
-
-                    # Create two new left nodes
-
-                    change_node = self.g.add_node(0, self.t)
-                    recip_node = self.g.add_node(0, self.t)
-
-                    self.look_for_dupes()
-
-                    self.ownership[change_node] = k[0]
-                    self.ownership[recip_node] = k[1]
-
-                    # Pick spendtimes and recipients and amounts for these new left nodes
-
-                    change_dt = self.pick_spend_time(k[0])
-                    recip_dt = self.pick_spend_time(k[1])
-
-                    change_next_recip = self.pick_next_recip(k[0])
-                    recip_next_recip = self.pick_next_recip(k[1])
-
-                    change_s = self.t + change_dt
-                    recip_s = self.t + recip_dt
-
-                    # Add them to the buffer
-
-                    if change_s < len(self.buffer):
-                        assert not any([(k[0], change_next_recip, change_node) in buff for buff in self.buffer])
-                        self.buffer[change_s] += [(k[0], change_next_recip, change_node)]
-
-                    self.look_for_dupes()
-
-                    if recip_s < len(self.buffer):
-                        assert not any([(k[1], recip_next_recip, recip_node) in buff for buff in self.buffer])
-                        self.buffer[recip_s] += [(k[1], recip_next_recip, recip_node)]
-
-                    self.look_for_dupes()
-
-                    # Pick a random amount.
-                    u = random()
-                    self.amounts[change_node] = u*tot_amt
-                    self.amounts[recip_node] = tot_amt - self.amounts[change_node]
-
-                    # summary[-1] += [(change_node, self.amounts[change_node])]
-                    # summary[-1] += [(recip_node, self.amounts[recip_node])]
-
-                    # Update stats
-                    new_lnids = len(self.g.left_nodes)
-                    new_rnids = len(self.g.right_nodes)
-                    new_reids = len(self.g.red_edges)
-                    new_beids = len(self.g.blue_edges)
-
-                    assert new_lnids == old_lnids + 2
-                    assert new_rnids == old_rnids
-                    assert new_reids == old_reids
-                    assert new_beids == old_beids
-
-                    old_lnids = deepcopy(new_lnids)
-                    old_rnids = deepcopy(new_rnids)
-                    old_reids = deepcopy(new_reids)
-                    old_beids = deepcopy(new_beids)
-
-                self.look_for_dupes()
-                assert len(list(set(new_right_nodes))) == len(new_right_nodes)
-
-                # FOURTH ======
-                for rnode in new_right_nodes:
-                    # Add blue edges from each new right node to each new left node
-                    # print("Adding blue edge for recipient")
-                    pair = (recip_node, rnode)
-                    blue_eid = self.g.add_edge(0, pair, 1.0, self.t)
-                    self.ownership[blue_eid] = self.ownership[blue_eid[0]]
-
-                    self.look_for_dupes()
-
-                    # print("Adding blue edge for change")
-                    pairr = (change_node, rnode)
-                    blue_eidd = self.g.add_edge(0, pairr, 1.0, self.t)
-                    self.ownership[blue_eidd] = self.ownership[blue_eidd[0]]
-
-                    self.look_for_dupes()
-
-                    new_lnids = len(self.g.left_nodes)
-                    new_rnids = len(self.g.right_nodes)
-                    new_reids = len(self.g.red_edges)
-                    new_beids = len(self.g.blue_edges)
-
-                    assert new_lnids == old_lnids
-                    assert new_rnids == old_rnids
-                    assert new_reids == old_reids
-                    assert new_beids == old_beids + 2
-                    assert len(rings[rnode]) == len(list(set(rings[rnode])))
-
-                    old_lnids = deepcopy(new_lnids)
-                    old_rnids = deepcopy(new_rnids)
-                    old_reids = deepcopy(new_reids)
-                    old_beids = deepcopy(new_beids)
-
-                    # Add red edges to each ring member.
-                    # print("Adding red edges to ring members")
-                    # print("rnode = " + str(rnode))
-                    # print("rings[rnode] = " + str(rings[rnode]))
-                    for ring_member in rings[rnode]:
-                        pairrr = (ring_member, rnode)
-                        expected_new_eid = (pairrr[0], pair[1], self.t)
-                        assert expected_new_eid not in self.g.red_edges and expected_new_eid not in self.g.blue_edges
-                        if expected_new_eid not in self.g.red_edges:
-                            new_eid = self.g.add_edge(1, pairrr, 1.0, self.t)
-                            self.look_for_dupes()
-                        assert expected_new_eid == new_eid
-
-                        new_lnids = len(self.g.left_nodes)
-                        new_rnids = len(self.g.right_nodes)
-                        new_reids = len(self.g.red_edges)
-                        new_beids = len(self.g.blue_edges)
-
-                        if new_eid in self.g.red_edges:
-                            assert new_lnids == old_lnids
-                            assert new_rnids == old_rnids
-                            assert new_reids == old_reids + 1
-                            assert new_beids == old_beids
-                        else:
-                            assert new_lnids == old_lnids
-                            assert new_rnids == old_rnids
-                            assert new_reids == old_reids
-                            assert new_beids == old_beids
-
-                        old_lnids = deepcopy(new_lnids)
-                        old_rnids = deepcopy(new_rnids)
-                        old_reids = deepcopy(new_reids)
-                        old_beids = deepcopy(new_beids)
-
-                        self.ownership[new_eid] = self.ownership[new_eid[1]]
-                        ct += 1
-
-                self.look_for_dupes()
-
-                new_lnids = len(self.g.left_nodes)
-                new_rnids = len(self.g.right_nodes)
-                new_reids = len(self.g.red_edges)
-                new_beids = len(self.g.blue_edges)
-
-                assert new_lnids == init_lnids + left_nodes_to_be_added
-                assert new_rnids == init_rnids + right_nodes_to_be_added
-                # assert new_reids == init_reids + ct
-                s = "Expected " + str(red_edges_to_be_added)
-                s += " red edges to be added, but got " + str(new_reids - old_reids)
-                s += " new red edges instead."
-                try:
-                    assert new_reids == init_reids + red_edges_to_be_added
-                except AssertionError:
-                    print(s)
-                    assert False
-                assert new_beids == init_beids + blue_edges_to_be_added
-
-                self.look_for_dupes()
-
-        return s
-
-    def sspend_from_buffer(self):
-        ring_member_choices = [x for x in self.g.left_nodes if x[1] + self.minspendtime <= self.t]
+        assert all([x[2] in ring_member_choices for x in self.buffer[self.t]])
         num_rmc = len(ring_member_choices)
         red_edges_per_sig = min(num_rmc, self.ringsize)
 
@@ -561,23 +305,19 @@ class Simulator(object):
         new_left_nodes = []
         new_blue_edges = []
         new_red_edges = []
+        next_txn = []
 
         if len(self.buffer[self.t]) > 0 and red_edges_per_sig != self.ringsize and self.t + 1 < len(self.buffer):
-            # print("~~~> -1 self.buffer[self.t] " + str(self.buffer[self.t]))
             self.buffer[self.t + 1] += self.buffer[self.t]
-            # print("~~~> 0 self.buffer[self.t] " + str(self.buffer[self.t]))
-            # print("~~~> 0 self.buffer[self.t + 1] " + str(self.buffer[self.t + 1]))
-
             self.buffer[self.t] = list()
-            
-            # print("~~~> 1 self.buffer[self.t] " + str(self.buffer[self.t]))
 
         elif red_edges_per_sig == self.ringsize:
-            right_nodes_remaining = [x for x in self.buffer[self.t] if x[2] in ring_member_choices]
+            to_be_spent = deepcopy(self.buffer[self.t])
+            node_ids_to_be_spent = [x[2] for x in to_be_spent]
 
             # print("~~~~~> right_nodes_remaining " + str(right_nodes_remaining))
-            if len(right_nodes_remaining) > 0:
-                bndl = groupby(right_nodes_remaining, key=lambda x: (x[0], x[1]))
+            if len(to_be_spent) > 0:
+                bndl = groupby(to_be_spent, key=lambda x: (x[0], x[1]))
                 rings = dict()
 
                 for k, grp in deepcopy(bndl):
@@ -632,6 +372,17 @@ class Simulator(object):
                         new_red_edges += [self.g.add_edge(1, ring_member_pair, 1.0, self.t)]
                         self.ownership[new_red_edges[-1]] = self.ownership[new_red_edges[-1][1]]
 
+                    with open(self.fn, "a") as wf:
+                        # Note: generally more than one ring signature is used to create new left nodes, so expect
+                        # overlap in the resulting file.
+                        line = "Party " + str(self.ownership[rnode]) + " constructs new ring signature " + str(
+                            rnode) + " with ring members " + str(
+                            rings[rnode]) + ", authorizing the creation of new left node " + str(
+                            recip_node) + " owned by party " + str(
+                            self.ownership[recip_node]) + " and new left node " + str(
+                            change_node) + " owned by party " + str(self.ownership[change_node]) + ".\n"
+                        wf.write(line)
+
                 self.look_for_dupes()
             
         return [len(new_left_nodes), len(new_right_nodes), len(new_red_edges), len(new_blue_edges)]
@@ -657,6 +408,8 @@ class Simulator(object):
             # if self.t % 100 == 0:
             #     print(".", end='')
             self.t += 1
+            with open(self.fn, "a") as wf:
+                wf.write("Beginning block height " + str(self.t) + ".\n")
 
             # Take new stats
             new_rmc = [x for x in self.g.left_nodes if x[1] + self.minspendtime <= self.t]
@@ -678,7 +431,12 @@ class Simulator(object):
             old_stats = new_stats
 
             # Do a thing
-            self.make_coinbase()
+            node_id, time_interval = self.make_coinbase()
+            ow = self.ownership[node_id]
+            with open(self.fn, "a") as wf:
+                wf.write("Party " + str(ow) + " mines a new coinbase output with node_id " + str(node_id) + ".\n")
+
+
 
             # Take new stats
             new_rmc = [x for x in self.g.left_nodes if x[1] + self.minspendtime <= self.t]
@@ -719,7 +477,7 @@ class Simulator(object):
             old_stats = new_stats
 
             # Do a thing
-            new_stuff = self.sspend_from_buffer()
+            new_stuff = self.spend_from_buffer()
             # print("New stuff = " + str(new_stuff))
             
             assert new_stuff[0] == new_predictions[0]  # left

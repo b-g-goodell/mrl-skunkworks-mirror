@@ -436,7 +436,7 @@ class TestSimulator(ut.TestCase):
         # Spend from the buffer - since we reset the buffer index, this should add exactly one new right node,
         # two new left nodes, eff_rs new red edges, and 2 new blue edges.
 
-        next_result = sally.sspend_from_buffer()
+        next_result = sally.spend_from_buffer()
         self.assertEqual(next_result, predictions)
 
         # We've now created the genesis block with the first coinbase output and nothing else.
@@ -477,7 +477,7 @@ class TestSimulator(ut.TestCase):
 
         # Spend from dat buffer tho
         sally.t += 1
-        new_stuff = sally.sspend_from_buffer()
+        new_stuff = sally.spend_from_buffer()
 
         # Gather some "new" stats
         [new_t, new_num_left_nodes, new_num_right_nodes,
@@ -513,7 +513,7 @@ class TestSimulator(ut.TestCase):
             red_edges_to_be_added = red_edges_per_sig * num_true_spenders
 
             sally.t += 1
-            new_stuff = sally.sspend_from_buffer()
+            new_stuff = sally.spend_from_buffer()
 
             # Gather some "new" stats
             [new_t, new_num_left_nodes, new_num_right_nodes,
