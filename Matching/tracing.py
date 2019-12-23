@@ -290,11 +290,11 @@ def run_experiment(inp_sim_par, sm, label, verbosity):
             line += "Output "
             line += str(edge_ident[0])
             line += " owned by "
-            line += str(sally.ownership[edge_ident[0]])
+            line += sally.owner_names[sally.ownership[edge_ident[0]]]
             line += " is thought by Eve to have created ring signature "
             line += str(edge_ident[1])
-            line += ". This is actually owned by "
-            line += str(sally.ownership[edge_ident[1]])
+            line += ". In reality, this ring signature is owned by  "
+            line += sally.owner_names[sally.ownership[edge_ident[1]]]
             line += ".\n"
         wf.write(line)
 

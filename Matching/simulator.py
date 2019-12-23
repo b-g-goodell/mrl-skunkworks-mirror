@@ -140,6 +140,7 @@ class Simulator(object):
         self.reporting_modulus = par['reporting modulus']
 
         self.verbosity = verbosity
+        self.owner_names = {0: "Alice", 1: "Eve", -2: "Eve", 2: "Bob", -1: "Bob"}
 
     def pick_coinbase_owner(self):
         """ pick_coinbase_owner uses the hashrate vector to determine the owner of the next coinbase output."""
@@ -306,6 +307,7 @@ class Simulator(object):
         new_blue_edges = []
         new_red_edges = []
         next_txn = []
+        true_spender_ring_sig_relation = {}
 
         if len(self.buffer[self.t]) > 0 and red_edges_per_sig != self.ringsize and self.t + 1 < len(self.buffer):
             self.buffer[self.t + 1] += self.buffer[self.t]
@@ -332,6 +334,7 @@ class Simulator(object):
                         new_right_nodes += [self.g.add_node(1, self.t)]
                         self.ownership.update({new_right_nodes[-1]: k[0]})
                         rings[new_right_nodes[-1]] = self.get_ring(x, ring_member_choices)
+                        true_spender_ring_sig_relation.update({new_right_nodes[-1]: x})
 
                     u = random()
 
@@ -375,12 +378,11 @@ class Simulator(object):
                     with open(self.fn, "a") as wf:
                         # Note: generally more than one ring signature is used to create new left nodes, so expect
                         # overlap in the resulting file.
-                        line = "Party " + str(self.ownership[rnode]) + " constructs new ring signature " + str(
+                        line = self.owner_names[self.ownership[rnode]] + " constructs new ring signature " + str(
                             rnode) + " with ring members " + str(
-                            rings[rnode]) + ", authorizing the creation of new left node " + str(
-                            recip_node) + " owned by party " + str(
-                            self.ownership[recip_node]) + " and new left node " + str(
-                            change_node) + " owned by party " + str(self.ownership[change_node]) + ".\n"
+                            rings[rnode]) + " and true spender " + str(true_spender_ring_sig_relation[rnode]) + ", authorizing the creation of new left node " + str(
+                            recip_node) + " owned by " + self.owner_names[self.ownership[recip_node]] + " and new left node " + str(
+                            change_node) + " owned by " + self.owner_names[self.ownership[change_node]] + ".\n"
                         wf.write(line)
 
                 self.look_for_dupes()
@@ -434,7 +436,7 @@ class Simulator(object):
             node_id, time_interval = self.make_coinbase()
             ow = self.ownership[node_id]
             with open(self.fn, "a") as wf:
-                wf.write("Party " + str(ow) + " mines a new coinbase output with node_id " + str(node_id) + ".\n")
+                wf.write(self.owner_names[ow] + " mines a new coinbase output with node_id " + str(node_id) + ".\n")
 
 
 
