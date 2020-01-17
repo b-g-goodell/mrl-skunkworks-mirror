@@ -962,7 +962,7 @@ class TestSimulator(ut.TestCase):
                             for x in R:
                                 self.assertTrue(any([edge_id[0] == x and edge_id[1] == y for edge_id in sally.g.red_edges]))
     
-    @ut.skip("Skipping test_run_from_simulated")
+    # @ut.skip("Skipping test_run_from_simulated")
     def test_run_from_simulated(self):
         sally = make_simulated_simulator()
         try:
