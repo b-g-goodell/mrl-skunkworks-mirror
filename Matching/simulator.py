@@ -1,536 +1,394 @@
 from itertools import groupby
 from graphtheory import *
-from random import *
+from random import random, sample, choice
 from copy import deepcopy
 
 MAX_MONERO_ATOMIC_UNITS = 2**64 - 1
 EMISSION_RATIO = 2**-18
+EMISSION_RATIO_COMPLEMENT = 1.0 - EMISSION_RATIO
 MIN_MINING_REWARD = 6e11
+OWNERSHIP_DICT = {0: "Alice", 1: "Eve", 2: "Bob"}
 
 
 class Simulator(object):
     """
-    Simulator object that generates a Monero-style ledger using a Markov chain; technically not a Markov process because
-    the time delay between events is not memoryless due to min spend-times.
+    Simulator
 
-    Attributes:
-        runtime                  : positive integer
-        fn                       : string
-        stoch_matrix             : matrix (list of lists)
-        hashrate                 : list
-        minspendtime             : positive integer
-        spendtimes               : list of lambda functions
-        ringsize                 : positive integer
-        mode                     : string, "uniform" only option presently supported TODO: add other ring selection modes
-        buffer                   : list
-        ownership                : dict(), GROUND TRUTH
-        amounts                  : dict()
-        g                        : BipartiteGraph()
-        t                        : non-negative integer (time)
-        dummy_monero_mining_flat : Boolean
-        next_mining_reward       : positive integer, EMISSION_RATIO*MAX_MONERO_ATOMIC_UNITS only option presently
-        reporting_modulus        : positive integer, how often we write to file
+    Simulates an economy with a Markov chain between Alice (single party), Eve (a KYC large institution), Bob (all
+    other background players). Stores transactions in a Monero-style ledger by using a Bipartite Graph and a
+    dictionary tracking ground truth ownership and amounts.
 
-    Initialization: Input dictionary par has the following key-value pairs:
-        'runtime'                : simulation runtime, bounds t, number of blocks
-        'filename'               : stored in fn
-        'stochastic matrix'      : input stochastic matrix governing the economy
-        'hashrate'               : vector of hashrates, index here = index in stochastic_matrix
-        'spendtimes'             : list of lambda functions
-        'min spendtime'          : minimal amount of time spenders must wait before spending
-        'ring size'              : size of red-neighbor set of a given right-node
-
-    Methods:
-        halting_run          : Execute next timestep of simulation.
-        run                  : Execute all timesteps of simulation.
-        make_coinbase        : Add a new coinbase key (left node) to the ledger with reward based on this timestep.
-        spend_from_buffer    : Add new signatures (right nodes with some new left nodes) to the ledger buffered for this timestep.
-        report               : Write to file TODO: Do I still use report? I don't think so...
-        pick_coinbase_owner  : Sample a coinbase owner based on hashrate vector.
-        pick_coinbase_amt    : Compute coinbase amount based on block height.
-        pick_spend_time      : Sample a spendtime for a new left node
-        pick_next_recip      : Sample a recipient for the transaction using stochastic matrix.
-        get_ring             : Sample a ring
-
-    Example Usage:
-        sm = [[2**(-8), 2**(-3), 1.0 - 2**(-3) - 2**(-8)],
-              [2**(-4), 2**(-3), 1.0 - 2**(-3) - 2**(-4)],
-              [2**(-1), 2**(-2), 1.0 - 2**(-1) - 2**(-2)]]
-        hr = [2**-5, 2**-5, 1.0 - 2**-5 - 2**-4]
-        mst = 10
-        st = [lambda x: (1.0/2.0)*((1.0 - (1.0/2.0)**(x - mst))),
-              lambda x: (1.0/5.0)*((1.0 - (1.0/5.0)**(x - mst))),
-              lambda x: (1.0/6.0)*((1.0 - (1.0/6.0)**(x - mst)))]
-        par = {'runtime': 100, 'filename': "output.csv", 'stochastic matrix': sm, 'hashrate': hr, 'spendtimes': st,
-               'min spendtime': mst, 'ring size': 11}
-        sally = Simulator(par)
-        sally.run()
+    Methods in this class are ordered first according to dependency upon other methods and second according to elegance.
 
     """
-    def __init__(self, par=None, verbosity=False):
-        """ See help(Simulator) """
-        assert par is not None
-        assert isinstance(par, dict)
-        assert 'runtime' in par
-        assert isinstance(par['runtime'], int)
-        assert par['runtime'] > 0
-        assert 'filename' in par
-        assert isinstance(par['filename'], str)
-        assert 'stochastic matrix' in par
-        assert isinstance(par['stochastic matrix'], list)
-        for row in par['stochastic matrix']:
-            assert isinstance(row, list)
-            for elt in row:
-                assert isinstance(elt, float)
-                assert 0.0 <= elt <= 1.0
-            # print(row, sum(row))
-            try:
-                assert sum(row) == 1.0
-            except AssertionError:
-                print("Woops, row didn't sum to 1.0 : " + str(row))
-                assert False
-        assert 'hashrate' in par
-        assert isinstance(par['hashrate'], list)
-        for elt in par['hashrate']:
-            assert isinstance(elt, float)
-            assert 0.0 <= elt <= 1.0
-        try:
-            assert sum(par['hashrate']) == 1.0
-        except AssertionError:
-            print("Woopsie! Tried to use a hashrate vector that doesn't sum to 1.0... offending vector = " + str(par['hashrate']))
-            assert False
-        assert 'spendtimes' in par
-        assert isinstance(par['spendtimes'], list)
-        for elt in par['spendtimes']:
-            assert callable(elt)
-        assert 'min spendtime' in par
-        assert isinstance(par['min spendtime'], int)
-        assert par['min spendtime'] > 0
-        assert 'ring size' in par
-        assert isinstance(par['ring size'], int)
-        assert par['ring size'] > 0
-
-        self.runtime = par['runtime']  # int, positive
-        self.fn = par['filename']  # str
-        with open(self.fn, "w+") as wf:
+    def __init__(self, inp=None):
+        self.runtime = inp['runtime']
+        self.hashrate = inp['hashrate']
+        self.stochastic_matrix = inp['stochastic matrix']
+        self.spend_times = inp['spend times']
+        self.min_spend_time = inp['min spend time']
+        self.ringsize = inp['ring size']
+        self.flat = inp['flat']  # boolean : are block rewards flat yet?
+        self.dt = inp['timestep']  # = 1
+        assert self.dt >= 1
+        self.max_atomic_units = inp['max atomic']  # 2**64 - 1 in monero
+        self.emission = inp['emission']  # 2**-18 in monero
+        self.min_reward = inp['min reward']  # 6e11 in Monero
+        self.filename = inp['filename']
+        with open(self.filename, "w+"):
             pass
-        self.stoch_matrix = par['stochastic matrix']  # list
-        self.hashrate = par['hashrate']  # list
-        self.minspendtime = par['min spendtime']
-        # dict with lambda functions 
-        # PMFs with support on minspendtime, minspendtime + 1, ...
-        self.spendtimes = par['spendtimes'] 
-        self.ringsize = par['ring size']  # int, positive
-        if 'ring selection mode' not in par or \
-                par['ring selection mode'] is None:
-            self.mode = "uniform" 
-        else:
-            # str, "uniform" or "monerolink"
-            self.mode = par['ring selection mode'] 
-        self.buffer = [list() for i in range(self.runtime)]
+
+        # self.next_mining_reward = EMISSION_RATIO*MAX_MONERO_ATOMIC_UNITS
+        self.next_mining_reward = self.emission*self.max_atomic_units
+
+        self.t = 0
         self.ownership = dict()
         self.amounts = dict()
+        self.real_red_edges = dict()
+        self.buffer = []
+        for i in range(self.runtime):
+            self.buffer += [[]]
         self.g = BipartiteGraph()
-        self.t = 0
-        # whether constant block reward has started
-        self.dummy_monero_mining_flat = False  
-        open(self.fn, "w+").close()
-        self.next_mining_reward = EMISSION_RATIO*MAX_MONERO_ATOMIC_UNITS
-        # Write to file each time these many blocks have been added
-        self.reporting_modulus = par['reporting modulus']
 
-        self.verbosity = verbosity
-        self.owner_names = {0: "Alice", 1: "Eve", -2: "Eve", 2: "Bob", -1: "Bob"}
+    def gen_time_step(self):
+        # Someone else can make this different if they like... madness
+        return min(1, self.dt)
 
-    def pick_coinbase_owner(self):
-        """ pick_coinbase_owner uses the hashrate vector to determine the owner of the next coinbase output."""
-        r = random()
-        u = 0
-        i = 0
-        found = False
-        while i < len(self.hashrate):
-            u += self.hashrate[i]
-            if u > r:
-                found = True
-                break
-            else:
-                i += 1
-        assert found
-        assert i in range(len(self.hashrate))
-        return i
+    def gen_coinbase_owner(self):
+        """ Generate a random coinbase owner based on hashrate. """
+        out, r = 0, random()
+        u = self.hashrate[out]
+        while r > u and out + 1 < len(self.hashrate):
+            out += 1
+            u += self.hashrate[out]
+        if out >= len(self.hashrate):
+            # raise Exception("Error in gen_coinbase_owner: tried to generate an index with pmf "
+            # + str(self.hashrate) + " but got " + str(out))
+            raise LookupError
+        return out
 
-    def pick_coinbase_amt(self):
-        """ pick_coinbase_amt starts with a max reward, multiplies the last mining
-        reward by a given decay ratio, until you hit a minimum. WARNING: If
-        Simulator is not run timestep-by-timestep, i.e. if any timepoints
-        t=0, 1, 2, ... are skipped, then the coinbase reward will be off.
-        """
-        result = self.next_mining_reward
-        if not self.dummy_monero_mining_flat:
-            self.next_mining_reward *= (1.0 - EMISSION_RATIO)
-            if self.next_mining_reward < MIN_MINING_REWARD:
-                self.next_mining_reward = MIN_MINING_REWARD
-                self.dummy_monero_mining_flat = True
-        return result
+    def gen_coinbase_amt(self):
+        """ Update next block reward if appropriate """
+        if self.t >= self.runtime:
+            raise RuntimeError("Error in gen_coinbase_amt: can't gen coinbase amt for a block outside of runtime")
 
-    def pick_spend_time(self, owner):
-        """ sample a random spend-time from the owner's spend-time distribution function. """
-        try:
-            assert owner in range(len(self.stoch_matrix))
-        except AssertionError:
-            print("Owner not found in stochastic matrix. owner = " + str(owner))
-        try:
-            assert owner in range(len(self.spendtimes))
-        except AssertionError:
-            print("Owner not found in spendtimes. owner = " + str(owner))
-        i = self.minspendtime  # Minimal spend-time
-        r = random()
-        # spend times gend support on min_spendtime, min_spendtime + 1, ...
-        u = self.spendtimes[owner](i)
-        found = (u >= r)
-        while not found and i < self.runtime:
+        # If time hasn't run out, get the next mining reward.
+        out = deepcopy(self.next_mining_reward)
+        # If block rewards aren't yet flat, drop next reward and check if flatness should begin.
+        if not self.flat:
+            self.next_mining_reward = max(self.next_mining_reward*(1.0 - self.emission), self.min_reward)
+            self.flat = self.next_mining_reward == MIN_MINING_REWARD
+        return out
+
+    def add_left_node_to_buffer(self, x, owner):
+        if x not in self.g.left_nodes:
+            raise LookupError("Tried to add " + str(x) + " to buffer but is not an element of g.left_nodes.")
+
+        # Pick a spend time
+        dt = self.gen_spend_time(owner)
+
+        if self.t + dt >= self.runtime:
+            # If the spend time is too long, this method does nothing.
+            pass
+        else:
+            # Otherwise, a recipient is determined and x is placed in the buffer.
+            recip = self.gen_recipient(owner)
+
+            # So that we can place the new left node into the buffer with a well-formed sender-recipient pair.
+            old_ct = len(self.buffer[self.t + dt])
+            self.buffer[self.t + dt] += [(owner, recip, x)]
+            new_ct = len(self.buffer[self.t + dt])
+            if old_ct + 1 != new_ct:
+                raise AttributeError("Error in make_coinbase: Tried to append to buffer, length unchanged.")
+
+    def make_lefts(self, sender, recip, amt):
+        """ Make new left nodes """
+        old_ct = len(self.g.left_nodes)
+
+        out, r = None, random()
+        ch_amt, recip_amt = r * amt, amt - r*amt
+        ch_out, recip_out = self.g.add_node(0, self.t), self.g.add_node(0, self.t)
+        out = [ch_out, recip_out]
+
+        new_ct = len(self.g.left_nodes)
+        if old_ct + 2 != new_ct:
+            raise AttributeError("Error in make_lefts: called add_node twice but did not get 2 new nodes.")
+
+        self.amounts[ch_out] = ch_amt
+        self.ownership[ch_out] = sender
+        self.amounts[recip_out] = recip_amt
+        self.ownership[recip_out] = recip
+        return out
+
+    def make_rights(self, sender, true_spenders):
+        """ Make new right nodes """
+        old_ct = len(self.g.right_nodes)
+        old_old_ct = old_ct
+        n = len(true_spenders)
+
+        out = []
+        for true_spender in true_spenders:
+            out += [self.g.add_node(1, self.t)]
+            self.real_red_edges[out[-1]] = true_spender
+            new_ct = len(self.g.right_nodes)
+            if old_ct + 1 != new_ct:
+                raise AttributeError("Error in make_rights: called add_node but did not get a single new node.")
+            old_ct = new_ct
+            self.ownership[out[-1]] = sender
+
+        new_ct = len(self.g.right_nodes)
+        if old_old_ct + n != new_ct:
+            raise AttributeError("Error in make_rights: called add_node " + str(n) +
+                                 " times, didn't get " + str(n) + " new nodes.")
+        return out
+
+    def make_reds(self, rings, new_rights):
+        """ Make new red edges """
+        old_ct = len(self.g.red_edges)
+        old_old_ct = old_ct
+        expected_new_red_edges = sum([len(ring) for ring in rings])
+
+        out = []
+        if not len(new_rights) == len(rings):
+            raise AttributeError  # ("Error in make_reds: number of sigs and number of rings do not match")
+        if len(rings) == 0:
+            raise LookupError  # ("Error in make_reds: cannot make reds without ring members. " +
+            # "It's possible the graph is empty and you have called make_reds.")
+        if any([len(ring) != len(set(ring)) for ring in rings]):
+            raise AttributeError  # ("Error in make_reds: Duplicate ring members present.")
+        if len(new_rights) != len(set(new_rights)):
+            raise AttributeError  # ("Error in make_reds: Duplicate new right nodes present.")
+
+        for R, y in zip(rings, new_rights):
+            for x in R:
+                if any(edge_id[0] == x and edge_id[1] == y for edge_id in self.g.red_edges):
+                    out += [self.g.add_edge(1, (x, y), 1.0, self.t)]
+                    new_ct = len(self.g.red_edges)
+                    if old_ct != new_ct:
+                        raise AttributeError  # ("Error in make_reds: called add_edge, didn't get a single new red edge.")
+                else:
+                    out += [self.g.add_edge(1, (x, y), 1.0, self.t)]
+                    new_ct = len(self.g.red_edges)
+                    if old_ct + 1 != new_ct:
+                        raise AttributeError  # ("Error in make_reds: called add_edge, didn't get a single new red edge.")
+                old_ct = new_ct
+
+        new_ct = len(self.g.red_edges)
+        if old_old_ct + expected_new_red_edges != new_ct:
+            raise AttributeError  # ("Error in make_reds: called add_edge " + str(expected_new_red_edges) +
+            # " times but got a different number of new red edges.")
+        return out
+
+    def make_blues(self, new_lefts, new_rights):
+        """ Make new blue edges """
+        old_ct = len(self.g.blue_edges)
+        old_old_ct = old_ct
+        expected_new_blue_edges = len(new_lefts)*len(new_rights)
+
+        out = []
+        if len(set(new_lefts)) != len(new_lefts):
+            raise AttributeError  # ("Error in make_blues: duplicate new left nodes present.")
+        if len(set(new_rights)) != len(new_rights):
+            raise AttributeError  # ("Error in make_blues: duplicate new right nodes present.")
+        if len(new_lefts) == 0 or len(new_rights) == 0:
+            raise LookupError  # ("Error in make_blues: cannot make blue edges without some new_lefts or new_rights.")
+
+        old_ct = len(self.g.blue_edges)
+        for x in new_lefts:
+            for y in new_rights:
+                out += [self.g.add_edge(0, (x, y), 1.0, self.t)]
+                new_ct = len(self.g.blue_edges)
+                if old_ct + 1 != new_ct:
+                    raise AttributeError  # ("Error in make_blues: called add_edge but did not get a single new edge.")
+                old_ct = new_ct
+        new_ct = len(self.g.blue_edges)
+
+        if old_old_ct + expected_new_blue_edges != new_ct:
+            raise AttributeError  # ("Error in make_blues: called add_edge " + str(expected_new_blue_edges) +
+            # " times but did not get this many new blue edges.")
+        return out
+
+    def gen_spend_time(self, owner):
+        """ Generate a wait time before a left_node appears in the buffer based on input spend-time dists"""
+        f = self.spend_times[owner]
+        i, u, r = 0, f(0), random()
+        while r > u and i + 1 < self.runtime - self.t - self.min_spend_time:
             i += 1
-            u += self.spendtimes[owner](i)
-            found = (u >= r)
-        assert found or i >= self.runtime
+            u += f(i)
+        i = i + self.min_spend_time
+        # if i >= self.runtime - self.t:
+        #     # Not really an error, and will be removed!
+        #     raise Exception("Error in gen_spend_time: generated time beyond runtime.")
         return i
 
-    def pick_next_recip(self, owner):
-        """ pick_next_recip uses the stochastic matrix and owner information to determine next recipient. """
-        i = 0
-        r = random()
-        u = self.stoch_matrix[owner][i]
-        found = (u >= r)
-        while not found and i < len(self.stoch_matrix[owner]):
+    def gen_recipient(self, owner):
+        """ Generate a recipient based on the stochastic matrix. """
+        f = self.stochastic_matrix[owner]
+        i, u, r = 0, f[0], random()
+        while r > u and i + 1 < len(self.stochastic_matrix):
             i += 1
-            u += self.stoch_matrix[owner][i]
-            found = (u >= r)
-        assert found
+            u += f[i]
+        if i < 0 or i >= len(self.stochastic_matrix):
+            raise Exception  # ("Error in gen_recipient: Tried to generate an index in " +
+            # str(range(len(self.stochastic_matrix))) + " but got " + str(i))
         return i
-
-    def look_for_dupes(self):
-        whole_buffer_list = [x for entry in self.buffer for x in entry]
-        whole_buffer_set = list(set(whole_buffer_list))
-        result = (len(whole_buffer_list) == len(whole_buffer_set))
-        try:
-            assert result
-        except AssertionError:
-            counts = dict()
-            for x in whole_buffer_set:
-                counts.update({x: 0})
-            for x in whole_buffer_list:
-                counts[x] += 1
-            repeats = [x for x in counts if counts[x] > 1]
-            print("\n\n ERROR: LOOKS LIKE A DUPE MADE IT INTO THE BUFFER. repeats = " + str(repeats))
-            assert result
-        return result
 
     def make_coinbase(self):
-        """ make_coinbase creates a new coinbase with reward based on the time. """
-        owner = self.pick_coinbase_owner()
-        assert owner in range(len(self.hashrate))
-        amt = self.pick_coinbase_amt()
-        dt = self.pick_spend_time(owner)
-        assert isinstance(dt, int)
-        assert 0 < dt
-        recip = self.pick_next_recip(owner)
+        """ Make a new coinbase output. """
+        # Pick a coinbase owner based on hashrate
+        owner = self.gen_coinbase_owner()
 
-        # print("Making coinbase.")
-        tomato = len(self.g.left_nodes)
-        node_to_spend = self.g.add_node(0, self.t)
-        # print("Coinbase with ident " + str(node_to_spend) + " created.")
-        assert len(self.g.left_nodes) == tomato + 1
-        self.ownership[node_to_spend] = owner
+        # Pick coinbase amount based on emission
+        v = self.gen_coinbase_amt()
 
-        s = self.t + dt
-        if s < len(self.buffer):
-            # at block s, owner will send new_node to recip
-            assert not any([(owner, recip, node_to_spend) in buff for buff in self.buffer])
-            self.look_for_dupes()
-            self.buffer[s] += [(owner, recip, node_to_spend)]
-            self.look_for_dupes()
-            assert node_to_spend[1] + self.minspendtime <= s
-            assert s >= self.t + self.minspendtime
-        # assert node_to_spend in self.amounts
-        self.amounts[node_to_spend] = amt
-        return node_to_spend, dt
+        # Add new left node
+        old_ct = len(self.g.left_nodes)
+        out = self.g.add_node(0, self.t)
+        new_ct = len(self.g.left_nodes)
+        if old_ct + 1 != new_ct:
+            raise Exception  # ("Error in make_coinbase: called add_node but did not get a single new node.")
 
-    def get_ring(self, spender, ring_member_choices):
-        """ get_ring selects ring members. Presently the only mode is uniform. """
-        # TODO: Expand modes.
-        ring = []
-        assert spender in ring_member_choices
-        if self.mode == "uniform":
-            k = min(len(ring_member_choices), self.ringsize)
-            ring = sample(ring_member_choices, k)
-            if spender not in ring:
-                i = choice(range(len(ring)))
-                ring[i] = spender
-            assert len(ring) == k
-            assert len(list(set(ring))) == len(ring)
-            # print("ring = " + str(len(ring)) + " , " + str(ring))
-        return ring
+        # Set left node's ownership and amount
+        self.ownership[out] = owner
+        self.amounts[out] = v
+        self.add_left_node_to_buffer(out, owner)
+        return out
 
-    def spend_from_buffer(self):
-        """
-        spend_from_buffer
+    def gen_rings(self, signing_keys):
+        """ Select ring members at random. """
+        if len(signing_keys) == 0:
+            raise AttributeError  # ("Error in gen_rings: Tried to sign without any keys.")
+        if any([_[1] + self.min_spend_time > self.t for _ in signing_keys]):
+            raise AttributeError  # ("Error in gen_rings: Some signing keys have not matured past min lock time yet.")
 
-        spend_from_buffer takes outputs pending "to be spent"  in the buffer at the current index, adds them to
-        the graph, and adds appropriate edges. It does so in the following way:
-            FIRST:  If there are not enough ring members available, buffer rolls over and spend_from_buffer returns an
-                    empty string. Otherwise, the buffer is inspected for any outputs that are being spent before their min spend time
-                    (assumed to be a concensus-enforced locktime) and rolls these over.
-            SECOND: The remaining buffer is grouped by sender-recipient pair.
-            THIRD:  New nodes are added for each sender-recipient-pair:
-                    (i)   2 new left nodes are added to the graph and
-                    (ii)  2 new spendtimes are samples for these and they are added to the buffer and
-                    (iii) 1 new right node (signature node) is added to the graph and
-                    (iv)  ring members are sampled and
-                    (v)   transaction amounts are decided.
-            FOURTH: New edges are added likewise:
-                    (i)   New red edges from each ring member to each corresponding new right node
-                    (ii)  2 new blue edges from each new right node to each corresponding pair of new output left nodes
+        out = []
+        valid_ring_members = [x for x in self.g.left_nodes if x[1] + self.min_spend_time <= self.t]
+        actual_ring_size = min(self.ringsize, len(valid_ring_members))
+        if actual_ring_size == 0:
+            raise AttributeError  # ("Error in gen_rings: No available ring members.")
+        if any([x not in valid_ring_members for x in signing_keys]):
+            raise AttributeError  # ("Error in gen_rings: Signing key not available ring member (not mature past locktime).")
 
-        WARNING: We assume if a buffer keys has not yet entered the ring_member_choices set, then the key owner
-        delays until the next block. This should not occur, but if it does it should not cause more than a single
-        block delay.
-        """
+        for _ in signing_keys:
+            out += [sample(valid_ring_members, actual_ring_size)]
+            if _ not in out[-1]:
+                i = choice(range(len(out[-1])))
+                out[-1][i] = _
+        return out
 
-        ring_member_choices = [x for x in self.g.left_nodes if x[1] + self.minspendtime <= self.t]
-        assert all([x[2] in ring_member_choices for x in self.buffer[self.t]])
-        num_rmc = len(ring_member_choices)
-        red_edges_per_sig = min(num_rmc, self.ringsize)
+    def make_txn(self, sender, recip, grp):
+        if sender not in range(len(self.stochastic_matrix)):
+            raise AttributeError
+        if recip not in range(len(self.stochastic_matrix)):
+            raise AttributeError
+        if all(False for _ in deepcopy(grp)):
+            # In this case, the input iterator is empty.
+            raise AttributeError
 
-        # We will return new_left, new_right, new_blue, new_red
-        new_right_nodes = []
-        new_left_nodes = []
-        new_blue_edges = []
-        new_red_edges = []
-        next_txn = []
-        true_spender_ring_sig_relation = {}
+        tmp_grp = deepcopy(grp)
+        out = []
 
-        if len(self.buffer[self.t]) > 0 and red_edges_per_sig != self.ringsize and self.t + 1 < len(self.buffer):
-            self.buffer[self.t + 1] += self.buffer[self.t]
-            self.buffer[self.t] = list()
+        # Make a new signature node for each signing key
+        signing_keys = [_[2] for _ in tmp_grp]
+        out += [self.make_rights(sender, signing_keys)]
 
-        elif red_edges_per_sig == self.ringsize:
-            to_be_spent = deepcopy(self.buffer[self.t])
-            node_ids_to_be_spent = [x[2] for x in to_be_spent]
+        # Make two new outputs with appropriately chosen amounts
+        amt = sum([self.amounts[_] for _ in signing_keys])
+        out += [self.make_lefts(sender, recip, amt)]
 
-            # print("~~~~~> right_nodes_remaining " + str(right_nodes_remaining))
-            if len(to_be_spent) > 0:
-                bndl = groupby(to_be_spent, key=lambda x: (x[0], x[1]))
-                rings = dict()
+        for new_left in out[-1]:
+            self.add_left_node_to_buffer(new_left, recip)
 
-                for k, grp in deepcopy(bndl):
-                    temp = deepcopy(grp)
-                    keys_to_spend = [x[2] for x in temp]
-                    tot_amt = sum([self.amounts[x] for x in keys_to_spend])
+        # Select ring members
+        out += [self.gen_rings(signing_keys)]
 
-                    # New right nodes
-                    # print("keys_to_spend " + str(keys_to_spend))
-                    for x in keys_to_spend:
-                        # print("about to add a right node")
-                        new_right_nodes += [self.g.add_node(1, self.t)]
-                        self.ownership.update({new_right_nodes[-1]: k[0]})
-                        rings[new_right_nodes[-1]] = self.get_ring(x, ring_member_choices)
-                        true_spender_ring_sig_relation.update({new_right_nodes[-1]: x})
+        # Make new red edges
+        out += [self.make_reds(out[-1], out[0])]
 
-                    u = random()
+        # Make new blue edges
+        out += [self.make_blues(out[1], out[0])]
 
-                    # New left nodes
-                    new_left_nodes += [self.g.add_node(0, self.t)]
-                    recip_node = new_left_nodes[-1]
-                    self.ownership[recip_node] = k[1]
-                    recip_dt = self.pick_spend_time(k[1])
-                    recip_next_recip = self.pick_next_recip(k[1])
-                    recip_s = self.t + recip_dt
-                    if recip_s < len(self.buffer):
-                        assert not any([(k[1], recip_next_recip, recip_node) in buff for buff in self.buffer])
-                        self.buffer[recip_s] += [(k[1], recip_next_recip, recip_node)]
-                    self.amounts[recip_node] = u * tot_amt
+        # Return list with [new rights, new lefts, rings, new reds, new blues]
+        return out
 
-                    new_left_nodes += [self.g.add_node(0, self.t)]
-                    change_node = new_left_nodes[-1]
-                    self.ownership[change_node] = k[0]
-                    change_dt = self.pick_spend_time(k[0])
-                    change_next_recip = self.pick_next_recip(k[0])
-                    change_s = self.t + change_dt
-                    if change_s < len(self.buffer):
-                        assert not any([(k[0], change_next_recip, change_node) in buff for buff in self.buffer])
-                        self.buffer[change_s] += [(k[0], change_next_recip, change_node)]
-                    self.amounts[change_node] = tot_amt - self.amounts[recip_node]
+    def make_txns(self):
+        """ Spend from the buffer, creating new right nodes (signatures), red edges (selecting ring members), new
+        left nodes (transaction outputs), and blue edges (signature-output relations). """
+        out = []
+        bndl = groupby(self.buffer[self.t], key=lambda x: (x[0], x[1]))
+        is_empty = all(False for _ in deepcopy(bndl))
+        if not is_empty:
+            for k, grp in bndl:
+                sender, recip = k  # Each grp in bndl consists of left nodes being spent with this sender-recip pair.
+                out += [self.make_txn(sender, recip, deepcopy(grp))]
+        return out
 
-                for rnode in new_right_nodes:
-                    recip_pair = (recip_node, rnode)
-                    new_blue_edges += [self.g.add_edge(0, recip_pair, 1.0, self.t)]
-                    self.ownership[new_blue_edges[-1]] = self.ownership[new_blue_edges[-1][0]]
+    def update_state(self, dt):
+        """ If time hasn't run out, call make_coinbase and make_txns """
+        # Check if dt is beyond the time horizon. If not, make a coinbase and spend from the buffer.
+        out = []
+        target_time = self.t + dt
+        if target_time >= self.runtime:
+            # Simulation comes to an end.
+            return out
+        while self.t < target_time:
+            self.t += self.dt
+            out += [[self.make_coinbase(), self.make_txns()]]
+        return out
 
-                    change_pair = (change_node, rnode)
-                    new_blue_edges += [self.g.add_edge(0, change_pair, 1.0, self.t)]
-                    self.ownership[new_blue_edges[-1]] = self.ownership[new_blue_edges[-1][0]]
+    def step(self):
+        """  Generate a timestep and update the state. """
+        dt = self.gen_time_step()
+        return self.update_state(dt)
 
-                    for ring_member in rings[rnode]:
-                        ring_member_pair = (ring_member, rnode)
-                        new_red_edges += [self.g.add_edge(1, ring_member_pair, 1.0, self.t)]
-                        self.ownership[new_red_edges[-1]] = self.ownership[new_red_edges[-1][1]]
+    def parse(self, txn):
+        [new_rights, new_lefts, rings, new_reds, new_blues] = txn
+        senders = [self.ownership[_] for _ in new_rights]
+        if any(x != y for x in senders for y in senders):
+            raise AttributeError
+        # if len(list(set(senders))) != len(senders):
+        #    raise AttributeError
+        sender = senders[0]
+        sender_name = str(OWNERSHIP_DICT[sender])
 
-                    with open(self.fn, "a") as wf:
-                        # Note: generally more than one ring signature is used to create new left nodes, so expect
-                        # overlap in the resulting file.
-                        line = self.owner_names[self.ownership[rnode]] + " constructs new ring signature " + str(
-                            rnode) + " with ring members " + str(
-                            rings[rnode]) + " and true spender " + str(true_spender_ring_sig_relation[rnode]) + ", authorizing the creation of new left node " + str(
-                            recip_node) + " owned by " + self.owner_names[self.ownership[recip_node]] + " and new left node " + str(
-                            change_node) + " owned by " + self.owner_names[self.ownership[change_node]] + ".\n"
-                        wf.write(line)
+        true_spenders = [self.real_red_edges[_] for _ in new_rights]  # string.
+        input_amt = sum([self.amounts[_] for _ in true_spenders])  # not string
 
-                self.look_for_dupes()
-            
-        return [len(new_left_nodes), len(new_right_nodes), len(new_red_edges), len(new_blue_edges)]
+        ch_out = new_lefts[0]
+        r_out = new_lefts[1]
+        ch_recip = self.ownership[ch_out]
+        r_recip = self.ownership[r_out]
 
-    def halting_run(self):
-        """ halting_run executes a single timestep and returns t+1 < runtime. """
-        if self.t + 1 < self.runtime:
-            # Make predictions
-            old_predictions = [0, 0, 0, 0]
+        recip_names = [OWNERSHIP_DICT[ch_recip], OWNERSHIP_DICT[r_recip]]
+        residual = self.amounts[ch_out] + self.amounts[r_out] - input_amt
+        return "Also, " + sender_name + " spends " + str(input_amt) + " with one-time keys " + str(true_spenders) + \
+               ", respective ring members " + str(rings) + ", outputting change key " + str(ch_out) + \
+               " and recipient key " + str(r_out) + ", respectively owned by " + recip_names[0] + " and " + \
+               recip_names[1] + " and resp. amounts " + str(self.amounts[ch_out]) + " and " + \
+               str(self.amounts[r_out]) + ", note INPUT - OUTPUT = " + str(residual) + ".\n"
 
-            # Take old stats
-            old_bndl = groupby(self.buffer[self.t + 1], key=lambda x: (x[0], x[1]))
-            old_r = len(self.buffer[self.t + 1])
-            old_l = sum([1 for _ in deepcopy(old_bndl)])
-            old_rmc = [x for x in self.g.left_nodes if x[1] + self.minspendtime <= self.t]
-            old_stats = [self.t, len(self.g.left_nodes), len(self.g.right_nodes), len(self.g.red_edges),
-                         len(self.g.blue_edges), len(old_rmc)]
+    def record(self, out):
+        h = 1
+        with open(self.filename, "w+") as wf:
+            for steps in out:
+                for block in steps:
+                    cb = block[0]
+                    txns = block[1]
+                    line = ""
+                    line += str(h) + "^th block: \n"
+                    line += "The coinbase with left_node_identity " + str(cb) + " was mined by "
+                    line += OWNERSHIP_DICT[self.ownership[cb]] + " for block reward " + str(self.amounts[cb]) + ".\n"
+                    for txn in txns:
+                        line += self.parse(txn)
+                    line += "\n"
+                    h += 1
 
-            # Look: old_r = len(self.buffer[self.t + 1]) = number of new right nodes to be added in the next block
-            # Also: old_l = number of txn bundles, each producing two output (new left nodes) in the next block
-
-            # Do a thing
-            # if self.t % 100 == 0:
-            #     print(".", end='')
-            self.t += 1
-            with open(self.fn, "a") as wf:
-                wf.write("Beginning block height " + str(self.t) + ".\n")
-
-            # Take new stats
-            new_rmc = [x for x in self.g.left_nodes if x[1] + self.minspendtime <= self.t]
-            new_stats = [self.t, len(self.g.left_nodes), len(self.g.right_nodes), len(self.g.red_edges),
-                         len(self.g.blue_edges), new_rmc]
-
-            # Check predictions
-            assert new_stats[0] == old_stats[0] + 1
-            assert new_stats[1] == old_stats[1] + old_predictions[0]
-            assert new_stats[2] == old_stats[2] + old_predictions[1]
-            assert new_stats[3] == old_stats[3] + old_predictions[2]
-            assert new_stats[4] == old_stats[4] + old_predictions[3]
-            self.look_for_dupes()
-
-            # Make predictions
-            new_predictions = [1, 0, 0, 0]
-
-            # Reset old stats
-            old_stats = new_stats
-
-            # Do a thing
-            node_id, time_interval = self.make_coinbase()
-            ow = self.ownership[node_id]
-            with open(self.fn, "a") as wf:
-                wf.write(self.owner_names[ow] + " mines a new coinbase output with node_id " + str(node_id) + ".\n")
-
-
-
-            # Take new stats
-            new_rmc = [x for x in self.g.left_nodes if x[1] + self.minspendtime <= self.t]
-            new_stats = [self.t, len(self.g.left_nodes), len(self.g.right_nodes), len(self.g.red_edges),
-                         len(self.g.blue_edges), len(new_rmc)]
-
-            # Check predictions
-            assert new_stats[0] == old_stats[0]
-            assert new_stats[1] == old_stats[1] + new_predictions[0]
-            assert new_stats[2] == old_stats[2] + new_predictions[1]
-            assert new_stats[3] == old_stats[3] + new_predictions[2]
-            assert new_stats[4] == old_stats[4] + new_predictions[3]
-            self.look_for_dupes()
-
-            new_predictions = [0, 0, 0, 0]
-            num_rmc = len(new_rmc)
-            red_edges_per_sig = min(num_rmc, self.ringsize)
-
-            if red_edges_per_sig == self.ringsize:
-                right_nodes_remaining = [x for x in self.buffer[self.t] if x[2] in new_rmc]
-                if len(right_nodes_remaining) > 0:
-                    bndl = groupby(right_nodes_remaining, key=lambda x: (x[0], x[1]))
-                    num_txns = sum([1 for k, grp in bndl])
-                    num_new_rights = len(right_nodes_remaining)
-                    new_predictions = [2 * num_txns, num_new_rights, self.ringsize * num_new_rights, 2 * num_new_rights]
-
-            # print("HR Predictions = " + str(new_predictions))
-            # print("HR Current num left nodes = " + str(len(self.g.left_nodes)))
-            # print("HR Current num right nodes = " + str(len(self.g.right_nodes)))
-            # print("HR Current num red edges = " + str(len(self.g.red_edges)))
-            # print("HR Current num blue edges = " + str(len(self.g.blue_edges)))
-            # print("HR Predicted num left nodes = " + str(len(self.g.left_nodes) + new_predictions[0]))
-            # print("HR Predicted num right nodes = " + str(len(self.g.right_nodes) + new_predictions[1]))
-            # print("HR Predicted num red edges = " + str(len(self.g.red_edges) + new_predictions[2]))
-            # print("HR Predicted num blue edges = " + str(len(self.g.blue_edges) + new_predictions[3]))
-            
-            # Reset old stats
-            old_stats = new_stats
-
-            # Do a thing
-            new_stuff = self.spend_from_buffer()
-            # print("New stuff = " + str(new_stuff))
-            
-            assert new_stuff[0] == new_predictions[0]  # left
-            assert new_stuff[1] == new_predictions[1]  # right
-            assert new_stuff[2] == new_predictions[2]  # red
-            assert new_stuff[3] == new_predictions[3]  # blue
-
-            # Take new stats
-            new_rmc = [x for x in self.g.left_nodes if x[1] + self.minspendtime <= self.t]
-            new_stats = [self.t, len(self.g.left_nodes), len(self.g.right_nodes), len(self.g.red_edges),
-                         len(self.g.blue_edges), new_rmc]
-
-            # Check predictions
-            assert new_stats[0] == old_stats[0]
-            # print("HR Observed num left nodes = " + str(new_stats[1]))
-            # print("HR Observed num right nodes = " + str(new_stats[2]))
-            # print("HR Observed num red edges = " + str(new_stats[3]))
-            # print("HR Observed num blue edges = " + str(new_stats[4]))
-            assert new_stats[1] == old_stats[1] + new_predictions[0]
-            assert new_stats[2] == old_stats[2] + new_predictions[1]
-            assert new_stats[3] == old_stats[3] + new_predictions[2]
-            assert new_stats[4] == old_stats[4] + new_predictions[3]
-            self.look_for_dupes()
-
-        return self.t+1 < self.runtime
+                    wf.write(line)
 
     def run(self):
-        """ run iteratively execute all timesteps, returning nothing. """
-        alpha = 0
-        keep_going = self.halting_run()
-        while keep_going:
-            alpha += 1
-            keep_going = self.halting_run()
-
-    def report(self):
-        """ report writes a summary of the graph and the ground truth of ownership and amounts to file. """
-        line = "\n\n\n\nREPORTING FOR TIMESTEP" + str(self.t) + "\n\n"
-        line += "LEFT NODES OF G AND OWNERSHIP AND AMOUNTS\n"
-        ct = 0
-        for node_idx in self.g.left_nodes:
-            temp = (node_idx, self.ownership[node_idx], self.amounts[node_idx])
-            line += str(temp)
-            ct += 1
-            if len(self.g.left_nodes) > ct:
-                line += ","
-        line += "\n\nRIGHT NODES OF G AND OWNERSHIP\n"
-        ct = 0
-        for node_idx in self.g.right_nodes:
-            line += str((node_idx, self.ownership[node_idx]))
-            ct += 1
-            if len(self.g.right_nodes) > ct:
-                line += ","
-        with open(self.fn, "w+") as wf:
-            wf.write(line + "\n\n\n")
+        """ Execute self.step until it returns a 0 success bit. """
+        out = [self.step()]
+        while self.t + self.dt <= self.runtime:
+            out += [self.step()]
+        self.record(out)
+        return out
