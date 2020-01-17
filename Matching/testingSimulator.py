@@ -43,14 +43,11 @@ def make_simulator():
 def make_simulated_simulator():
     sally = make_simulator()
     out = []
-    s = sum([len(sally.buffer[sally.t + _]) for _ in range(sally.dt)])
-    u = len(sally.g.left_nodes)
-    v = len(sally.g.right_nodes)
-    while sally.t + sally.dt < sally.runtime and s*u*v == 0:
-        out += [sally.step()]
-        s = sum([len(sally.buffer[sally.t + _]) for _ in range(sally.dt)])
-        u = len(sally.g.left_nodes)
-        v = len(sally.g.right_nodes)
+    while len(sally.buffer[sally.t])*len(sally.buffer[sally.t + 1]) == 0 or sally.t + 1 >= sally.runtime:
+        while sally.t + 1 < sally.runtime and len(sally.buffer[sally.t])*len(sally.buffer[sally.t + 1]) == 0:
+            out += [sally.step()]
+        if len(sally.buffer[sally.t])*len(sally.buffer[sally.t + 1]) == 0:
+            sally = make_simulator()
     return sally
 
 
@@ -232,7 +229,50 @@ class TestSimulator(ut.TestCase):
     # @ut.skip("Skipping test_update_state_from_empty")
     def test_update_state_from_empty(self):
         sally = make_simulator()
-        sally.update_state(1)
+        
+        available_ring_members = [_ for _ in sally.g.left_nodes if _[1] + sally.min_spend_time < sally.t]
+        eff_ring_size = min(sally.ringsize, len(available_ring_members))
+        
+        old_num_left_nodes = len(sally.g.left_nodes)
+        old_num_right_nodes = len(sally.g.right_nodes)
+        old_num_blue_edges = len(sally.g.blue_edges)
+        old_num_red_edges = len(sally.g.red_edges)
+        
+        pred_num_new_rights = len(sally.buffer[sally.t+1])
+        pred_num_new_lefts = 1 + 2*pred_num_new_rights
+        pred_num_red_edges = eff_ring_size*pred_num_new_rights
+        pred_num_blue_edges = 2*pred_num_new_rights
+        
+        out = sally.update_state(1)
+        
+        new_num_left_nodes = len(sally.g.left_nodes)
+        new_num_right_nodes = len(sally.g.right_nodes)
+        new_num_blue_edges = len(sally.g.blue_edges)
+        new_num_red_edges = len(sally.g.red_edges)
+        
+        self.assertEqual(len(out), sally.dt)
+        self.assertEqual(len(out[0]), 2)
+        self.assertIsInstance(out[0][1], list)
+        self.assertIn(out[0][0], sally.g.left_nodes)
+        self.assertEqual(new_num_left_nodes, pred_num_new_lefts)
+        self.assertEqual(new_num_right_nodes, pred_num_new_rights)
+        self.assertEqual(new_num_blue_edges, pred_num_blue_edges)
+        self.assertEqual(new_num_red_edges, pred_num_red_edges)
+        
+        for txn in out[0][1]:
+            [new_rights, new_lefts, rings, new_reds, new_blues] = txn
+            for new_right in new_rights:
+                self.assertTrue(new_right in sally.g.right_nodes)
+            for new_left in new_lefts:
+                self.assertTrue(new_left in sally.g.left_nodes)
+            for R, new_right in zip(rings, new_rights):
+                for ring_member in R:
+                    self.assertIn((ring_member, new_right, sally.t) in sally.g.red_edges)
+                    self.assertIn((ring_member, new_right, sally.t) in new_reds)
+            for new_left in new_lefts:
+                for new_right in new_rights:
+                    self.assertIn((new_left, new_right, sally.t) in sally.g.blue_edges)
+                    self.assertIn((new_left, new_right, sally.t) in new_blues)
 
     # @ut.skip("Skipping test_run_from_empty")
     def test_run_from_empty(self):
@@ -290,7 +330,7 @@ class TestSimulator(ut.TestCase):
         for _ in range(SAMPLE_SIZE):
             self.test_gen_spend_time_from_empty()
 
-    # @ut.skip("Skipping test_gen_recipient_from_empty_repeated")
+    @ut.skip("Skipping test_gen_recipient_from_empty_repeated")
     def test_gen_recipient_from_empty_repeated(self):
         for _ in range(SAMPLE_SIZE):
             self.test_gen_recipient_from_empty()
@@ -443,11 +483,18 @@ class TestSimulator(ut.TestCase):
         self.assertTrue(len(sally.g.left_nodes) > 0)
         y = choice(list(sally.g.right_nodes.keys()))
         x = choice(list(sally.g.left_nodes.keys()))
+        while any([edge_id[0] == x and edge_id[1] == y for edge_id in sally.g.red_edges]):        
+            y = choice(list(sally.g.right_nodes.keys()))
+            x = choice(list(sally.g.left_nodes.keys()))
         try:
             out = sally.make_reds([[x]], [y])
         except LookupError:
             self.assertTrue(False)
         except AttributeError:
+            self.assertTrue(False)
+        except IndexError:
+            self.assertTrue(False)
+        except:
             self.assertTrue(False)
         else:
             for new_edge_id in out:
@@ -471,11 +518,18 @@ class TestSimulator(ut.TestCase):
         self.assertTrue(len(sally.g.left_nodes) > 0)
         y = choice(list(sally.g.right_nodes.keys()))
         x = choice(list(sally.g.left_nodes.keys()))
+        while any([edge_id[0] == x and edge_id[1] == y for edge_id in sally.g.blue_edges]):
+            y = choice(list(sally.g.right_nodes.keys()))
+            x = choice(list(sally.g.left_nodes.keys()))
         try:
             out = sally.make_blues([x], [y])
         except AttributeError:
             self.assertTrue(False)
         except LookupError:
+            self.assertTrue(False)
+        except IndexError:
+            self.assertTrue(False)
+        except:
             self.assertTrue(False)
         else:
             self.assertIn((x, y, sally.t), sally.g.blue_edges)
@@ -567,12 +621,81 @@ class TestSimulator(ut.TestCase):
     # @ut.skip("Skipping test_make_txns_from_simulated")
     def test_make_txns_from_simulated(self):
         sally = make_simulated_simulator()
-        self.assertEqual(sally.make_txns(), [])
-
+        expected_number_sigs = len(sally.buffer[sally.t])
+        out = sally.make_txns()
+        self.assertIsInstance(out, list)
+        self.assertGreater(len(out), 0)
+        for txn in out:
+            self.assertIsInstance(txn, list)
+            self.assertEqual(len(txn), 5)
+            [new_rights, new_lefts, rings, new_reds, new_blues] = txn
+            self.assertIsInstance(new_rights, list)
+            self.assertIsInstance(new_lefts, list)
+            self.assertEqual(len(new_lefts), 2)
+            self.assertIsInstance(rings, list)
+            self.assertEqual(len(new_rights), len(rings))
+            self.assertIsInstance(new_reds, list)
+            self.assertIsInstance(new_blues, list)
+            self.assertEqual(len(new_blues), len(new_rights)*2)
+            
     # @ut.skip("Skipping test_update_state_from_simulated")
     def test_update_state_from_simulated(self):
-        sally = make_simulator()
-        sally.update_state(1)
+    
+        # Generate simulator
+        sally = make_simulated_simulator()
+        
+        # Collect some stats
+        old_num_left_nodes = len(sally.g.left_nodes)
+        old_num_right_nodes = len(sally.g.right_nodes)
+        old_num_blue_edges = len(sally.g.blue_edges)
+        old_num_red_edges = len(sally.g.red_edges)
+        available_ring_members = [_ for _ in sally.g.left_nodes if _[1] + sally.min_spend_time < sally.t]
+        eff_ring_size = min(sally.ringsize, len(available_ring_members))
+        self.assertGreaterEqual(len(available_ring_members), 1)
+
+        
+        bndl = groupby(sally.buffer[sally.t+1], key=lambda x: (x[0], x[1]))
+        is_empty = all(False for _ in deepcopy(bndl))
+        self.assertFalse(is_empty)
+        num_txns = len([(k, grp) for k, grp in bndl])
+
+        pred_num_new_rights = len(sally.buffer[sally.t+1])
+        self.assertGreaterEqual(pred_num_new_rights, 1)
+        pred_num_new_lefts = 1 + 2*num_txns
+        pred_num_red_edges = eff_ring_size*pred_num_new_rights
+        pred_num_blue_edges = 2*pred_num_new_rights
+        
+        out = sally.update_state(1)  # calls make_coinbase and make_txns
+        
+        new_num_left_nodes = len(sally.g.left_nodes)
+        new_num_right_nodes = len(sally.g.right_nodes)
+        new_num_blue_edges = len(sally.g.blue_edges)
+        new_num_red_edges = len(sally.g.red_edges)
+        
+        self.assertEqual(len(out), sally.dt)
+        self.assertEqual(len(out[0]), 2)
+        self.assertIsInstance(out[0][1], list)
+        self.assertIn(out[0][0], sally.g.left_nodes)
+        
+        self.assertEqual(new_num_left_nodes, old_num_left_nodes + pred_num_new_lefts)
+        self.assertEqual(new_num_right_nodes, old_num_right_nodes + pred_num_new_rights)
+        self.assertEqual(new_num_blue_edges, old_num_blue_edges + pred_num_blue_edges)
+        self.assertEqual(new_num_red_edges, old_num_red_edges + pred_num_red_edges)
+        
+        for txn in out[0][1]:
+            [new_rights, new_lefts, rings, new_reds, new_blues] = txn
+            for new_right in new_rights:
+                self.assertTrue(new_right in sally.g.right_nodes)
+            for new_left in new_lefts:
+                self.assertTrue(new_left in sally.g.left_nodes)
+            for R, new_right in zip(rings, new_rights):
+                for ring_member in R:
+                    self.assertIn((ring_member, new_right, sally.t), sally.g.red_edges)
+                    self.assertIn((ring_member, new_right, sally.t), new_reds)
+            for new_left in new_lefts:
+                for new_right in new_rights:
+                    self.assertIn((new_left, new_right, sally.t), sally.g.blue_edges)
+                    self.assertIn((new_left, new_right, sally.t), new_blues)
 
     @ut.skip("Skipping test_run_from_simulated")
     def test_run_from_simulated(self):
@@ -597,7 +720,7 @@ class TestSimulator(ut.TestCase):
     # @ut.skip("Skipping test_gen_rings_from_simulated")
     def test_gen_rings_from_simulated(self):
         sally = make_simulated_simulator()
-        self.assertGreater(sum([len(sally.buffer[sally.t + _]) for _ in range(sally.dt)]), 0)
+        self.assertGreater(len(sally.buffer[sally.t + 1]), 0)
         signing_keys = [_[2] for _ in sally.buffer[sally.t]]
         sally.t += sally.gen_time_step()
         while len(signing_keys) == 0:

@@ -147,17 +147,15 @@ class Simulator(object):
         old_ct = len(self.g.red_edges)
         old_old_ct = old_ct
         expected_new_red_edges = sum([len(ring) for ring in rings])
-
         out = []
         if not len(new_rights) == len(rings):
-            raise AttributeError  # ("Error in make_reds: number of sigs and number of rings do not match")
+            raise AttributeError("Error in make_reds: number of sigs and number of rings do not match")
         if len(rings) == 0:
-            raise LookupError  # ("Error in make_reds: cannot make reds without ring members. " +
-            # "It's possible the graph is empty and you have called make_reds.")
+            raise LookupError("Error in make_reds: cannot make reds without ring members. It's possible the graph is empty and you have called make_reds.")
         if any([len(ring) != len(set(ring)) for ring in rings]):
-            raise AttributeError  # ("Error in make_reds: Duplicate ring members present.")
+            raise IndexError("Error in make_reds: Duplicate ring members present.")
         if len(new_rights) != len(set(new_rights)):
-            raise AttributeError  # ("Error in make_reds: Duplicate new right nodes present.")
+            raise IndexError("Error in make_reds: Duplicate new right nodes present.")
 
         for R, y in zip(rings, new_rights):
             for x in R:
@@ -165,18 +163,17 @@ class Simulator(object):
                     out += [self.g.add_edge(1, (x, y), 1.0, self.t)]
                     new_ct = len(self.g.red_edges)
                     if old_ct != new_ct:
-                        raise AttributeError  # ("Error in make_reds: called add_edge, didn't get a single new red edge.")
+                        raise AttributeError("Error in make_reds: called add_edge, didn't get a single new red edge.")
                 else:
                     out += [self.g.add_edge(1, (x, y), 1.0, self.t)]
                     new_ct = len(self.g.red_edges)
                     if old_ct + 1 != new_ct:
-                        raise AttributeError  # ("Error in make_reds: called add_edge, didn't get a single new red edge.")
+                        raise AttributeError("Error in make_reds: called add_edge, didn't get a single new red edge.")
                 old_ct = new_ct
 
         new_ct = len(self.g.red_edges)
         if old_old_ct + expected_new_red_edges != new_ct:
-            raise AttributeError  # ("Error in make_reds: called add_edge " + str(expected_new_red_edges) +
-            # " times but got a different number of new red edges.")
+            raise AttributeError("Error in make_reds: called add_edge " + str(expected_new_red_edges) + " times but got a different number of new red edges.")
         return out
 
     def make_blues(self, new_lefts, new_rights):
@@ -187,11 +184,11 @@ class Simulator(object):
 
         out = []
         if len(set(new_lefts)) != len(new_lefts):
-            raise AttributeError  # ("Error in make_blues: duplicate new left nodes present.")
+            raise IndexError("Error in make_blues: duplicate new left nodes present.")
         if len(set(new_rights)) != len(new_rights):
-            raise AttributeError  # ("Error in make_blues: duplicate new right nodes present.")
+            raise IndexError("Error in make_blues: duplicate new right nodes present.")
         if len(new_lefts) == 0 or len(new_rights) == 0:
-            raise LookupError  # ("Error in make_blues: cannot make blue edges without some new_lefts or new_rights.")
+            raise LookupError("Error in make_blues: cannot make blue edges without some new_lefts or new_rights.")
 
         old_ct = len(self.g.blue_edges)
         for x in new_lefts:
@@ -199,7 +196,7 @@ class Simulator(object):
                 out += [self.g.add_edge(0, (x, y), 1.0, self.t)]
                 new_ct = len(self.g.blue_edges)
                 if old_ct + 1 != new_ct:
-                    raise AttributeError  # ("Error in make_blues: called add_edge but did not get a single new edge.")
+                    raise AttributeError("Error in make_blues: called add_edge but did not get a single new edge.")
                 old_ct = new_ct
         new_ct = len(self.g.blue_edges)
 
@@ -246,7 +243,7 @@ class Simulator(object):
         out = self.g.add_node(0, self.t)
         new_ct = len(self.g.left_nodes)
         if old_ct + 1 != new_ct:
-            raise Exception  # ("Error in make_coinbase: called add_node but did not get a single new node.")
+            raise RuntimeError("Error in make_coinbase: called add_node but did not get a single new node.")
 
         # Set left node's ownership and amount
         self.ownership[out] = owner
@@ -270,10 +267,15 @@ class Simulator(object):
             raise AttributeError  # ("Error in gen_rings: Signing key not available ring member (not mature past locktime).")
 
         for _ in signing_keys:
-            out += [sample(valid_ring_members, actual_ring_size)]
-            if _ not in out[-1]:
-                i = choice(range(len(out[-1])))
-                out[-1][i] = _
+            next_ring = sample(valid_ring_members, actual_ring_size)
+            if _ not in next_ring:
+                i = choice(range(len(next_ring)))
+                next_ring[i] = _            
+            out += [next_ring]
+            
+        for R, y in zip(out, signing_keys):
+            assert y in R
+            
         return out
 
     def make_txn(self, sender, recip, grp):
