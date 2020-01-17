@@ -6,6 +6,8 @@ from copy import deepcopy
 from random import sample, random, choice
 from math import floor
 
+SAMPLE_SIZE = 2
+
 FILENAME = "data/output.txt"
 STOCHASTIC_MATRIX = [[0.0, 0.9, 1.0 - 0.9], [0.125, 0.75, 0.125], [0.75, 0.25, 0.0]]
 HASH_RATE_ALICE = 0.33
@@ -20,9 +22,6 @@ SPEND_TIMES = [lambda x: 0.05 * ((1.0 - 0.05) ** (x - MIN_SPEND_TIME)),
                lambda x: 0.01 * ((1.0 - 0.01) ** (x - MIN_SPEND_TIME)),
                lambda x: 0.025 * ((1.0 - 0.025) ** (x - MIN_SPEND_TIME))]
 RUNTIME = 100
-REPORTING_MODULUS = 7  # lol whatever
-
-SAMPLE_SIZE = 100
 
 
 def make_simulator():
@@ -46,13 +45,14 @@ def make_simulated_simulator():
     while len(sally.buffer[sally.t])*len(sally.buffer[sally.t + 1]) == 0 or sally.t + 1 >= sally.runtime:
         while sally.t + 1 < sally.runtime and len(sally.buffer[sally.t])*len(sally.buffer[sally.t + 1]) == 0:
             out += [sally.step()]
-        if len(sally.buffer[sally.t])*len(sally.buffer[sally.t + 1]) == 0:
+        if sally.t + 1 >= sally.runtime or sally.t >= sally.runtime or len(sally.buffer[sally.t])*len(sally.buffer[sally.t + 1]) == 0:
             sally = make_simulator()
+            out = []
     return sally
 
 
 class TestSimulator(ut.TestCase):
-    """ TestSimulator tests our simulator """
+    """ tests for simulator.py """
 
     #### SINGLE USE TESTS FROM EMPTY LEDGER ####
 
@@ -60,7 +60,7 @@ class TestSimulator(ut.TestCase):
     def test_init(self):
         pass
 
-    # @ut.skip("Skipping test_gen_time_step")
+    # @ut.skip("Skipping test_gen_time_step_from_empty")
     def test_gen_time_step_from_empty(self):
         sally = make_simulator()
         dt = sally.gen_time_step()
@@ -68,8 +68,6 @@ class TestSimulator(ut.TestCase):
 
     # @ut.skip("Skipping test_gen_coinbase_owner_from_empty")
     def test_gen_coinbase_owner_from_empty(self):
-        """ Check that SAMPLE_SIZE executions of gen_coinbase_owner with all input domain elements yields outputs
-        only in the allowable image or range or codomain or whatever you want to call it. """
         sally = make_simulator()
         results = []
         domain = list(range(len(sally.stochastic_matrix)))
@@ -130,7 +128,6 @@ class TestSimulator(ut.TestCase):
 
     # @ut.skip("Skipping test_make_rights_from_empty")
     def test_make_rights_from_empty(self):
-        """ Cannot test making right_nodes in an empty graph with no left nodes. """
         sally = make_simulator()
         for owner in range(len(sally.stochastic_matrix)):
             try:
@@ -180,7 +177,7 @@ class TestSimulator(ut.TestCase):
                 for _ in range(SAMPLE_SIZE):
                     self.assertIn(sally.gen_recipient(owner), allowed_idxs)
 
-    # @ut.skip("Skipping test_add_left_node_to_buffer")
+    # @ut.skip("Skipping test_add_left_node_to_buffer_from_empty")
     def test_add_left_node_to_buffer_from_empty(self):
         sally = make_simulator()
 
@@ -274,20 +271,6 @@ class TestSimulator(ut.TestCase):
                     self.assertIn((new_left, new_right, sally.t) in sally.g.blue_edges)
                     self.assertIn((new_left, new_right, sally.t) in new_blues)
 
-    # @ut.skip("Skipping test_run_from_empty")
-    def test_run_from_empty(self):
-        sally = make_simulator()
-        try:
-            out = sally.run()
-        except:
-            self.assertTrue(False)
-        else:
-            self.assertIsInstance(out, list)
-            self.assertEqual(len(out), sally.runtime)
-            for step in out:
-                for block in step:
-                    cb, txns = block
-
     #### REPETITION OF SINGLE-USE TESTS ####
 
     # @ut.skip("Skipping test_gen_time_step_from_empty_repeated")
@@ -330,7 +313,7 @@ class TestSimulator(ut.TestCase):
         for _ in range(SAMPLE_SIZE):
             self.test_gen_spend_time_from_empty()
 
-    @ut.skip("Skipping test_gen_recipient_from_empty_repeated")
+    # @ut.skip("Skipping test_gen_recipient_from_empty_repeated")
     def test_gen_recipient_from_empty_repeated(self):
         for _ in range(SAMPLE_SIZE):
             self.test_gen_recipient_from_empty()
@@ -365,23 +348,14 @@ class TestSimulator(ut.TestCase):
         for _ in range(SAMPLE_SIZE):
             self.test_update_state_from_empty()
 
-    @ut.skip("Skipping test_run_from_empty")
-    def test_run_from_empty(self):
-        sally = make_simulator()
-        try:
-            out = sally.run()
-        except:
-            self.assertTrue(False)
-        else:
-            self.assertIsInstance(out, list)
-            self.assertEqual(len(out), sally.runtime)
-            for step in out:
-                for block in step:
-                    cb, txns = block
-
+    @ut.skip("Skipping test_run_from_empty_repeated")
+    def test_run_from_empty_repeated(self):
+        for _ in range(SAMPLE_SIZE):
+            self.test_run_from_empty()
+            
     #### SINGLE-USE TESTS FROM A SIMULATED LEDGER. ####
 
-    # @ut.skip("Skipping test_gen_time_step")
+    # @ut.skip("Skipping test_gen_time_step_from_simulated")
     def test_gen_time_step_from_simulated(self):
         sally = make_simulated_simulator()
         dt = sally.gen_time_step()
@@ -389,8 +363,6 @@ class TestSimulator(ut.TestCase):
 
     # @ut.skip("Skipping test_gen_coinbase_owner_from_simulated")
     def test_gen_coinbase_owner_from_simulated(self):
-        """ Check that SAMPLE_SIZE executions of gen_coinbase_owner with all input domain elements yields outputs
-        only in the allowable image or range or codomain or whatever you want to call it. """
         sally = make_simulated_simulator()
         results = []
         domain = list(range(len(sally.stochastic_matrix)))
@@ -401,6 +373,8 @@ class TestSimulator(ut.TestCase):
     # @ut.skip("Skipping test_gen_coinbase_amt_from_simulated")
     def test_gen_coinbase_amt_from_simulated(self):
         sally = make_simulated_simulator()
+        while sally.runtime - sally.t < 10:
+            sally = make_simulated_simulator()
 
         pred_v = EMISSION_RATIO * MAX_MONERO_ATOMIC_UNITS * (1.0 - EMISSION_RATIO)**(sally.t)
         self.assertLessEqual(abs(sally.next_mining_reward - pred_v), 1e-1)
@@ -451,7 +425,6 @@ class TestSimulator(ut.TestCase):
 
     # @ut.skip("Skipping test_make_rights_from_simulated")
     def test_make_rights_from_simulated(self):
-        """ Cannot test making right_nodes in an empty graph with no left nodes. """
         for owner in range(len(STOCHASTIC_MATRIX)):
             sally = make_simulated_simulator()
             available_left_nodes = [x for x in sally.g.left_nodes if x[1] + MIN_SPEND_TIME < sally.t]
@@ -550,7 +523,7 @@ class TestSimulator(ut.TestCase):
             for _ in range(SAMPLE_SIZE):
                 self.assertIn(sally.gen_recipient(owner), allowed_idxs)
 
-    # @ut.skip("Skipping test_add_left_node_to_buffer")
+    # @ut.skip("Skipping test_add_left_node_to_buffer_from_simulated")
     def test_add_left_node_to_buffer_from_simulated(self):
         sally = make_simulated_simulator()
 
@@ -640,7 +613,6 @@ class TestSimulator(ut.TestCase):
             
     # @ut.skip("Skipping test_update_state_from_simulated")
     def test_update_state_from_simulated(self):
-    
         # Generate simulator
         sally = make_simulated_simulator()
         
@@ -697,25 +669,12 @@ class TestSimulator(ut.TestCase):
                     self.assertIn((new_left, new_right, sally.t), sally.g.blue_edges)
                     self.assertIn((new_left, new_right, sally.t), new_blues)
 
-    @ut.skip("Skipping test_run_from_simulated")
-    def test_run_from_simulated(self):
-        sally = make_simulator()
-        try:
-            out = sally.run()
-        except:
-            self.assertTrue(False)
-        else:
-            self.assertIsInstance(out, list)
-            self.assertEqual(len(out), sally.runtime)
-            for step in out:
-                for block in step:
-                    cb, txns = block
-
     # @ut.skip("Skipping test_make_simulated_simulator")
     def test_make_simulated_simulator(self):
-        sample_size = 10000
         sally = make_simulated_simulator()
-        pass
+        self.assertGreater(len(sally.g.left_nodes), 0)
+        self.assertGreater(len(sally.g.right_nodes), 0)
+        self.assertGreater(sally.runtime, sally.t + 1)
 
     # @ut.skip("Skipping test_gen_rings_from_simulated")
     def test_gen_rings_from_simulated(self):
@@ -728,9 +687,9 @@ class TestSimulator(ut.TestCase):
             sally.t += sally.gen_time_step()
         self.assertGreater(len(signing_keys), 0)
         out = sally.gen_rings(signing_keys)
-        for R, y in zip(out, sally.buffer[sally.t]):
-            self.assertIn(y[2], R)
-            self.assertIn(y[2], sally.g.left_nodes)
+        for R, y in zip(out, signing_keys):
+            self.assertIn(y, R)
+            self.assertIn(y, sally.g.left_nodes)
             for x in R:
                 self.assertIn(x, sally.g.left_nodes)
 
@@ -800,90 +759,235 @@ class TestSimulator(ut.TestCase):
     # @ut.skip("Skipping test_step_from_simulated")
     def test_step_from_simulated(self):
         magic_numbers = [17, 10]
-        for each_sample in range(SAMPLE_SIZE):
-            sally = make_simulated_simulator()
-            while sally.t + 1 < sally.runtime and len(sally.buffer[sally.t + 1]) == 0:
-                out = sally.make_coinbase()  # out = id of new left node
-                self.assertIn(out, sally.g.left_nodes)
-                sally.t += sally.dt
-            while sally.t + sally.dt + magic_numbers[0] >= sally.runtime or len(sally.buffer[sally.t + 1]) == 0:
-                sally = make_simulator()
-                while sally.t + 1 < sally.runtime and len(sally.buffer[sally.t + 1]) == 0:
-                    out = sally.make_coinbase()  # out = id of new left node
-                    self.assertIn(out, sally.g.left_nodes)
-                    sally.t += sally.dt
-
-            old_t = sally.t
-            out = sally.step()
-            new_t = sally.t
-            self.assertEqual(old_t + sally.dt, new_t)
-            self.assertEqual(len(out), sally.dt)
-            for ovt in out:
-                self.assertEqual(len(ovt), 2)
-                cb, txns = ovt
-                self.assertIn(cb, sally.g.left_nodes)
-                for txn in txns:
-                    [new_rights, new_lefts, rings, new_reds, new_blues] = txn
-                    for _ in new_rights:
-                        self.assertIn(_, sally.g.right_nodes)
-                    for _ in new_lefts:
-                        self.assertIn(_, sally.g.left_nodes)
-                    for R, y in zip(rings, new_rights):
-                        for x in R:
-                            self.assertTrue(any([eid[0] == x and eid[1] == y for eid in sally.g.red_edges]))
-                            self.assertTrue(any([eid[0] == x and eid[1] == y for eid in new_reds]))
-                    for new_red in new_reds:
-                        self.assertTrue(new_red in sally.g.red_edges)
-                    for y in new_rights:
-                        for z in new_lefts:
-                            self.assertTrue(any([eid[0] == z and eid[1] == y for eid in sally.g.blue_edges]))
-                            self.assertTrue(any([eid[0] == z and eid[1] == y for eid in new_blues]))
-                    for new_blue in new_blues:
-                        self.assertTrue(new_blue in sally.g.blue_edges)
+        sally = make_simulated_simulator()
+        old_t = sally.t
+        out = sally.step()
+        new_t = sally.t
+        self.assertEqual(old_t + sally.dt, new_t)
+        self.assertEqual(len(out), sally.dt)
+        for block in out:
+            self.assertEqual(len(block), 2)
+            cb, txns = block
+            self.assertIn(cb, sally.g.left_nodes)
+            for txn in txns:
+                [new_rights, new_lefts, rings, new_reds, new_blues] = txn
+                for _ in new_rights:
+                    self.assertIn(_, sally.g.right_nodes)
+                for _ in new_lefts:
+                    self.assertIn(_, sally.g.left_nodes)
+                for R, y in zip(rings, new_rights):
+                    for x in R:
+                        self.assertTrue(any([eid[0] == x and eid[1] == y for eid in sally.g.red_edges]))
+                        self.assertTrue(any([eid[0] == x and eid[1] == y for eid in new_reds]))
+                for new_red in new_reds:
+                    self.assertTrue(new_red in sally.g.red_edges)
+                for y in new_rights:
+                    for z in new_lefts:
+                        self.assertTrue(any([eid[0] == z and eid[1] == y for eid in sally.g.blue_edges]))
+                        self.assertTrue(any([eid[0] == z and eid[1] == y for eid in new_blues]))
+                for new_blue in new_blues:
+                    self.assertTrue(new_blue in sally.g.blue_edges)
 
     # @ut.skip("Skipping test_update_state_from_simulated")
     def test_update_state_from_simulated(self):
+        magic_numbers = [17, 10]
         sally = make_simulated_simulator()
-        magic_numbers = [17, 10]  # ints such that 1 <= magic_numbers[1] < magic_numbers[0] < runtime
-        for each_sample in range(SAMPLE_SIZE):
-            sally = make_simulator()
-            while sally.t + 1 < sally.runtime and len(sally.buffer[sally.t + 1]) == 0:
-                out = sally.make_coinbase()  # out = id of new left node
-                self.assertIn(out, sally.g.left_nodes)
-                sally.t += sally.dt
-            while sally.t + sally.dt + magic_numbers[0] >= sally.runtime or len(sally.buffer[sally.t + 1]) == 0:
-                sally = make_simulator()
-                while sally.t + 1 < sally.runtime and len(sally.buffer[sally.t + 1]) == 0:
-                    out = sally.make_coinbase()  # out = id of new left node
-                    self.assertIn(out, sally.g.left_nodes)
-                    sally.t += sally.dt
+        dt = magic_numbers[1]
+        try:
+            out = sally.update_state(dt)
+        except Exception:
+            self.assertTrue(False)
+        else:
+            self.assertEqual(len(out), dt)
+            for x in out:
+                self.assertEqual(len(x), 2)
+                cb, txns = x
+                self.assertIn(cb, sally.g.left_nodes)
+                for txn in txns:
+                    new_rights, new_lefts, rings, new_reds, new_blues = txn
+                    for R, y in zip(rings, new_rights):
+                        self.assertIn(y, sally.g.right_nodes)
+                        for ring_member in R:
+                            self.assertIn(ring_member, sally.g.left_nodes)
+                            self.assertTrue(any([red_edge[0] == ring_member and red_edge[1] == y for red_edge in sally.g.red_edges]))
+                    for y in new_rights:
+                        for z in new_lefts:
+                            self.assertIn(z, sally.g.left_nodes)
+                            self.assertTrue(any([blue_edge[0] == z and blue_edge[1] == y for blue_edge in sally.g.blue_edges]))
+        
+    #### REPETITION OF SINGLE-USE TESTS FROM A SIMULATED LEDGER ####
+    
+    # @ut.skip("Skipping test_gen_time_step_from_simulated_repeated")
+    def test_gen_time_step_from_simulated_repeated(self):
+        for _ in range(SAMPLE_SIZE):
+            self.test_gen_time_step_from_simulated()
 
-            dt = magic_numbers[1]
-            try:
-                out = sally.update_state(dt)
-            except Exception:
-                self.assertTrue(False)
-            else:
-                self.assertEqual(len(out), dt)
-                for x in out:
-                    self.assertEqual(len(x), 2)
-                    cb, txns = x
+    # @ut.skip("Skipping test_gen_coinbase_owner_from_simulated_repeated")
+    def test_gen_coinbase_owner_from_simulated_repeated(self):
+        for _ in range(SAMPLE_SIZE):
+            self.test_gen_coinbase_owner_from_simulated()
+
+    # @ut.skip("Skipping test_gen_coinbase_amt_from_simulated_repeated")
+    def test_gen_coinbase_amt_from_simulated_repeated(self):
+        for _ in range(SAMPLE_SIZE):
+            self.test_gen_coinbase_amt_from_simulated()
+
+
+    # @ut.skip("Skipping test_make_lefts_from_simulated_repeated")
+    def test_make_lefts_from_simulated_repeated(self):
+        for _ in range(SAMPLE_SIZE):
+            self.test_make_lefts_from_simulated()
+
+
+    # @ut.skip("Skipping test_make_rights_from_simulated_repeated")
+    def test_make_rights_from_simulated_repeated(self):
+        for _ in range(SAMPLE_SIZE):
+            self.test_make_rights_from_simulated()
+
+
+    # @ut.skip("Skipping test_make_reds_from_simulated_repeated")
+    def test_make_reds_from_simulated_repeated(self):
+        for _ in range(SAMPLE_SIZE):
+            self.test_make_reds_from_simulated()
+
+
+    # @ut.skip("Skipping test_make_blues_from_simulated_repeated")
+    def test_make_blues_from_simulated_repeated(self):
+        for _ in range(SAMPLE_SIZE):
+            self.test_make_blues_from_simulated()
+
+
+    # @ut.skip("Skipping test_gen_spend_time_from_simulated_repeated")
+    def test_gen_spend_time_from_simulated_repeated(self):
+        for _ in range(SAMPLE_SIZE):
+            self.test_gen_spend_time_from_simulated()
+
+    # @ut.skip("Skipping test_gen_recipient_from_simulated_repeated")
+    def test_gen_recipient_from_simulated_repeated(self):
+        for _ in range(SAMPLE_SIZE):
+            self.test_gen_recipient_from_simulated()
+
+    # @ut.skip("Skipping test_add_left_node_to_buffer_from_simulated_repeated")
+    def test_add_left_node_to_buffer_from_simulated_repeated(self):
+        for _ in range(SAMPLE_SIZE):
+            self.test_add_left_node_to_buffer_from_simulated()
+
+    # @ut.skip("Skipping test_make_coinbase_from_simulated_repeated")
+    def test_make_coinbase_from_simulated_repeated(self):
+        for _ in range(SAMPLE_SIZE):
+            self.test_make_coinbase_from_simulated()
+
+    # @ut.skip("Skipping test_gen_rings_from_simulated_repeated")
+    def test_gen_rings_from_simulated_repeated(self):
+        for _ in range(SAMPLE_SIZE):
+            self.test_gen_rings_from_simulated()
+
+    # @ut.skip("Skipping test_make_txn_from_simulated_repeated")
+    def test_make_txn_from_simulated_repeated(self):
+        for _ in range(SAMPLE_SIZE):
+            self.test_make_txn_from_simulated()
+
+    # @ut.skip("Skipping test_make_txns_from_simulated_repeated")
+    def test_make_txns_from_simulated_repeated(self):
+        for _ in range(SAMPLE_SIZE):
+            self.test_make_txns_from_simulated()
+            
+    # @ut.skip("Skipping test_update_state_from_simulated_repeated")
+    def test_update_state_from_simulated_repeated(self):
+        for _ in range(SAMPLE_SIZE):
+            self.test_update_state_from_simulated()
+
+    @ut.skip("Skipping test_run_from_simulated_repeated")
+    def test_run_from_simulated_repeated(self):
+        for _ in range(SAMPLE_SIZE):
+            self.test_run_from_simulated()
+
+    # @ut.skip("Skipping test_make_simulated_simulator_repeated")
+    def test_make_simulated_simulator_repeated(self):
+        for _ in range(SAMPLE_SIZE):
+            self.test_make_simulated_simulator()
+
+    # @ut.skip("Skipping test_gen_rings_from_simulated_repeated")
+    def test_gen_rings_from_simulated_repeated(self):
+        for _ in range(SAMPLE_SIZE):
+            self.test_gen_rings_from_simulated()
+
+    # @ut.skip("Skipping test_make_txn_from_simulated_repeated")
+    def test_make_txn_from_simulated_repeated(self):
+        for _ in range(SAMPLE_SIZE):
+            self.test_make_txn_from_simulated()
+
+    # @ut.skip("Skipping test_make_txns_from_simulated_repeated")
+    def test_make_txns_from_simulated_repeated(self):
+        for _ in range(SAMPLE_SIZE):
+            self.test_make_txns_from_simulated()
+
+    # @ut.skip("Skipping test_step_from_simulated_repeated")
+    def test_step_from_simulated_repeated(self):
+        for _ in range(SAMPLE_SIZE):
+            self.test_step_from_simulated()
+
+    # @ut.skip("Skipping test_update_state_from_simulated_repeated")
+    def test_update_state_from_simulated_repeated(self):
+        for _ in range(SAMPLE_SIZE):
+            self.test_update_state_from_simulated()
+
+    #### INTEGRATION TESTS ####
+    
+    # @ut.skip("Skipping test_run_from_empty")
+    def test_run_from_empty(self):
+        sally = make_simulator()
+        try:
+            out = sally.run()
+        except:
+            self.assertTrue(False)
+        else:
+            self.assertIsInstance(out, list)
+            self.assertEqual(len(out), sally.runtime)
+            for step in out:
+                for block in step:
+                    cb, txns = block
                     self.assertIn(cb, sally.g.left_nodes)
                     for txn in txns:
-                        new_rights, new_lefts, rings, new_reds, new_blues = txn
+                        [new_rights, new_lefts, rings, new_reds, new_blues] = txn
+                        for new_right in new_rights:
+                            self.assertIn(new_right, sally.g.right_nodes)
+                        for new_left in new_lefts:
+                            self.assertIn(new_left, sally.g.left_nodes)
+                        for new_red in new_reds:
+                            self.assertIn(new_red, sally.g.red_edges)
+                        for new_blue in new_blues:
+                            self.assertIn(new_blue, sally.g.blue_edges)
                         for R, y in zip(rings, new_rights):
-                            self.assertIn(y, sally.g.right_nodes)
-                            for ring_member in R:
-                                self.assertIn(ring_member, sally.g.left_nodes)
-                                self.assertTrue(any([red_edge[0] == ring_member and red_edge[1] == y for red_edge in sally.g.red_edges]))
-                        for y in new_rights:
-                            for z in new_lefts:
-                                self.assertIn(z, sally.g.left_nodes)
-                                self.assertTrue(any([blue_edge[0] == z and blue_edge[1] == y for blue_edge in sally.g.blue_edges]))
-
+                            for x in R:
+                                self.assertTrue(any([edge_id[0] == x and edge_id[1] == y for edge_id in sally.g.red_edges]))
+    
     @ut.skip("Skipping test_run_from_simulated")
     def test_run_from_simulated(self):
-        pass
-
+        sally = make_simulated_simulator()
+        try:
+            out = sally.run()
+        except:
+            self.assertTrue(False)
+        else:
+            self.assertIsInstance(out, list)
+            self.assertEqual(len(out), sally.runtime)
+            for step in out:
+                for block in step:
+                    cb, txns = block
+                    self.assertIn(cb, sally.g.left_nodes)
+                    for txn in txns:
+                        [new_rights, new_lefts, rings, new_reds, new_blues] = txn
+                        for new_right in new_rights:
+                            self.assertIn(new_right, sally.g.right_nodes)
+                        for new_left in new_lefts:
+                            self.assertIn(new_left, sally.g.left_nodes)
+                        for new_red in new_reds:
+                            self.assertIn(new_red, sally.g.red_edges)
+                        for new_blue in new_blues:
+                            self.assertIn(new_blue, sally.g.blue_edges)
+                        for R, y in zip(rings, new_rights):
+                            for x in R:
+                                self.assertTrue(any([edge_id[0] == x and edge_id[1] == y for edge_id in sally.g.red_edges]))
 
 ut.TextTestRunner(verbosity=2, failfast=True).run(ut.TestLoader().loadTestsFromTestCase(TestSimulator))
