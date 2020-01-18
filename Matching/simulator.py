@@ -1,6 +1,6 @@
 from itertools import groupby
 from graphtheory import *
-from random import random, sample, choice
+from random import random, sample, randrange
 from copy import deepcopy
 
 # Some Monero-specific constants
@@ -84,7 +84,8 @@ class Simulator(object):
             out += 1
             u += self.hashrate[out]
         if out >= len(self.hashrate):
-            raise LookupError("Error in gen_coinbase_owner: tried to generate an index with pmf " + str(self.hashrate) + " but got " + str(out))
+            raise LookupError("Error in gen_coinbase_owner: tried to generate an index with pmf " +
+                              str(self.hashrate) + " but got " + str(out))
         return out
 
     def gen_coinbase_amt(self):
@@ -142,7 +143,7 @@ class Simulator(object):
         n = len(true_spenders)
         out = []
         for true_spender in true_spenders:
-            # For each true spender, create a new right node, mark ownership of the new right node and note the real red edge.
+            # For each true spender, create new right node, mark ownership, note the real red edge.
             out += [self.g.add_node(1, self.t)]
             self.real_red_edges[out[-1]] = true_spender
             new_ct = len(self.g.right_nodes)
@@ -166,7 +167,7 @@ class Simulator(object):
         if not len(new_rights) == len(rings):
             raise AttributeError("Error in make_reds: number of sigs and number of rings do not match")
         if len(rings) == 0:
-            raise LookupError("Error in make_reds: cannot make reds without ring members. It's possible the graph is empty and you have called make_reds.")
+            raise LookupError("Error in make_reds: cannot make reds without ring members. Is the graph is empty?")
         if any([len(ring) != len(set(ring)) for ring in rings]):
             raise IndexError("Error in make_reds: Duplicate ring members present.")
         if len(new_rights) != len(set(new_rights)):
@@ -185,7 +186,8 @@ class Simulator(object):
 
         new_ct = len(self.g.red_edges)
         if old_old_ct + expected_new_red_edges != new_ct:
-            raise AttributeError("Error in make_reds: called add_edge " + str(expected_new_red_edges) + " times but got a different number of new red edges.")
+            raise AttributeError("Error in make_reds: called add_edge " + str(expected_new_red_edges) +
+                                 " times but got a different number of new red edges.")
         return out
 
     def make_blues(self, new_lefts, new_rights):
@@ -276,12 +278,12 @@ class Simulator(object):
         if actual_ring_size == 0:
             raise AttributeError  # ("Error in gen_rings: No available ring members.")
         if any([x not in valid_ring_members for x in signing_keys]):
-            raise AttributeError  # ("Error in gen_rings: Signing key not available ring member (not mature past locktime).")
+            raise AttributeError  # ("Error in gen_rings: Signing key not available ring member.")
 
         for _ in signing_keys:
             next_ring = sample(valid_ring_members, actual_ring_size)
             if _ not in next_ring:
-                i = choice(range(len(next_ring)))
+                i = randrange(actual_ring_size)
                 next_ring[i] = _            
             out += [next_ring]
             
@@ -357,7 +359,7 @@ class Simulator(object):
 
     def human_parse(self, txn):
         """ Describe txn in human-readable terms. """
-        [new_rights, new_lefts, rings, new_reds, new_blues] = txn
+        [new_rights, new_lefts, rings] = txn[:3]
         senders = [self.ownership[_] for _ in new_rights]
         if any(x != y for x in senders for y in senders):
             raise AttributeError

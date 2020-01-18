@@ -3,8 +3,7 @@ from itertools import groupby
 from graphtheory import *
 from simulator import *
 from copy import deepcopy
-from random import sample, random, choice
-from math import floor
+from random import randrange, random, choice
 
 SAMPLE_SIZE = 2
 
@@ -29,11 +28,14 @@ def make_simulator():
     inp.update({'runtime': RUNTIME, 'hashrate': HASH_RATE, 'stochastic matrix': STOCHASTIC_MATRIX})
     inp.update({'spend times': SPEND_TIMES, 'min spend time': MIN_SPEND_TIME, 'ring size': RING_SIZE})
     inp.update({'flat': False, 'timestep': 1, 'max atomic': 2**64 - 1, 'emission': 2**-18, 'min reward': 6e11})
-    label_msg = (RUNTIME, HASH_RATE[0], HASH_RATE[1], HASH_RATE[2], STOCHASTIC_MATRIX[0][0], STOCHASTIC_MATRIX[0][1], STOCHASTIC_MATRIX[0][2], STOCHASTIC_MATRIX[1][0], STOCHASTIC_MATRIX[1][1], STOCHASTIC_MATRIX[1][2], STOCHASTIC_MATRIX[2][0], STOCHASTIC_MATRIX[2][1], STOCHASTIC_MATRIX[2][2], 1.0/SPEND_TIMES[0](1), 1.0/SPEND_TIMES[1](1), 1.0/SPEND_TIMES[2](1), MIN_SPEND_TIME, RING_SIZE)
+    label_msg = (RUNTIME, HASH_RATE[0], HASH_RATE[1], HASH_RATE[2], STOCHASTIC_MATRIX[0][0], STOCHASTIC_MATRIX[0][1],
+                 STOCHASTIC_MATRIX[0][2], STOCHASTIC_MATRIX[1][0], STOCHASTIC_MATRIX[1][1], STOCHASTIC_MATRIX[1][2],
+                 STOCHASTIC_MATRIX[2][0], STOCHASTIC_MATRIX[2][1], STOCHASTIC_MATRIX[2][2], 1.0/SPEND_TIMES[0](1),
+                 1.0/SPEND_TIMES[1](1), 1.0/SPEND_TIMES[2](1), MIN_SPEND_TIME, RING_SIZE)
     label = str(hash(label_msg))
     label = label[-8:]
     fn = FILENAME[:-4] + str(label) + FILENAME[-4:]
-    with open(fn, "w+") as wf:
+    with open(fn, "w+") as _:
         pass
     inp.update({'filename': fn})
     return Simulator(inp)
@@ -45,7 +47,8 @@ def make_simulated_simulator():
     while len(sally.buffer[sally.t])*len(sally.buffer[sally.t + 1]) == 0 or sally.t + 1 >= sally.runtime:
         while sally.t + 1 < sally.runtime and len(sally.buffer[sally.t])*len(sally.buffer[sally.t + 1]) == 0:
             out += [sally.step()]
-        if sally.t + 1 >= sally.runtime or sally.t >= sally.runtime or len(sally.buffer[sally.t])*len(sally.buffer[sally.t + 1]) == 0:
+        if sally.t + 1 >= sally.runtime or sally.t >= sally.runtime or \
+                len(sally.buffer[sally.t])*len(sally.buffer[sally.t + 1]) == 0:
             sally = make_simulator()
             out = []
     return sally
@@ -54,7 +57,7 @@ def make_simulated_simulator():
 class TestSimulator(ut.TestCase):
     """ tests for simulator.py """
 
-    #### SINGLE USE TESTS FROM EMPTY LEDGER ####
+    # SINGLE USE TESTS FROM EMPTY LEDGER ####
 
     # @ut.skip("Skipping test_init")
     def test_init(self):
@@ -132,7 +135,7 @@ class TestSimulator(ut.TestCase):
         for owner in range(len(sally.stochastic_matrix)):
             try:
                 out = sally.make_rights(owner, [])
-            except:
+            except AttributeError:
                 self.assertTrue(False)
             else:
                 self.assertIsInstance(out, list)
@@ -185,7 +188,9 @@ class TestSimulator(ut.TestCase):
             x = sally.g.add_node(0)
             try:
                 sally.add_left_node_to_buffer(x, owner)
-            except Exception:
+            except AttributeError:
+                self.assertTrue(False)
+            except LookupError:
                 self.assertTrue(False)
             else:
                 self.assertTrue(True)
@@ -202,8 +207,8 @@ class TestSimulator(ut.TestCase):
     def test_gen_rings_from_empty(self):
         sally = make_simulator()
         try:
-            out = sally.gen_rings([])
-        except Exception:
+            sally.gen_rings([])
+        except AttributeError:
             self.assertTrue(True)
         else:
             self.assertTrue(False)
@@ -214,7 +219,7 @@ class TestSimulator(ut.TestCase):
         for sender in range(len(sally.stochastic_matrix)):
             for recip in range(len(sally.stochastic_matrix)):
                 try:
-                    out = sally.make_txn(sender, recip, [])
+                    sally.make_txn(sender, recip, [])
                 except AttributeError:
                     self.assertTrue(True)
 
@@ -251,27 +256,27 @@ class TestSimulator(ut.TestCase):
         self.assertEqual(len(out[0]), 2)
         self.assertIsInstance(out[0][1], list)
         self.assertIn(out[0][0], sally.g.left_nodes)
-        self.assertEqual(new_num_left_nodes, pred_num_new_lefts)
-        self.assertEqual(new_num_right_nodes, pred_num_new_rights)
-        self.assertEqual(new_num_blue_edges, pred_num_blue_edges)
-        self.assertEqual(new_num_red_edges, pred_num_red_edges)
+        self.assertEqual(new_num_left_nodes, old_num_left_nodes + pred_num_new_lefts)
+        self.assertEqual(new_num_right_nodes, old_num_right_nodes + pred_num_new_rights)
+        self.assertEqual(new_num_blue_edges, old_num_blue_edges + pred_num_blue_edges)
+        self.assertEqual(new_num_red_edges, old_num_red_edges + pred_num_red_edges)
         
         for txn in out[0][1]:
             [new_rights, new_lefts, rings, new_reds, new_blues] = txn
             for new_right in new_rights:
-                self.assertTrue(new_right in sally.g.right_nodes)
+                self.assertIn(new_right, sally.g.right_nodes)
             for new_left in new_lefts:
-                self.assertTrue(new_left in sally.g.left_nodes)
+                self.assertIn(new_left, sally.g.left_nodes)
             for R, new_right in zip(rings, new_rights):
                 for ring_member in R:
-                    self.assertIn((ring_member, new_right, sally.t) in sally.g.red_edges)
-                    self.assertIn((ring_member, new_right, sally.t) in new_reds)
+                    self.assertIn((ring_member, new_right, sally.t), sally.g.red_edges)
+                    self.assertIn((ring_member, new_right, sally.t), new_reds)
             for new_left in new_lefts:
                 for new_right in new_rights:
-                    self.assertIn((new_left, new_right, sally.t) in sally.g.blue_edges)
-                    self.assertIn((new_left, new_right, sally.t) in new_blues)
+                    self.assertIn((new_left, new_right, sally.t), sally.g.blue_edges)
+                    self.assertIn((new_left, new_right, sally.t), new_blues)
 
-    #### REPETITION OF SINGLE-USE TESTS ####
+    # REPETITION OF SINGLE-USE TESTS ####
 
     # @ut.skip("Skipping test_gen_time_step_from_empty_repeated")
     def test_gen_time_step_from_empty_repeated(self):
@@ -353,7 +358,7 @@ class TestSimulator(ut.TestCase):
         for _ in range(SAMPLE_SIZE):
             self.test_run_from_empty()
             
-    #### SINGLE-USE TESTS FROM A SIMULATED LEDGER. ####
+    # SINGLE-USE TESTS FROM A SIMULATED LEDGER. ####
 
     # @ut.skip("Skipping test_gen_time_step_from_simulated")
     def test_gen_time_step_from_simulated(self):
@@ -433,12 +438,11 @@ class TestSimulator(ut.TestCase):
                 available_left_nodes = [x for x in sally.g.left_nodes if x[1] + MIN_SPEND_TIME < sally.t]
             true_spender = choice(available_left_nodes)
             try:
-                out = sally.make_rights(owner, [])
-            except:
-                self.assertTrue(False)
-            else:
+                out = sally.make_rights(owner, [true_spender])
                 self.assertIsInstance(out, list)
-                self.assertEqual(len(out), 0)
+                self.assertEqual(len(out), 1)
+            except AttributeError:
+                self.assertTrue(False)
 
     # @ut.skip("Skipping test_make_reds_from_simulated")
     def test_make_reds_from_simulated(self):
@@ -464,10 +468,6 @@ class TestSimulator(ut.TestCase):
         except LookupError:
             self.assertTrue(False)
         except AttributeError:
-            self.assertTrue(False)
-        except IndexError:
-            self.assertTrue(False)
-        except:
             self.assertTrue(False)
         else:
             for new_edge_id in out:
@@ -495,14 +495,10 @@ class TestSimulator(ut.TestCase):
             y = choice(list(sally.g.right_nodes.keys()))
             x = choice(list(sally.g.left_nodes.keys()))
         try:
-            out = sally.make_blues([x], [y])
+            sally.make_blues([x], [y])
         except AttributeError:
             self.assertTrue(False)
         except LookupError:
-            self.assertTrue(False)
-        except IndexError:
-            self.assertTrue(False)
-        except:
             self.assertTrue(False)
         else:
             self.assertIn((x, y, sally.t), sally.g.blue_edges)
@@ -531,7 +527,7 @@ class TestSimulator(ut.TestCase):
             x = sally.g.add_node(0)
             try:
                 sally.add_left_node_to_buffer(x, owner)
-            except Exception:
+            except AttributeError:
                 self.assertTrue(False)
             else:
                 self.assertTrue(True)
@@ -545,11 +541,11 @@ class TestSimulator(ut.TestCase):
         self.assertIn(out, sally.g.left_nodes)
         self.assertEqual(old_ct + 1, new_ct)
 
-    # @ut.skip("Skipping test_gen_rings_from_simulated")
+    @ut.skip("Skipping test_gen_rings_from_simulated")
     def test_gen_rings_from_simulated(self):
         sally = make_simulated_simulator()
         try:
-            out = sally.gen_rings([])
+            sally.gen_rings([])
         except AttributeError:
             self.assertTrue(True)
         else:
@@ -557,6 +553,7 @@ class TestSimulator(ut.TestCase):
 
         sally = make_simulated_simulator()
         available = [_ for _ in sally.g.left_nodes if _[1] + MIN_SPEND_TIME < sally.t]
+        eff_ring_size = min(sally.ringsize, len(available))
         x = choice(available)
         try:
             out = sally.gen_rings([x])
@@ -565,7 +562,22 @@ class TestSimulator(ut.TestCase):
         else:
             self.assertIsInstance(out, list)
             self.assertEqual(len(out), 1)
-            self.assertEqual(len(out[0]), sally.ringsize)
+            self.assertEqual(len(out[0]), eff_ring_size)
+
+        sally = make_simulated_simulator()
+        self.assertGreater(len(sally.buffer[sally.t + 1]), 0)
+        signing_keys = [_[2] for _ in sally.buffer[sally.t]]
+        sally.t += sally.gen_time_step()
+        while len(signing_keys) == 0:
+            signing_keys = [_[2] for _ in sally.buffer[sally.t]]
+            sally.t += sally.gen_time_step()
+        self.assertGreater(len(signing_keys), 0)
+        out = sally.gen_rings(signing_keys)
+        for R, y in zip(out, signing_keys):
+            self.assertIn(y, R)
+            self.assertIn(y, sally.g.left_nodes)
+            for x in R:
+                self.assertIn(x, sally.g.left_nodes)
 
     # @ut.skip("Skipping test_make_txn_from_simulated")
     def test_make_txn_from_simulated(self):
@@ -573,7 +585,7 @@ class TestSimulator(ut.TestCase):
         for sender in range(len(sally.stochastic_matrix)):
             for recip in range(len(sally.stochastic_matrix)):
                 try:
-                    out = sally.make_txn(sender, recip, [])
+                    sally.make_txn(sender, recip, [])
                 except AttributeError:
                     self.assertTrue(True)
                 else:
@@ -587,17 +599,53 @@ class TestSimulator(ut.TestCase):
                 available = [_ for _ in sally.g.left_nodes if _[1] + MIN_SPEND_TIME < sally.t]
                 x = choice(available)
                 try:
-                    out = sally.make_txn(sender, recip, [x])
+                    sally.make_txn(sender, recip, [(sender, recip, x)])
                 except AttributeError:
                     self.assertTrue(False)
+                else:
+                    self.assertTrue(True)
+
+        sally = make_simulated_simulator()
+        while sally.t + 1 >= sally.runtime or len(sally.buffer[sally.t + 1]) == 0:
+            while sally.t + 1 < sally.runtime and len(sally.buffer[sally.t + 1]) == 0:
+                out = sally.make_coinbase()  # out = id of new left node
+                self.assertIn(out, sally.g.left_nodes)
+                sally.t += 1
+            if sally.t + 1 >= sally.runtime:
+                sally = make_simulator()
+        self.assertTrue(sally.t + 1 < sally.runtime)
+        sally.t += 1
+        bndl = groupby(sally.buffer[sally.t], key=lambda entry: (entry[0], entry[1]))
+        for k, grp in bndl:
+            sender = randrange(len(sally.stochastic_matrix))
+            recip = randrange(len(sally.stochastic_matrix))
+            try:
+                sally.make_txn(sender, recip, grp)
+            except AttributeError:
+                self.assertTrue(False)
+            else:
+                self.assertTrue(True)
 
     # @ut.skip("Skipping test_make_txns_from_simulated")
     def test_make_txns_from_simulated(self):
         sally = make_simulated_simulator()
-        expected_number_sigs = len(sally.buffer[sally.t])
+        old_num_rights = len(sally.g.right_nodes)
+        old_num_lefts = len(sally.g.left_nodes)
+        expected_new_rights = len(sally.buffer[sally.t])
+        bndl = groupby(sally.buffer[sally.t], key=lambda entry: (entry[0], entry[1]))
+        is_empty = all(False for _ in deepcopy(bndl))
+        self.assertFalse(is_empty)
+        expected_new_lefts = 2*len([(k, grp) for k, grp in bndl])
+
         out = sally.make_txns()
+
         self.assertIsInstance(out, list)
         self.assertGreater(len(out), 0)
+        new_num_rights = len(sally.g.right_nodes)
+        new_num_lefts = len(sally.g.left_nodes)
+        self.assertEqual(old_num_rights + expected_new_rights, new_num_rights)
+        self.assertEqual(old_num_lefts + expected_new_lefts, new_num_lefts)
+
         for txn in out:
             self.assertIsInstance(txn, list)
             self.assertEqual(len(txn), 5)
@@ -610,7 +658,48 @@ class TestSimulator(ut.TestCase):
             self.assertIsInstance(new_reds, list)
             self.assertIsInstance(new_blues, list)
             self.assertEqual(len(new_blues), len(new_rights)*2)
-            
+
+        sally = make_simulated_simulator()
+        while sally.t + 1 < sally.runtime and len(sally.buffer[sally.t + 1]) == 0:
+            out = sally.make_coinbase()  # out = id of new left node
+            self.assertIn(out, sally.g.left_nodes)
+            sally.t += 1
+        while sally.t + 1 >= sally.runtime or len(sally.buffer[sally.t + 1]) == 0:
+            sally = make_simulator()
+            while sally.t + 1 < sally.runtime and len(sally.buffer[sally.t + 1]) == 0:
+                out = sally.make_coinbase()  # out = id of new left node
+                self.assertIn(out, sally.g.left_nodes)
+                sally.t += 1
+
+        out = None  # clear out
+        self.assertGreater(len(sally.buffer[sally.t + 1]), 0)
+        sally.t += 1
+        self.assertGreater(len(sally.buffer[sally.t]), 0)
+        bndl = groupby(sally.buffer[sally.t], key=lambda entry: (entry[0], entry[1]))
+        k = sum([1 for _ in deepcopy(bndl)])
+        self.assertGreater(k, 0)
+        out = sally.make_txns()
+        self.assertEqual(len(out), k)
+        for ovt in out:
+            self.assertEqual(len(ovt), 5)
+            new_rights, new_lefts, rings, new_reds, new_blues = ovt
+            for new_right in new_rights:
+                self.assertIn(new_right, sally.g.right_nodes)
+            for new_left in new_lefts:
+                self.assertIn(new_left, sally.g.left_nodes)
+            for new_red in new_reds:
+                self.assertIn(new_red, sally.g.red_edges)
+            for new_blue in new_blues:
+                self.assertIn(new_blue, sally.g.blue_edges)
+            for R, y in zip(rings, new_rights):
+                for x in R:
+                    self.assertTrue(any([_[0] == x and _[1] == y for _ in new_reds]))
+            for new_red in new_reds:
+                new_left = new_red[0]
+                new_right = new_red[1]
+                self.assertTrue(any([x == new_left for ring in rings for x in ring]))
+                self.assertIn(new_right, new_rights)
+
     # @ut.skip("Skipping test_update_state_from_simulated")
     def test_update_state_from_simulated(self):
         # Generate simulator
@@ -625,8 +714,7 @@ class TestSimulator(ut.TestCase):
         eff_ring_size = min(sally.ringsize, len(available_ring_members))
         self.assertGreaterEqual(len(available_ring_members), 1)
 
-        
-        bndl = groupby(sally.buffer[sally.t+1], key=lambda x: (x[0], x[1]))
+        bndl = groupby(sally.buffer[sally.t+1], key=lambda entry: (entry[0], entry[1]))
         is_empty = all(False for _ in deepcopy(bndl))
         self.assertFalse(is_empty)
         num_txns = len([(k, grp) for k, grp in bndl])
@@ -669,6 +757,35 @@ class TestSimulator(ut.TestCase):
                     self.assertIn((new_left, new_right, sally.t), sally.g.blue_edges)
                     self.assertIn((new_left, new_right, sally.t), new_blues)
 
+        magic_numbers = [17, 10]
+        sally = make_simulated_simulator()
+        dt = magic_numbers[1]
+        try:
+            out = sally.update_state(dt)
+        except AttributeError:
+            self.assertTrue(False)
+        except RuntimeError:
+            self.assertTrue(False)
+        else:
+            self.assertEqual(len(out), dt)
+            for x in out:
+                self.assertEqual(len(x), 2)
+                cb, txns = x
+                self.assertIn(cb, sally.g.left_nodes)
+                for txn in txns:
+                    new_rights, new_lefts, rings, new_reds, new_blues = txn
+                    for R, y in zip(rings, new_rights):
+                        self.assertIn(y, sally.g.right_nodes)
+                        for ring_member in R:
+                            self.assertIn(ring_member, sally.g.left_nodes)
+                            self.assertTrue(any(
+                                [red_edge[0] == ring_member and red_edge[1] == y for red_edge in sally.g.red_edges]))
+                    for y in new_rights:
+                        for z in new_lefts:
+                            self.assertIn(z, sally.g.left_nodes)
+                            self.assertTrue(
+                                any([blue_edge[0] == z and blue_edge[1] == y for blue_edge in sally.g.blue_edges]))
+
     # @ut.skip("Skipping test_make_simulated_simulator")
     def test_make_simulated_simulator(self):
         sally = make_simulated_simulator()
@@ -676,89 +793,8 @@ class TestSimulator(ut.TestCase):
         self.assertGreater(len(sally.g.right_nodes), 0)
         self.assertGreater(sally.runtime, sally.t + 1)
 
-    # @ut.skip("Skipping test_gen_rings_from_simulated")
-    def test_gen_rings_from_simulated(self):
-        sally = make_simulated_simulator()
-        self.assertGreater(len(sally.buffer[sally.t + 1]), 0)
-        signing_keys = [_[2] for _ in sally.buffer[sally.t]]
-        sally.t += sally.gen_time_step()
-        while len(signing_keys) == 0:
-            signing_keys = [_[2] for _ in sally.buffer[sally.t]]
-            sally.t += sally.gen_time_step()
-        self.assertGreater(len(signing_keys), 0)
-        out = sally.gen_rings(signing_keys)
-        for R, y in zip(out, signing_keys):
-            self.assertIn(y, R)
-            self.assertIn(y, sally.g.left_nodes)
-            for x in R:
-                self.assertIn(x, sally.g.left_nodes)
-
-    # @ut.skip("Skipping test_make_txn_from_simulated")
-    def test_make_txn_from_simulated(self):
-        sally = make_simulated_simulator()
-        while sally.t + 1 >= sally.runtime or len(sally.buffer[sally.t + 1]) == 0:
-            while sally.t + 1 < sally.runtime and len(sally.buffer[sally.t + 1]) == 0:
-                out = sally.make_coinbase()  # out = id of new left node
-                self.assertIn(out, sally.g.left_nodes)
-                sally.t += 1
-            if sally.t + 1 >= sally.runtime:
-                sally = make_simulator()
-
-        self.assertTrue(sally.t + 1 < sally.runtime)
-
-        sally.t += 1
-        bndl = groupby(sally.buffer[sally.t], key=lambda x: (x[0], x[1]))
-        for k, grp in bndl:
-            sender = choice(range(len(sally.stochastic_matrix)))
-            recip = choice(range(len(sally.stochastic_matrix)))
-            out = sally.make_txn(sender, recip, grp)
-
-    # @ut.skip("Skipping test_make_txns_from_simulated")
-    def test_make_txns_from_simulated(self):
-        sally = make_simulated_simulator()
-        while sally.t + 1 < sally.runtime and len(sally.buffer[sally.t + 1]) == 0:
-            out = sally.make_coinbase()  # out = id of new left node
-            self.assertIn(out, sally.g.left_nodes)
-            sally.t += 1
-        while sally.t + 1 >= sally.runtime or len(sally.buffer[sally.t + 1]) == 0:
-            sally = make_simulator()
-            while sally.t + 1 < sally.runtime and len(sally.buffer[sally.t + 1]) == 0:
-                out = sally.make_coinbase()  # out = id of new left node
-                self.assertIn(out, sally.g.left_nodes)
-                sally.t += 1
-
-        out = None  # clear out
-        self.assertGreater(len(sally.buffer[sally.t + 1]), 0)
-        sally.t += 1
-        self.assertGreater(len(sally.buffer[sally.t]), 0)
-        bndl = groupby(sally.buffer[sally.t], key=lambda x: (x[0], x[1]))
-        k = sum([1 for key, grp in bndl])
-        self.assertGreater(k, 0)
-        out = sally.make_txns()
-        self.assertEqual(len(out), k)
-        for ovt in out:
-            self.assertEqual(len(ovt), 5)
-            new_rights, new_lefts, rings, new_reds, new_blues = ovt
-            for new_right in new_rights:
-                self.assertIn(new_right, sally.g.right_nodes)
-            for new_left in new_lefts:
-                self.assertIn(new_left, sally.g.left_nodes)
-            for new_red in new_reds:
-                self.assertIn(new_red, sally.g.red_edges)
-            for new_blue in new_blues:
-                self.assertIn(new_blue, sally.g.blue_edges)
-            for R, y in zip(rings, new_rights):
-                for x in R:
-                    self.assertTrue(any([_[0] == x and _[1] == y for _ in new_reds]))
-            for new_red in new_reds:
-                new_left = new_red[0]
-                new_right = new_red[1]
-                self.assertTrue(any([x == new_left for ring in rings for x in ring]))
-                self.assertIn(new_right, new_rights)
-
     # @ut.skip("Skipping test_step_from_simulated")
     def test_step_from_simulated(self):
-        magic_numbers = [17, 10]
         sally = make_simulated_simulator()
         old_t = sally.t
         out = sally.step()
@@ -788,34 +824,7 @@ class TestSimulator(ut.TestCase):
                 for new_blue in new_blues:
                     self.assertTrue(new_blue in sally.g.blue_edges)
 
-    # @ut.skip("Skipping test_update_state_from_simulated")
-    def test_update_state_from_simulated(self):
-        magic_numbers = [17, 10]
-        sally = make_simulated_simulator()
-        dt = magic_numbers[1]
-        try:
-            out = sally.update_state(dt)
-        except Exception:
-            self.assertTrue(False)
-        else:
-            self.assertEqual(len(out), dt)
-            for x in out:
-                self.assertEqual(len(x), 2)
-                cb, txns = x
-                self.assertIn(cb, sally.g.left_nodes)
-                for txn in txns:
-                    new_rights, new_lefts, rings, new_reds, new_blues = txn
-                    for R, y in zip(rings, new_rights):
-                        self.assertIn(y, sally.g.right_nodes)
-                        for ring_member in R:
-                            self.assertIn(ring_member, sally.g.left_nodes)
-                            self.assertTrue(any([red_edge[0] == ring_member and red_edge[1] == y for red_edge in sally.g.red_edges]))
-                    for y in new_rights:
-                        for z in new_lefts:
-                            self.assertIn(z, sally.g.left_nodes)
-                            self.assertTrue(any([blue_edge[0] == z and blue_edge[1] == y for blue_edge in sally.g.blue_edges]))
-        
-    #### REPETITION OF SINGLE-USE TESTS FROM A SIMULATED LEDGER ####
+    # REPETITION OF SINGLE-USE TESTS FROM A SIMULATED LEDGER ####
     
     # @ut.skip("Skipping test_gen_time_step_from_simulated_repeated")
     def test_gen_time_step_from_simulated_repeated(self):
@@ -832,30 +841,25 @@ class TestSimulator(ut.TestCase):
         for _ in range(SAMPLE_SIZE):
             self.test_gen_coinbase_amt_from_simulated()
 
-
     # @ut.skip("Skipping test_make_lefts_from_simulated_repeated")
     def test_make_lefts_from_simulated_repeated(self):
         for _ in range(SAMPLE_SIZE):
             self.test_make_lefts_from_simulated()
-
 
     # @ut.skip("Skipping test_make_rights_from_simulated_repeated")
     def test_make_rights_from_simulated_repeated(self):
         for _ in range(SAMPLE_SIZE):
             self.test_make_rights_from_simulated()
 
-
     # @ut.skip("Skipping test_make_reds_from_simulated_repeated")
     def test_make_reds_from_simulated_repeated(self):
         for _ in range(SAMPLE_SIZE):
             self.test_make_reds_from_simulated()
 
-
     # @ut.skip("Skipping test_make_blues_from_simulated_repeated")
     def test_make_blues_from_simulated_repeated(self):
         for _ in range(SAMPLE_SIZE):
             self.test_make_blues_from_simulated()
-
 
     # @ut.skip("Skipping test_gen_spend_time_from_simulated_repeated")
     def test_gen_spend_time_from_simulated_repeated(self):
@@ -907,39 +911,21 @@ class TestSimulator(ut.TestCase):
         for _ in range(SAMPLE_SIZE):
             self.test_make_simulated_simulator()
 
-    # @ut.skip("Skipping test_gen_rings_from_simulated_repeated")
-    def test_gen_rings_from_simulated_repeated(self):
-        for _ in range(SAMPLE_SIZE):
-            self.test_gen_rings_from_simulated()
-
-    # @ut.skip("Skipping test_make_txn_from_simulated_repeated")
-    def test_make_txn_from_simulated_repeated(self):
-        for _ in range(SAMPLE_SIZE):
-            self.test_make_txn_from_simulated()
-
-    # @ut.skip("Skipping test_make_txns_from_simulated_repeated")
-    def test_make_txns_from_simulated_repeated(self):
-        for _ in range(SAMPLE_SIZE):
-            self.test_make_txns_from_simulated()
-
     # @ut.skip("Skipping test_step_from_simulated_repeated")
     def test_step_from_simulated_repeated(self):
         for _ in range(SAMPLE_SIZE):
             self.test_step_from_simulated()
 
-    # @ut.skip("Skipping test_update_state_from_simulated_repeated")
-    def test_update_state_from_simulated_repeated(self):
-        for _ in range(SAMPLE_SIZE):
-            self.test_update_state_from_simulated()
-
-    #### INTEGRATION TESTS ####
+    # INTEGRATION TESTS ####
     
-    # @ut.skip("Skipping test_run_from_empty")
+    @ut.skip("Skipping test_run_from_empty")
     def test_run_from_empty(self):
         sally = make_simulator()
         try:
             out = sally.run()
-        except:
+        except AttributeError:
+            self.assertTrue(False)
+        except RuntimeError:
             self.assertTrue(False)
         else:
             self.assertIsInstance(out, list)
@@ -960,14 +946,17 @@ class TestSimulator(ut.TestCase):
                             self.assertIn(new_blue, sally.g.blue_edges)
                         for R, y in zip(rings, new_rights):
                             for x in R:
-                                self.assertTrue(any([edge_id[0] == x and edge_id[1] == y for edge_id in sally.g.red_edges]))
+                                b = any([edge_id[0] == x and edge_id[1] == y for edge_id in sally.g.red_edges])
+                                self.assertTrue(b)
     
-    # @ut.skip("Skipping test_run_from_simulated")
+    @ut.skip("Skipping test_run_from_simulated")
     def test_run_from_simulated(self):
         sally = make_simulated_simulator()
         try:
             out = sally.run()
-        except:
+        except AttributeError:
+            self.assertTrue(False)
+        except RuntimeError:
             self.assertTrue(False)
         else:
             self.assertIsInstance(out, list)
@@ -988,6 +977,8 @@ class TestSimulator(ut.TestCase):
                             self.assertIn(new_blue, sally.g.blue_edges)
                         for R, y in zip(rings, new_rights):
                             for x in R:
-                                self.assertTrue(any([edge_id[0] == x and edge_id[1] == y for edge_id in sally.g.red_edges]))
+                                b = any([edge_id[0] == x and edge_id[1] == y for edge_id in sally.g.red_edges])
+                                self.assertTrue(b)
+
 
 ut.TextTestRunner(verbosity=2, failfast=True).run(ut.TestLoader().loadTestsFromTestCase(TestSimulator))
