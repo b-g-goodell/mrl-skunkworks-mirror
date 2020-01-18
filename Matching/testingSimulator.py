@@ -5,7 +5,7 @@ from simulator import *
 from copy import deepcopy
 from random import randrange, random, choice
 
-SAMPLE_SIZE = 2
+SAMPLE_SIZE = int(1e2)
 
 FILENAME = "data/output.txt"
 STOCHASTIC_MATRIX = [[0.0, 0.9, 1.0 - 0.9], [0.125, 0.75, 0.125], [0.75, 0.25, 0.0]]
@@ -353,7 +353,7 @@ class TestSimulator(ut.TestCase):
         for _ in range(SAMPLE_SIZE):
             self.test_update_state_from_empty()
 
-    @ut.skip("Skipping test_run_from_empty_repeated")
+    # @ut.skip("Skipping test_run_from_empty_repeated")
     def test_run_from_empty_repeated(self):
         for _ in range(SAMPLE_SIZE):
             self.test_run_from_empty()
@@ -700,7 +700,7 @@ class TestSimulator(ut.TestCase):
                 self.assertTrue(any([x == new_left for ring in rings for x in ring]))
                 self.assertIn(new_right, new_rights)
 
-    # @ut.skip("Skipping test_update_state_from_simulated")
+    @ut.skip("Skipping test_update_state_from_simulated")
     def test_update_state_from_simulated(self):
         # Generate simulator
         sally = make_simulated_simulator()
@@ -901,7 +901,7 @@ class TestSimulator(ut.TestCase):
         for _ in range(SAMPLE_SIZE):
             self.test_update_state_from_simulated()
 
-    @ut.skip("Skipping test_run_from_simulated_repeated")
+    # @ut.skip("Skipping test_run_from_simulated_repeated")
     def test_run_from_simulated_repeated(self):
         for _ in range(SAMPLE_SIZE):
             self.test_run_from_simulated()
