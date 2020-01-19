@@ -3,14 +3,6 @@ from graphtheory import *
 from random import random, sample, randrange
 from copy import deepcopy
 
-# Some Monero-specific constants
-MAX_MONERO_ATOMIC_UNITS = 2**64 - 1
-EMISSION_RATIO = 2**-18
-EMISSION_RATIO_COMPLEMENT = 1.0 - EMISSION_RATIO
-MIN_MINING_REWARD = 6e11
-# A useful dictionary for human-readable files
-OWNERSHIP_DICT = {0: "Alice", 1: "Eve", 2: "Bob"}
-
 
 class Simulator(object):
     """
@@ -31,39 +23,43 @@ class Simulator(object):
         flat               : boolean (has monero reward become flat?)
         dt                 : positive integer (timestep width)
         max_atomic_units   : positive integer, in Monero 2**64 - 1
-        emission           : float, in Monero 2**-18
-        min_reward         : positive integer, in Monero 6e11
+        emission_ratio     : float, in Monero 2**-18
+        min_mining_reward  : positive integer, in Monero 6e11
         filename           : filename
         next_mining_reward : positive integer
         t                  : positive integer, next block height
         ownership          : dict() tracking ownership
+        owner_names        : dict() tracking human-readable names
         amounts            : dict() tracking amounts
         real_red_edges     : dict() tracking true spending edges
         buffer             : spending buffer
         g                  : BipartiteGraph visualizing the Monero ledger.
 
-    Methods in this class are ordered first according to dependency upon other methods and second according to elegance.
+    Methods in this class are ordered mostly according to dependency upon other methods.
 
     """
     def __init__(self, inp=None):
         self.runtime = inp['runtime']
+        assert 'hashrate' in inp and len(inp['hashrate']) == 3
         self.hashrate = inp['hashrate']
         self.stochastic_matrix = inp['stochastic matrix']
+        self.churn_number = len(self.stochastic_matrix) - len(self.hashrate)
         self.spend_times = inp['spend times']
         self.min_spend_time = inp['min spend time']
         self.ringsize = inp['ring size']
         self.flat = inp['flat']  # boolean : are block rewards flat yet?
         self.dt = inp['timestep']  # = 1
         assert self.dt >= 1
-        self.max_atomic_units = inp['max atomic']  # 2**64 - 1 in monero
-        self.emission = inp['emission']  # 2**-18 in monero
-        self.min_reward = inp['min reward']  # 6e11 in Monero
+        self.max_atomic_units = inp['max atomic units']  # 2**64 - 1 in monero
+        self.emission_ratio = inp['emission ratio']  # 2**-18 in monero
+        self.min_mining_reward = inp['min mining reward']  # 6e11 in Monero
         self.filename = inp['filename']
         with open(self.filename, "w+"):
             pass
-        self.next_mining_reward = self.emission*self.max_atomic_units
+        self.next_mining_reward = self.emission_ratio*self.max_atomic_units
         self.t = 0
         self.ownership = dict()
+        self.owner_names = inp['owner names']
         self.amounts = dict()
         self.real_red_edges = dict()
         self.buffer = []
@@ -96,14 +92,16 @@ class Simulator(object):
         out = deepcopy(self.next_mining_reward)
         # If block rewards aren't yet flat, drop next reward and check if flatness should begin.
         if not self.flat:
-            self.next_mining_reward = max(self.next_mining_reward*(1.0 - self.emission), self.min_reward)
-            self.flat = self.next_mining_reward == MIN_MINING_REWARD
+            self.next_mining_reward = max(self.next_mining_reward*(1.0 - self.emission_ratio), self.min_mining_reward)
+            self.flat = self.next_mining_reward == self.min_mining_reward
         return out
 
     def add_left_node_to_buffer(self, x, owner):
         """ Mark a left_node/one-time Monero key x for spending by owner """
         if x not in self.g.left_nodes:
             raise LookupError("Tried to add " + str(x) + " to buffer but is not an element of g.left_nodes.")
+        if any([(owner, recip, x) in self.buffer[t] for recip in range(len(self.hashrate)) for t in range(self.runtime)]):
+            raise LookupError("Tried to add " + str(x) + " to buffer but already occurs in buffer.")
 
         # Pick a spend time
         dt = self.gen_spend_time(owner)
@@ -117,13 +115,18 @@ class Simulator(object):
             if old_ct + 1 != new_ct:
                 raise AttributeError("Error in make_coinbase: Tried to append to buffer, length unchanged.")
 
+        return dt
+
     def make_lefts(self, sender, recip, amt):
         """ Make 2 new left nodes indicating change and recipient output whose amounts sum to amt. """
         # Split amounts across two new left nodes
         old_ct = len(self.g.left_nodes)
         out, r = None, random()
         ch_amt, recip_amt = r * amt, amt - r*amt
-        ch_out, recip_out = self.g.add_node(0, self.t), self.g.add_node(0, self.t)
+        ch_out = self.g.add_node(0, self.t)
+        recip_out = self.g.add_node(0, self.t)
+        assert ch_out in self.g.left_nodes
+        assert recip_out in self.g.left_nodes
         out = [ch_out, recip_out]
         new_ct = len(self.g.left_nodes)
         if old_ct + 2 != new_ct:
@@ -138,10 +141,21 @@ class Simulator(object):
 
     def make_rights(self, sender, true_spenders):
         """ Construct signatures by signer with the keys in true_spenders. """
+        if not isinstance(true_spenders, list):
+            raise AttributeError("Error in make_rights: tried to call make_rights with a non-list of true_spenders")
+        if sender not in self.owner_names:
+            raise AttributeError("Error in make_rights: tried to call make_rights with a bad sender.")
+
         old_ct = len(self.g.right_nodes)
         old_old_ct = old_ct
         n = len(true_spenders)
         out = []
+        if not all([_ in self.g.left_nodes for _ in true_spenders]):
+            raise AttributeError("Error in make_rights: tried to call make_rights with true_spenders that isn't a subset of left nodes.")
+
+        if not all([_[1] + self.min_spend_time <= self.t for _ in true_spenders]):
+            raise AttributeError("Tried to make rights with some true spenders that are not yet mature.")
+
         for true_spender in true_spenders:
             # For each true spender, create new right node, mark ownership, note the real red edge.
             out += [self.g.add_node(1, self.t)]
@@ -157,23 +171,24 @@ class Simulator(object):
                                  " times, didn't get " + str(n) + " new nodes.")
         return out
 
-    def make_reds(self, rings, new_rights):
+    def make_reds(self, rings, signature_keys):
         """ Make new red edges between rings and new_rights. """
+        predictions = sorted([(x, y) for ring, y in zip(rings, signature_keys) for x in ring])
         old_ct = len(self.g.red_edges)
         old_old_ct = old_ct
         # Compute an expected number of red edges we should be gaining.
         expected_new_red_edges = sum([len(ring) for ring in rings])
         out = []
-        if not len(new_rights) == len(rings):
+        if not len(signature_keys) == len(rings):
             raise AttributeError("Error in make_reds: number of sigs and number of rings do not match")
         if len(rings) == 0:
             raise LookupError("Error in make_reds: cannot make reds without ring members. Is the graph is empty?")
         if any([len(ring) != len(set(ring)) for ring in rings]):
             raise IndexError("Error in make_reds: Duplicate ring members present.")
-        if len(new_rights) != len(set(new_rights)):
+        if len(signature_keys) != len(set(signature_keys)):
             raise IndexError("Error in make_reds: Duplicate new right nodes present.")
 
-        for R, y in zip(rings, new_rights):
+        for R, y in zip(rings, signature_keys):
             for x in R:
                 if any([edge_id[0] == x and edge_id[1] == y for edge_id in self.g.red_edges]):
                     raise LookupError("Error in make_reds: tried to make a red edge that already exists.")
@@ -366,7 +381,7 @@ class Simulator(object):
         # if len(list(set(senders))) != len(senders):
         #    raise AttributeError
         sender = senders[0]
-        sender_name = str(OWNERSHIP_DICT[sender])
+        sender_name = str(self.owner_names[sender])
 
         true_spenders = [self.real_red_edges[_] for _ in new_rights]  # string.
         input_amt = sum([self.amounts[_] for _ in true_spenders])  # not string
@@ -376,7 +391,7 @@ class Simulator(object):
         ch_recip = self.ownership[ch_out]
         r_recip = self.ownership[r_out]
 
-        recip_names = [OWNERSHIP_DICT[ch_recip], OWNERSHIP_DICT[r_recip]]
+        recip_names = [self.owner_names[ch_recip], self.owner_names[r_recip]]
         residual = self.amounts[ch_out] + self.amounts[r_out] - input_amt
         return "Also, " + sender_name + " spends " + str(input_amt) + " with one-time keys " + str(true_spenders) + \
                ", respective ring members " + str(rings) + ", outputting change key " + str(ch_out) + \
@@ -387,6 +402,8 @@ class Simulator(object):
     def record(self, out):
         """ Write ledger and its ground truth to file. """
         h = 1
+        with open(self.filename, "r") as rf:
+            out = rf.read()
         with open(self.filename, "w+") as wf:
             for steps in out:
                 for block in steps:
@@ -395,7 +412,7 @@ class Simulator(object):
                     line = ""
                     line += str(h) + "^th block: \n"
                     line += "The coinbase with left_node_identity " + str(cb) + " was mined by "
-                    line += OWNERSHIP_DICT[self.ownership[cb]] + " for block reward " + str(self.amounts[cb]) + ".\n"
+                    line += self.owner_names[self.ownership[cb]] + " for block reward " + str(self.amounts[cb]) + ".\n"
                     for txn in txns:
                         line += self.human_parse(txn)
                     line += "\n"
@@ -405,8 +422,21 @@ class Simulator(object):
 
     def run(self):
         """ Execute self.step until time runs out and then record results. """
-        out = [self.step()]
-        while self.t + self.dt <= self.runtime:
-            out += [self.step()]
-        self.record(out)
-        return out
+        with open(self.filename, "w+") as wf:
+            pass
+        writing_buffer = []
+        modulus = 1000
+        ct = 0
+        writing_buffer += [self.step()]
+        while self.t + self.dt < self.runtime:
+            writing_buffer += [self.step()]
+            if len(writing_buffer) % modulus == 0:
+                with open(self.filename, "a") as wf:
+                    for entry in writing_buffer:
+                        wf.write(str(entry))
+                    writing_buffer = []
+                    ct += 1
+                    print(ct, self.t, self.runtime)
+        with open(self.filename, "a") as wf:
+            for entry in writing_buffer:
+                wf.write(str(entry))

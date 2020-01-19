@@ -123,7 +123,6 @@ class BipartiteGraph(object):
         Note: OVER-WRITES any previous edge weight of color b
         with weight w and over-writes the weight of color 1-b with weight 0.0.
         """
-        # print(pair)
         (x, y) = pair  # parse eid to get left node and right node ids
         result = x in self.left_nodes
         result = result and y in self.right_nodes    
@@ -134,12 +133,11 @@ class BipartiteGraph(object):
             self.del_edge(eid)
         elif result and w > 0.0:
             result = eid
-            new_dict = {result: w}
+            new_dict = {result: w}  # TODO: Replace w with log(w) throughout code and use sums instead of products.
             if b == 1:
                 self.red_edges.update(new_dict)
             else:
                 self.blue_edges.update(new_dict)
-            result = eid
         return result
 
     def del_edge(self, input_eids):
