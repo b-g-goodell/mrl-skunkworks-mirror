@@ -1,8 +1,8 @@
-from collections import deque
 import sys
+from collections import deque
 
-# Check version number
 if sys.version_info[0] != 3:
+    # Check version number
     #  print("This script requires Python3")
     sys.exit(1)
 
@@ -40,7 +40,8 @@ class BipartiteGraph(object):
         boost
 
     Usage:
-        g = BipartiteGraph({'data': 'han-tyumi', 'count': 0, 'left_nodes': dict(), 'right_nodes': dict(), 'red_edges': dict(), 'blue_edges': dict()})
+        g = BipartiteGraph({'data': 'han-tyumi', 'count': 0, 'left_nodes': dict(), 'right_nodes': dict(),
+                'red_edges': dict(), 'blue_edges': dict()})
         x = g.add_node(0, block_height_one)  # Add left node
         y = g.add_node(1, block_height_two)  # Add right node
         z = g.add_edge(1, (x, y), edge_weight, block_height_three)  # Add red edge
@@ -393,7 +394,8 @@ class BipartiteGraph(object):
                 wt_dct = self.blue_edges
             assert len(wt_dct) > 0
             #  print("Parsing (b, input_match):")
-            (matched_lefts, matched_rights, unmatched_lefts, unmatched_rights, bb, non_match_edges) = self._parse(b, input_match)
+            (matched_lefts, matched_rights, unmatched_lefts, unmatched_rights, bb, non_match_edges) = \
+                self._parse(b, input_match)
             assert len(input_match) + len(non_match_edges) == len(wt_dct)
 
             q = deque([[eid] for eid in non_match_edges if eid[0] in unmatched_lefts])
@@ -611,9 +613,8 @@ class BipartiteGraph(object):
 
         TODO: Run optimize with a maximal match of each length, find heaviest among these.
         """
-        # Maximal matchings leave no edges available with two untouched end-
-        # points, whereas maximum matchings are maximal and also have the prop-
-        # erty that no other maximal matchings have more edges.
+        # Maximal matchings leave no edges available with two untouched end-points, whereas maximum matchings are
+        # maximal and also have the property that no other maximal matchings have more edges.
 
         # print("Beginning optimization.")
         assert b in [0, 1]
@@ -621,14 +622,13 @@ class BipartiteGraph(object):
             wt_dct = self.red_edges
         else:
             wt_dct = self.blue_edges
-            
 
         # print("Extending empty match.")
         next_match = self.extend(b)  # starts with empty match by default
         
         assert next_match is not None
         assert len(next_match) > 0 or len(wt_dct) == 0 
-        lnm = len(next_match)
+        # lnm = len(next_match)
 
         print("Extending match.")
         temp = None
@@ -637,8 +637,7 @@ class BipartiteGraph(object):
             print(".", end='')
             next_match = self.extend(b, temp)
             assert len(next_match) >= len(temp)
-            lnm = len(next_match)
-
+            # lnm = len(next_match)
 
         print("\nBoosting previous match")
         temp = next_match

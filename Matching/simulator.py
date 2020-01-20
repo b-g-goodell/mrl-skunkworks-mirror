@@ -1,7 +1,7 @@
-from itertools import groupby
-from graphtheory import *
-from random import random, sample, randrange
 from copy import deepcopy
+from itertools import groupby
+from random import random, sample, randrange
+from Matching.graphtheory import BipartiteGraph
 
 
 class Simulator(object):
@@ -100,7 +100,8 @@ class Simulator(object):
         """ Mark a left_node/one-time Monero key x for spending by owner """
         if x not in self.g.left_nodes:
             raise LookupError("Tried to add " + str(x) + " to buffer but is not an element of g.left_nodes.")
-        if any([(owner, recip, x) in self.buffer[t] for recip in range(len(self.hashrate)) for t in range(self.runtime)]):
+        temp = [(owner, recip, x) in self.buffer[t] for recip in range(len(self.hashrate)) for t in range(self.runtime)]
+        if any(temp):
             raise LookupError("Tried to add " + str(x) + " to buffer but already occurs in buffer.")
 
         # Pick a spend time
@@ -151,7 +152,8 @@ class Simulator(object):
         n = len(true_spenders)
         out = []
         if not all([_ in self.g.left_nodes for _ in true_spenders]):
-            raise AttributeError("Error in make_rights: tried to call make_rights with true_spenders that isn't a subset of left nodes.")
+            err = "Error in make_rights: tried make_rights with true_spenders that isn't a subset of left nodes."
+            raise AttributeError(err)
 
         if not all([_[1] + self.min_spend_time <= self.t for _ in true_spenders]):
             raise AttributeError("Tried to make rights with some true spenders that are not yet mature.")
@@ -203,6 +205,9 @@ class Simulator(object):
         if old_old_ct + expected_new_red_edges != new_ct:
             raise AttributeError("Error in make_reds: called add_edge " + str(expected_new_red_edges) +
                                  " times but got a different number of new red edges.")
+        # Complicated way of testing set equality:
+        assert all([any([_[0] == eid[0] and _[1] == eid[1] for eid in predictions]) for _ in out])
+        assert all([any([_[0] == eid[0] and _[1] == eid[1] for _ in out]) for eid in predictions])
         return out
 
     def make_blues(self, new_lefts, new_rights):
@@ -433,7 +438,7 @@ class Simulator(object):
             if len(writing_buffer) % modulus == 0:
                 with open(self.filename, "a") as wf:
                     for entry in writing_buffer:
-                        wf.write(str(entry))
+                        wf.write(str(entry) + "\n")
                     writing_buffer = []
                     ct += 1
                     print(ct, self.t, self.runtime)

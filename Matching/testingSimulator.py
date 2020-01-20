@@ -1,12 +1,11 @@
-import unittest as ut
-from itertools import groupby
-from graphtheory import BipartiteGraph
-from simulator import Simulator
 from copy import deepcopy
-from random import randrange, random, choice, sample
+from itertools import groupby
+from random import random, choice, sample, randrange
 from math import pi
+from Matching.simulator import Simulator
+import unittest as ut
 
-SAMPLE_SIZE = 100
+SAMPLE_SIZE = 1
 FILENAME = "data/output.txt"
 STOCHASTIC_MATRIX = [[0.0, 0.9, 1.0 - 0.9], [0.125, 0.75, 0.125], [0.75, 0.25, 0.0]]
 HASH_RATE_ALICE = 0.33
@@ -1254,7 +1253,7 @@ class TestSimulator(ut.TestCase):
         self.assertGreater(len(sally.g.left_nodes), 0)
         self.assertGreater(len(sally.g.right_nodes), 0)
         self.assertGreater(sally.runtime, sally.t + 1)
-        self.assertTrue(sally.t >= sally.runtime or len(sally.buffer[sally.t])*len(sally.buffer[sally.t + 1])> 0)
+        self.assertTrue(sally.t >= sally.runtime or len(sally.buffer[sally.t])*len(sally.buffer[sally.t + 1]) > 0)
 
     # @ut.skip("Skipping test_step_from_simulated")
     def test_step_from_simulated(self):
@@ -1302,144 +1301,140 @@ class TestSimulator(ut.TestCase):
 
     # REPETITION OF SINGLE-USE TESTS FROM A SIMULATED LEDGER ####
 
-    # @ut.skip("Skipping test_step_from_simulated_repeated")
-    # def test_step_from_simulated_repeated(self):
-    #     for _ in range(SAMPLE_SIZE):
-    #         self.test_step_from_simulated()
-
     # @ut.skip("Skipping test_gen_time_step_from_simulated_repeated")
     def test_gen_time_step_from_simulated_repeated(self):
         for _ in range(SAMPLE_SIZE):
-             self.test_gen_time_step_from_simulated()
+            self.test_gen_time_step_from_simulated()
 
     # @ut.skip("Skipping test_gen_coinbase_owner_from_simulated_repeated")
     def test_gen_coinbase_owner_from_simulated_repeated(self):
         for _ in range(SAMPLE_SIZE):
-             self.test_gen_coinbase_owner_from_simulated()
+            self.test_gen_coinbase_owner_from_simulated()
 
     # @ut.skip("Skipping test_gen_coinbase_amt_from_simulated_repeated")
     def test_gen_coinbase_amt_from_simulated_repeated(self):
         for _ in range(SAMPLE_SIZE):
-             self.test_gen_coinbase_amt_from_simulated()
+            self.test_gen_coinbase_amt_from_simulated()
 
     # @ut.skip("Skipping test_add_left_node_to_buffer_from_simulated_repeated")
     def test_add_left_node_to_buffer_from_simulated_repeated(self):
         for _ in range(SAMPLE_SIZE):
-             self.test_add_left_node_to_buffer_from_simulated()
+            self.test_add_left_node_to_buffer_from_simulated()
 
     # @ut.skip("Skipping test_make_lefts_from_simulated_repeated")
     def test_make_lefts_from_simulated_repeated(self):
         for _ in range(SAMPLE_SIZE):
-             self.test_make_lefts_from_simulated()
+            self.test_make_lefts_from_simulated()
 
     # @ut.skip("Skipping test_make_rights_from_simulated_fail_repeated")
     def test_make_rights_from_simulated_fail_repeated(self):
         for _ in range(SAMPLE_SIZE):
-             self.test_make_rights_from_simulated_fail()
+            self.test_make_rights_from_simulated_fail()
 
     # @ut.skip("Skipping test_make_rights_from_simulated_simple_repeated")
     def test_make_rights_from_simulated_simple_repeated(self):
         for _ in range(SAMPLE_SIZE):
-             self.test_make_rights_from_simulated_simple()
+            self.test_make_rights_from_simulated_simple()
 
     # @ut.skip("Skipping test_make_rights_from_simulated_complex_repeated")
     def test_make_rights_from_simulated_complex_repeated(self):
         for _ in range(SAMPLE_SIZE):
-             self.test_make_rights_from_simulated_complex()
+            self.test_make_rights_from_simulated_complex()
 
     # @ut.skip("Skipping test_make_reds_from_simulated_no_input_repeated")
     def test_make_reds_from_simulated_no_input_repeated(self):
         for _ in range(SAMPLE_SIZE):
-             self.test_make_reds_from_simulated_no_input()
+            self.test_make_reds_from_simulated_no_input()
 
     # @ut.skip("Skipping test_make_reds_from_simulated_simple_repeated")
     def test_make_reds_from_simulated_simple_repeated(self):
         for _ in range(SAMPLE_SIZE):
-             self.test_make_reds_from_simulated_simple()
+            self.test_make_reds_from_simulated_simple()
 
     # @ut.skip("Skipping test_make_reds_from_simulated_less_simple_repeated")
     def test_make_reds_from_simulated_less_simple_repeated(self):
         for _ in range(SAMPLE_SIZE):
-             self.test_make_reds_from_simulated_less_simple()
+            self.test_make_reds_from_simulated_less_simple()
 
     # @ut.skip("Skipping test_make_reds_from_simulated_complex_repeated")
     def test_make_reds_from_simulated_complex_repeated(self):
         for _ in range(SAMPLE_SIZE):
-             self.test_make_reds_from_simulated_complex()
+            self.test_make_reds_from_simulated_complex()
 
     # @ut.skip("Skipping test_make_blues_from_simulated_repeated")
     def test_make_blues_from_simulated_repeated(self):
         for _ in range(SAMPLE_SIZE):
-             self.test_make_blues_from_simulated()
+            self.test_make_blues_from_simulated()
 
     # @ut.skip("Skipping test_gen_spend_time_from_simulated_repeated")
     def test_gen_spend_time_from_simulated_repeated(self):
         for _ in range(SAMPLE_SIZE):
-             self.test_gen_spend_time_from_simulated()
+            self.test_gen_spend_time_from_simulated()
 
     # @ut.skip("Skipping test_gen_recipient_from_simulated_repeated")
     def test_gen_recipient_from_simulated_repeated(self):
         for _ in range(SAMPLE_SIZE):
-             self.test_gen_recipient_from_simulated()
+            self.test_gen_recipient_from_simulated()
 
     # @ut.skip("Skipping test_gen_recipient_distribution_from_simulated_repeated")
     def test_gen_recipient_distribution_from_simulated_repeated(self):
         for _ in range(SAMPLE_SIZE):
-             self.test_gen_recipient_distribution_from_simulated()
+            self.test_gen_recipient_distribution_from_simulated()
 
     # @ut.skip("Skipping test_make_coinbase_from_simulated_repeated")
     def test_make_coinbase_from_simulated_repeated(self):
         for _ in range(SAMPLE_SIZE):
-             self.test_make_coinbase_from_simulated()
+            self.test_make_coinbase_from_simulated()
 
     # @ut.skip("Skipping test_gen_rings_from_simulated_fail_repeated")
     def test_gen_rings_from_simulated_fail_repeated(self):
         for _ in range(SAMPLE_SIZE):
-             self.test_gen_rings_from_simulated_fail()
+            self.test_gen_rings_from_simulated_fail()
 
     # @ut.skip("Skipping test_gen_rings_from_simulated_simple_repeated")
     def test_gen_rings_from_simulated_simple_repeated(self):
         for _ in range(SAMPLE_SIZE):
-             self.test_gen_rings_from_simulated_simple()
+            self.test_gen_rings_from_simulated_simple()
 
     # @ut.skip("Skipping test_gen_rings_from_simulated_complex_repeated")
     def test_gen_rings_from_simulated_complex_repeated(self):
         for _ in range(SAMPLE_SIZE):
-             self.test_gen_rings_from_simulated_complex()
+            self.test_gen_rings_from_simulated_complex()
 
     # @ut.skip("Skipping test_gen_rings_distribution_from_simulated_repeated")
     def test_gen_rings_distribution_from_simulated_repeated(self):
         for _ in range(SAMPLE_SIZE):
-             self.test_gen_rings_distribution_from_simulated()
+            self.test_gen_rings_distribution_from_simulated()
 
     # @ut.skip("Skipping test_make_txn_from_simulated_repeated")
     def test_make_txn_from_simulated_repeated(self):
         for _ in range(SAMPLE_SIZE):
-             self.test_make_txn_from_simulated()
+            self.test_make_txn_from_simulated()
 
     # @ut.skip("Skipping test_make_txns_from_simulated_repeated")
     def test_make_txns_from_simulated_repeated(self):
         for _ in range(SAMPLE_SIZE):
-             self.test_make_txns_from_simulated()
+            self.test_make_txns_from_simulated()
 
     # @ut.skip("Skipping test_update_state_from_simulated_repeated")
     def test_update_state_from_simulated_repeated(self):
         for _ in range(SAMPLE_SIZE):
-             self.test_update_state_from_simulated()
+            self.test_update_state_from_simulated()
 
     # @ut.skip("Skipping test_make_simulated_simulator_repeated")
     def test_make_simulated_simulator_repeated(self):
         for _ in range(SAMPLE_SIZE):
-             self.test_make_simulated_simulator()
+            self.test_make_simulated_simulator()
 
     # @ut.skip("Skipping test_step_from_simulated_repeated")
     def test_step_from_simulated_repeated(self):
         for _ in range(SAMPLE_SIZE):
-             self.test_step_from_simulated()
+            self.test_step_from_simulated()
 
     # @ut.skip("Skipping test_run_from_simulated_repeated")
     def test_run_from_simulated_repeated(self):
         for _ in range(SAMPLE_SIZE):
-             self.test_run_from_simulated()
+            self.test_run_from_simulated()
+
 
 ut.TextTestRunner(verbosity=2, failfast=True).run(ut.TestLoader().loadTestsFromTestCase(TestSimulator))
