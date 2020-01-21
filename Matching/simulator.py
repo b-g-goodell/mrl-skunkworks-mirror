@@ -3,6 +3,24 @@ from itertools import groupby
 from random import random, sample, randrange
 from Matching.graphtheory import BipartiteGraph
 
+FILENAME = "data/output.csv"
+STOCHASTIC_MATRIX = [[0.0, 0.9, 1.0 - 0.9], [0.125, 0.75, 0.125], [0.75, 0.25, 0.0]]
+HASH_RATE_ALICE = 0.33
+HASH_RATE_EVE = 0.33
+HASH_RATE_BOB = 1.0 - HASH_RATE_ALICE - HASH_RATE_EVE
+HASH_RATE = [HASH_RATE_ALICE, HASH_RATE_EVE, HASH_RATE_BOB]
+RING_SIZE = 3
+MIN_SPEND_TIME = RING_SIZE + 2  # Guarantees enough ring members for all signatures
+RUNTIME = 100
+MAX_ATOMIC_UNITS = 2**64 - 1
+EMISSION_RATIO = 2**-18
+MIN_MINING_REWARD = int(6e11)
+OWNER_NAMES = {0: "Alice", 1: "Eve", 2: "Bob"}
+# Expected spend-times are 20.0, 100.0, and 50.0 blocks, respectively.
+SPEND_TIMES = [lambda x: 0.05 * ((1.0 - 0.05) ** (x - MIN_SPEND_TIME)),
+               lambda x: 0.01 * ((1.0 - 0.01) ** (x - MIN_SPEND_TIME)),
+               lambda x: 0.025 * ((1.0 - 0.025) ** (x - MIN_SPEND_TIME))]
+
 
 class Simulator(object):
     """
@@ -404,7 +422,7 @@ class Simulator(object):
                recip_names[1] + " and resp. amounts " + str(self.amounts[ch_out]) + " and " + \
                str(self.amounts[r_out]) + ", note INPUT - OUTPUT = " + str(residual) + ".\n"
 
-    def record(self, out):
+    def record(self):
         """ Write ledger and its ground truth to file. """
         h = 1
         with open(self.filename, "r") as rf:
@@ -427,7 +445,7 @@ class Simulator(object):
 
     def run(self):
         """ Execute self.step until time runs out and then record results. """
-        with open(self.filename, "w+") as wf:
+        with open(self.filename, "w+"):
             pass
         writing_buffer = []
         modulus = 1000
@@ -445,3 +463,38 @@ class Simulator(object):
         with open(self.filename, "a") as wf:
             for entry in writing_buffer:
                 wf.write(str(entry))
+
+
+# Methods for conveniently generating a simulator.
+def make_simulator():
+    """ Return a fresh simulator with some standard parameters and no blocks. For testing an empty simulator. """
+    inp = dict()
+    inp.update({'runtime': RUNTIME, 'hashrate': HASH_RATE, 'stochastic matrix': STOCHASTIC_MATRIX})
+    inp.update({'spend times': SPEND_TIMES, 'min spend time': MIN_SPEND_TIME, 'ring size': RING_SIZE})
+    inp.update({'flat': False, 'timestep': 1, 'max atomic units': 2**64 - 1, 'emission ratio': 2**-18})
+    inp.update({'min mining reward': 6e11, 'owner names': OWNER_NAMES})
+    label_msg = (RUNTIME, HASH_RATE[0], HASH_RATE[1], HASH_RATE[2], STOCHASTIC_MATRIX[0][0], STOCHASTIC_MATRIX[0][1],
+                 STOCHASTIC_MATRIX[0][2], STOCHASTIC_MATRIX[1][0], STOCHASTIC_MATRIX[1][1], STOCHASTIC_MATRIX[1][2],
+                 STOCHASTIC_MATRIX[2][0], STOCHASTIC_MATRIX[2][1], STOCHASTIC_MATRIX[2][2], 1.0/SPEND_TIMES[0](1),
+                 1.0/SPEND_TIMES[1](1), 1.0/SPEND_TIMES[2](1), MIN_SPEND_TIME, RING_SIZE)
+    label = str(hash(label_msg))
+    label = label[-8:]
+    fn = FILENAME[:-4] + str(label) + FILENAME[-4:]
+    with open(fn, "w+") as _:
+        pass
+    inp.update({'filename': fn})
+    return Simulator(inp)
+
+
+def make_simulated_simulator():
+    """ Return a new simulator after simulating until upcoming buffer isn't empty. For testing non-empty simulator."""
+    sally = make_simulator()
+    out = []
+    while len(sally.buffer[sally.t])*len(sally.buffer[sally.t + 1]) == 0 or sally.t + 1 >= sally.runtime:
+        while sally.t + 1 < sally.runtime and len(sally.buffer[sally.t])*len(sally.buffer[sally.t + 1]) == 0:
+            out += [sally.step()]
+        if sally.t + 1 >= sally.runtime or sally.t >= sally.runtime or \
+                len(sally.buffer[sally.t])*len(sally.buffer[sally.t + 1]) == 0:
+            sally = make_simulator()
+            out = []
+    return sally
