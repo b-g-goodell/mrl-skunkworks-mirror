@@ -377,14 +377,13 @@ class Simulator(object):
                 out += [self.make_txn(sender, recip, deepcopy(grp))]
         return out
 
-    def update_state(self, dt):
+    def update_state(self, total_dt=None):
         """ If time hasn't run out, call make_coinbase and make_txns """
         # Check if dt is beyond the time horizon. If not, make a coinbase and spend from the buffer.
         out = []
-        target_time = self.t + dt
-        if target_time >= self.runtime:
-            # Simulation comes to an end.
-            return out
+        if total_dt is None:
+            total_dt = self.dt
+        target_time = min(self.runtime, self.t + total_dt)
         while self.t < target_time:
             self.t += self.dt
             out += [[self.make_coinbase(), self.make_txns()]]
@@ -490,11 +489,11 @@ def make_simulated_simulator():
     """ Return a new simulator after simulating until upcoming buffer isn't empty. For testing non-empty simulator."""
     sally = make_simulator()
     out = []
-    while len(sally.buffer[sally.t])*len(sally.buffer[sally.t + 1]) == 0 or sally.t + 1 >= sally.runtime:
+    while len(sally.buffer[sally.t])*len(sally.buffer[sally.t + 1]) == 0 and sally.t < sally.runtime:
         while sally.t + 1 < sally.runtime and len(sally.buffer[sally.t])*len(sally.buffer[sally.t + 1]) == 0:
-            out += [sally.step()]
-        if sally.t + 1 >= sally.runtime or sally.t >= sally.runtime or \
-                len(sally.buffer[sally.t])*len(sally.buffer[sally.t + 1]) == 0:
-            sally = make_simulator()
-            out = []
+            out += [sally.step()]  # step calls update_state
+        else:
+            if sally.t + 1 >= sally.runtime or sally.t >= sally.runtime:
+                sally = make_simulator()
+                out = []
     return sally
