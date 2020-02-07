@@ -831,7 +831,7 @@ class TestSimulator(ut.TestCase):
                     self.assertEqual(new_edge_id[1], eid[1])
                     self.assertEqual(new_edge_id[2], sally.t)
 
-    # @ut.skip("Skipping test_make_reds_from_simulated_complex")
+    @ut.skip("Skipping test_make_reds_from_simulated_complex")
     def test_make_reds_from_simulated_complex(self):
         """ Tests that making more than one edge at a time succeeds. This does not test gen_rings, and so ring
         members in this test are manually constructed. """
@@ -1160,23 +1160,35 @@ class TestSimulator(ut.TestCase):
 
     # @ut.skip("Skipping test_update_state_from_simulated_complex")
     def test_update_state_from_simulated_complex(self):
-        magic_numbers = [17, 10]
+        magic_numbers = [17]
 
+        total_dt = magic_numbers[0]
+        
         sally = make_simulated_simulator()
-        old_stats, old_aux, old_pred = self.gather_stats_from_sally(sally)
-        total_dt = magic_numbers[1]
         old_sally = deepcopy(sally)
+        old_stats, old_aux, old_pred = self.gather_stats_from_sally(old_sally)
+        
+        stepwise_sally = deepcopy(sally)
+        old_stepwise_sally = deepcopy(stepwise_sally)
+        old_stepwise_stats, old_stepwise_aux, old_stepwise_pred = self.gather_stats_from_sally(old_stepwise_sally)
         try:
-            out = sally.update_state(total_dt)
+            out_total = sally.update_state(total_dt)
         except AttributeError:
             self.assertTrue(False)
         except RuntimeError:
             self.assertTrue(False)
         else:
-            self.assertEqual(old_sally.t + total_dt, sally.t)
-            new_stats, new_aux, new_pred = self.gather_stats_from_sally(sally)
-            self.compare_stats_with_predictions(sally, old_stats, old_aux, old_pred, new_stats, new_aux, new_pred, out,
-                                                total_dt)
+            stepwise_out = []
+            target_t = old_sally.t + total_dt
+            while stepwise_sally.t < target_t:
+                stepwise_out += [stepwise_sally.update_state()]
+                self.assertEqual(old_stepwise_sally.t + stepwise_sally.dt, stepwise_sally.t)
+                new_stepwise_stats, new_stepwise_aux, new_stepwise_pred = self.gather_stats_from_sally(stepwise_sally)
+                self.compare_stats_with_predictions(sally, old_stepwise_stats, 
+                    old_stepwise_aux, old_stepwise_pred, new_stepwise_stats, 
+                    new_stepwise_aux, new_stepwise_pred, stepwise_out[-1], stepwise_sally.dt)
+                old_stepwise_sally = deepcopy(stepwise_sally)
+                old_stepwise_stats, old_stepwise_aux, old_stepwise_pred = new_stepwise_stats, new_stepwise_aux, new_stepwise_pred
 
     # @ut.skip("Skipping test_make_simulated_simulator")
     def test_make_simulated_simulator(self):
@@ -1289,7 +1301,7 @@ class TestSimulator(ut.TestCase):
         for _ in range(SAMPLE_SIZE):
             self.test_make_reds_from_simulated_less_simple()
 
-    # @ut.skip("Skipping test_make_reds_from_simulated_complex_repeated")
+    @ut.skip("Skipping test_make_reds_from_simulated_complex_repeated")
     def test_make_reds_from_simulated_complex_repeated(self):
         for _ in range(SAMPLE_SIZE):
             self.test_make_reds_from_simulated_complex()

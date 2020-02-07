@@ -465,29 +465,25 @@ SPEND_TIMES = [lambda x: 0.05 * ((1.0 - 0.05) ** (x - MIN_SPEND_TIME)),
                lambda x: 0.025 * ((1.0 - 0.025) ** (x - MIN_SPEND_TIME))]
 
 # Methods for conveniently generating a simulator.
-def make_simulator():
-    """ Return a fresh simulator with some standard parameters and no blocks. For testing an empty simulator. """
-    inp = dict()
-    inp.update({'runtime': RUNTIME, 'hashrate': HASH_RATE, 'stochastic matrix': STOCHASTIC_MATRIX})
-    inp.update({'spend times': SPEND_TIMES, 'min spend time': MIN_SPEND_TIME, 'ring size': RING_SIZE})
-    inp.update({'flat': False, 'timestep': 1, 'max atomic units': 2**64 - 1, 'emission ratio': 2**-18})
-    inp.update({'min mining reward': 6e11, 'owner names': OWNER_NAMES})
-    label_msg = (RUNTIME, HASH_RATE[0], HASH_RATE[1], HASH_RATE[2], STOCHASTIC_MATRIX[0][0], STOCHASTIC_MATRIX[0][1],
-                 STOCHASTIC_MATRIX[0][2], STOCHASTIC_MATRIX[1][0], STOCHASTIC_MATRIX[1][1], STOCHASTIC_MATRIX[1][2],
-                 STOCHASTIC_MATRIX[2][0], STOCHASTIC_MATRIX[2][1], STOCHASTIC_MATRIX[2][2], 1.0/SPEND_TIMES[0](1),
-                 1.0/SPEND_TIMES[1](1), 1.0/SPEND_TIMES[2](1), MIN_SPEND_TIME, RING_SIZE)
-    label = str(hash(label_msg))
-    label = label[-8:]
-    fn = FILENAME[:-4] + str(label) + FILENAME[-4:]
-    with open(fn, "w+") as _:
-        pass
-    inp.update({'filename': fn})
+def make_simulator(inp = None):
+    """ Return a fresh simulator with some standard parameters and no blocks. For testing an empty simulator. """    
+    if inp is None:
+        inp = dict()
+        inp.update({'runtime': RUNTIME, 'hashrate': HASH_RATE, 'stochastic matrix': STOCHASTIC_MATRIX})
+        inp.update({'spend times': SPEND_TIMES, 'min spend time': MIN_SPEND_TIME, 'ring size': RING_SIZE})
+        inp.update({'flat': False, 'timestep': 1, 'max atomic units': 2**64 - 1, 'emission ratio': 2**-18})
+        inp.update({'min mining reward': 6e11, 'owner names': OWNER_NAMES})
+        label_msg = (RUNTIME, HASH_RATE[0], HASH_RATE[1], HASH_RATE[2], STOCHASTIC_MATRIX[0][0], STOCHASTIC_MATRIX[0][1],
+                     STOCHASTIC_MATRIX[0][2], STOCHASTIC_MATRIX[1][0], STOCHASTIC_MATRIX[1][1], STOCHASTIC_MATRIX[1][2],
+                     STOCHASTIC_MATRIX[2][0], STOCHASTIC_MATRIX[2][1], STOCHASTIC_MATRIX[2][2], 1.0/SPEND_TIMES[0](1),
+                     1.0/SPEND_TIMES[1](1), 1.0/SPEND_TIMES[2](1), MIN_SPEND_TIME, RING_SIZE)
+        label = str(hash(label_msg))
+        label = label[-8:]
+        fn = FILENAME[:-4] + str(label) + FILENAME[-4:]
+        with open(fn, "w+") as _:
+            pass
+        inp.update({'filename': fn})
     return Simulator(inp)
-    
-def make_simulator(inp):
-    """ Return a fresh simulator with some standard parameters and no blocks. For testing an empty simulator. """
-    return Simulator(inp)
-
 
 def make_simulated_simulator():
     """ Return a new simulator after simulating until upcoming buffer isn't empty. For testing non-empty simulator."""
