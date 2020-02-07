@@ -1,26 +1,7 @@
 from copy import deepcopy
 from itertools import groupby
 from random import random, sample, randrange
-from Matching.graphtheory import BipartiteGraph
-
-FILENAME = "data/output.csv"
-STOCHASTIC_MATRIX = [[0.0, 0.9, 1.0 - 0.9], [0.125, 0.75, 0.125], [0.75, 0.25, 0.0]]
-HASH_RATE_ALICE = 0.33
-HASH_RATE_EVE = 0.33
-HASH_RATE_BOB = 1.0 - HASH_RATE_ALICE - HASH_RATE_EVE
-HASH_RATE = [HASH_RATE_ALICE, HASH_RATE_EVE, HASH_RATE_BOB]
-RING_SIZE = 11
-MIN_SPEND_TIME = RING_SIZE + 2  # Guarantees enough ring members for all signatures
-RUNTIME = 60
-MAX_ATOMIC_UNITS = 2**64 - 1
-EMISSION_RATIO = 2**-18
-MIN_MINING_REWARD = int(6e11)
-OWNER_NAMES = {0: "Alice", 1: "Eve", 2: "Bob"}
-# Expected spend-times are 20.0, 100.0, and 50.0 blocks, respectively.
-SPEND_TIMES = [lambda x: 0.05 * ((1.0 - 0.05) ** (x - MIN_SPEND_TIME)),
-               lambda x: 0.01 * ((1.0 - 0.01) ** (x - MIN_SPEND_TIME)),
-               lambda x: 0.025 * ((1.0 - 0.025) ** (x - MIN_SPEND_TIME))]
-
+from graphtheory import BipartiteGraph
 
 class Simulator(object):
     """
@@ -463,6 +444,25 @@ class Simulator(object):
             for entry in writing_buffer:
                 wf.write(str(entry))
 
+# Some convenience
+
+FILENAME = "data/output.csv"
+STOCHASTIC_MATRIX = [[0.0, 0.9, 1.0 - 0.9], [0.0625, 0.0125, 1.0 - 0.0625 - 0.0125], [0.0125, 0.0625, 1.0 - 0.0125 - 0.0625]]
+HASH_RATE_ALICE = 0.33
+HASH_RATE_EVE = 0.33
+HASH_RATE_BOB = 1.0 - HASH_RATE_ALICE - HASH_RATE_EVE
+HASH_RATE = [HASH_RATE_ALICE, HASH_RATE_EVE, HASH_RATE_BOB]
+RING_SIZE = 11
+MIN_SPEND_TIME = RING_SIZE + 2  # Guarantees enough ring members for all signatures
+RUNTIME = 60
+MAX_ATOMIC_UNITS = 2**64 - 1
+EMISSION_RATIO = 2**-18
+MIN_MINING_REWARD = int(6e11)
+OWNER_NAMES = {0: "Alice", 1: "Eve", 2: "Bob"}
+# Expected spend-times are 20.0, 100.0, and 50.0 blocks, respectively.
+SPEND_TIMES = [lambda x: 0.05 * ((1.0 - 0.05) ** (x - MIN_SPEND_TIME)),
+               lambda x: 0.01 * ((1.0 - 0.01) ** (x - MIN_SPEND_TIME)),
+               lambda x: 0.025 * ((1.0 - 0.025) ** (x - MIN_SPEND_TIME))]
 
 # Methods for conveniently generating a simulator.
 def make_simulator():
@@ -482,6 +482,10 @@ def make_simulator():
     with open(fn, "w+") as _:
         pass
     inp.update({'filename': fn})
+    return Simulator(inp)
+    
+def make_simulator(inp):
+    """ Return a fresh simulator with some standard parameters and no blocks. For testing an empty simulator. """
     return Simulator(inp)
 
 

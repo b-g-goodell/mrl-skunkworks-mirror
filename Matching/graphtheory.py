@@ -275,8 +275,7 @@ class BipartiteGraph(object):
                             nid not in matched_rights]
 
         # non-match edges
-        non_match_edges = [eid for eid in wt_dct if
-                           eid not in input_match and wt_dct[eid] > 0.0]
+        non_match_edges = [eid for eid in wt_dct if eid not in input_match]
 
         result = (matched_lefts, matched_rights, unmatched_lefts,
                   unmatched_rights, b, non_match_edges)

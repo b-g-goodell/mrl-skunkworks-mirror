@@ -2,7 +2,7 @@ from copy import deepcopy
 from itertools import groupby
 from random import random, choice, sample, randrange
 from math import pi
-from Matching.simulator import make_simulator, EMISSION_RATIO, MAX_ATOMIC_UNITS, MIN_MINING_REWARD, \
+from simulator import make_simulator, EMISSION_RATIO, MAX_ATOMIC_UNITS, MIN_MINING_REWARD, \
     make_simulated_simulator, MIN_SPEND_TIME
 import unittest as ut
 
@@ -1158,7 +1158,7 @@ class TestSimulator(ut.TestCase):
             self.compare_stats_with_predictions(sally, old_stats, old_aux, old_pred, new_stats, new_aux, new_pred, out,
                                                 sally.dt)
 
-    @ut.skip("Skipping test_update_state_from_simulated_complex")
+    # @ut.skip("Skipping test_update_state_from_simulated_complex")
     def test_update_state_from_simulated_complex(self):
         magic_numbers = [17, 10]
 
