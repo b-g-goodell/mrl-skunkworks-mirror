@@ -69,6 +69,7 @@ class TestSimulator(ut.TestCase):
                     self.assertTrue(new_left in sally.g.left_nodes)
                 for R, new_right in zip(rings, new_rights):
                     for ring_member in R:
+                        # TODO: These tests are sometimes failing.
                         self.assertIn((ring_member, new_right, sally.t), sally.g.red_edges)
                         self.assertIn((ring_member, new_right, sally.t), new_reds)
                 for new_left in new_lefts:
