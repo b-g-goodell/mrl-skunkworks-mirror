@@ -52,8 +52,9 @@ class TestSimulator(ut.TestCase):
         return old_stats, auxiliary_data, predicted_gains
 
     def compare_stats_with_predictions(self, sally, old_stats, old_aux, old_pred, new_stats, new_aux, new_pred, out, total_dt):
+        # print(out)
         self.assertEqual(len(out), total_dt)
-        self.assertTrue(all(len(_) == 2 for _ in out))
+        self.assertTrue(all(len(_)==2 for _ in out))
         self.assertTrue(all(isinstance(_[1], list) for _ in out))
         self.assertTrue(all(_[0] in sally.g.left_nodes for _ in out))
         self.assertEqual(len(new_stats), len(old_stats))
@@ -65,8 +66,10 @@ class TestSimulator(ut.TestCase):
                 [new_rights, new_lefts, rings, new_reds, new_blues] = txn
                 for new_right in new_rights:
                     self.assertTrue(new_right in sally.g.right_nodes)
+                    self.assertTrue(new_right in new_rights)
                 for new_left in new_lefts:
                     self.assertTrue(new_left in sally.g.left_nodes)
+                    self.assertTrue(new_left in new_lefts)
                 for R, new_right in zip(rings, new_rights):
                     for ring_member in R:
                         # TODO: These tests are sometimes failing.
@@ -832,7 +835,7 @@ class TestSimulator(ut.TestCase):
                     self.assertEqual(new_edge_id[1], eid[1])
                     self.assertEqual(new_edge_id[2], sally.t)
 
-    @ut.skip("Skipping test_make_reds_from_simulated_complex")
+    # @ut.skip("Skipping test_make_reds_from_simulated_complex")
     def test_make_reds_from_simulated_complex(self):
         """ Tests that making more than one edge at a time succeeds. This does not test gen_rings, and so ring
         members in this test are manually constructed. """
@@ -1166,11 +1169,12 @@ class TestSimulator(ut.TestCase):
         total_dt = magic_numbers[0]
         
         sally = make_simulated_simulator()
+
         old_sally = deepcopy(sally)
-        old_stats, old_aux, old_pred = self.gather_stats_from_sally(old_sally)
-        
         stepwise_sally = deepcopy(sally)
         old_stepwise_sally = deepcopy(stepwise_sally)
+
+        old_stats, old_aux, old_pred = self.gather_stats_from_sally(old_sally)        
         old_stepwise_stats, old_stepwise_aux, old_stepwise_pred = self.gather_stats_from_sally(old_stepwise_sally)
         try:
             out_total = sally.update_state(total_dt)
@@ -1179,17 +1183,34 @@ class TestSimulator(ut.TestCase):
         except RuntimeError:
             self.assertTrue(False)
         else:
-            stepwise_out = []
+            # dat = ""
+            # with open("temp.txt", "w+") as wf:
+            #     dat += "\n\nTOTAL OUT = \n"
+            #     for _ in out_total:
+            #         dat += str(_) + "\n"
+            #     dat += "\n\nSTEPWISE OUT = \n"
+            #     wf.write(dat)
+                
+            stepwise_out = None
             target_t = old_sally.t + total_dt
+            self.assertEqual(target_t, sally.t)
             while stepwise_sally.t < target_t:
-                stepwise_out += [stepwise_sally.update_state()]
+                stepwise_out = stepwise_sally.update_state()
                 self.assertEqual(old_stepwise_sally.t + stepwise_sally.dt, stepwise_sally.t)
+                self.assertEqual(len(stepwise_out), stepwise_sally.dt)
+                self.assertTrue(all(len(_)==2 for _ in stepwise_out))
                 new_stepwise_stats, new_stepwise_aux, new_stepwise_pred = self.gather_stats_from_sally(stepwise_sally)
-                self.compare_stats_with_predictions(sally, old_stepwise_stats, 
+                self.compare_stats_with_predictions(stepwise_sally, old_stepwise_stats, 
                     old_stepwise_aux, old_stepwise_pred, new_stepwise_stats, 
-                    new_stepwise_aux, new_stepwise_pred, stepwise_out[-1], stepwise_sally.dt)
+                    new_stepwise_aux, new_stepwise_pred, stepwise_out, stepwise_sally.dt)
                 old_stepwise_sally = deepcopy(stepwise_sally)
                 old_stepwise_stats, old_stepwise_aux, old_stepwise_pred = new_stepwise_stats, new_stepwise_aux, new_stepwise_pred
+                # dat = ""
+                # with open("temp.txt", "a") as wf:
+                #     for _ in stepwise_out:
+                #         dat += str(_) + "\n"
+                #     wf.write(dat)
+                
 
     # @ut.skip("Skipping test_make_simulated_simulator")
     def test_make_simulated_simulator(self):
@@ -1302,7 +1323,7 @@ class TestSimulator(ut.TestCase):
         for _ in range(SAMPLE_SIZE):
             self.test_make_reds_from_simulated_less_simple()
 
-    @ut.skip("Skipping test_make_reds_from_simulated_complex_repeated")
+    # @ut.skip("Skipping test_make_reds_from_simulated_complex_repeated")
     def test_make_reds_from_simulated_complex_repeated(self):
         for _ in range(SAMPLE_SIZE):
             self.test_make_reds_from_simulated_complex()
